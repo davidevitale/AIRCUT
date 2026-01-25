@@ -1,11 +1,7 @@
-import React from 'react';
-import { 
-  StyleSheet, 
-  Text, 
-  View,
-  SafeAreaView
-} from 'react-native';
-import { BlurView } from 'expo-blur';
+import React from "react";
+import { StyleSheet, Text, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { BlurView } from "expo-blur";
 
 const Header = () => {
   return (
@@ -19,21 +15,21 @@ const Header = () => {
 
 const styles = StyleSheet.create({
   safeArea: {
-    backgroundColor: '#ffffffff',
+    backgroundColor: "#ffffffff",
   },
   headerContainer: {
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderRadius: 25,
     borderBottomWidth: 1,
-    borderBottomColor: '#fffefeff',
-    alignItems: 'center',
+    borderBottomColor: "#fffefeff",
+    alignItems: "center",
   },
   headerTitle: {
     fontSize: 24,
-    fontWeight: 'bold',
-    color: '#00BCD4',
+    fontWeight: "bold",
+    color: "#00BCD4",
     letterSpacing: 0.5,
   },
 });

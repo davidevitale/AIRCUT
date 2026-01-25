@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  StyleSheet, 
+import {
+  StyleSheet,
   ScrollView,
   View,
   Text,
@@ -11,9 +11,9 @@ import {
   FlatList
 } from 'react-native';
 import { BlurView } from 'expo-blur';
-import BarberPost from '../components/BarberPost';
-import PostGrid from '../components/PostGrid';
-import UserListItem from '../components/UserListItem';
+import BarberPost from '../../components/BarberPost';
+import PostGrid from '../../components/PostGrid';
+import UserListItem from '../../components/UserListItem';
 import { getAllPostsWithLikeStatus, getCurrentUserData, smartSearch } from '../services/authService';
 
 /* CODICE COMMENTATO - DA RIUTILIZZARE NEL SEARCH COMPONENT
@@ -83,15 +83,15 @@ const HomeScreen = ({ onViewProfile, onHashtagPress }) => {
       setLoading(true);
       setHasConnectionError(false); // Reset error state
       console.log('HomeScreen: Starting to load data...');
-      
+
       // Carica l'utente corrente
       const userData = await getCurrentUserData();
       setCurrentUser(userData);
-      
+
       // Usa la nuova funzione che gestisce automaticamente lo stato like
       const postsWithLikeStatus = await getAllPostsWithLikeStatus(userData?.user?.uid);
       console.log('HomeScreen: Loaded posts with like status:', postsWithLikeStatus.length);
-      
+
       // Debug: mostra i primi post
       if (postsWithLikeStatus.length > 0) {
         console.log('HomeScreen: First post:', {
@@ -101,17 +101,17 @@ const HomeScreen = ({ onViewProfile, onHashtagPress }) => {
           likesCount: postsWithLikeStatus[0].likesCount
         });
       }
-      
+
       setPosts(postsWithLikeStatus);
       console.log('HomeScreen: Posts loaded successfully');
     } catch (error) {
       console.error('HomeScreen: Error loading data:', error);
-      
+
       // Controlla se è un errore di connessione Firebase
-      if (error.message?.includes('client is offline') || 
-          error.message?.includes('Failed to get document') ||
-          error.code === 'unavailable') {
-        
+      if (error.message?.includes('client is offline') ||
+        error.message?.includes('Failed to get document') ||
+        error.code === 'unavailable') {
+
         console.log('HomeScreen: Firebase offline, showing connection error state');
         setHasConnectionError(true);
         setPosts([]);
@@ -205,7 +205,7 @@ const HomeScreen = ({ onViewProfile, onHashtagPress }) => {
           <View style={styles.emptyContent}>
             <Text style={styles.emptyTitle}>Nessun risultato</Text>
             <Text style={styles.emptyDescription}>
-              {isHashtagSearch 
+              {isHashtagSearch
                 ? `Nessun post trovato per ${searchText}`
                 : 'Prova con parole chiave diverse'}
             </Text>
@@ -219,8 +219,8 @@ const HomeScreen = ({ onViewProfile, onHashtagPress }) => {
         {/* Post (per hashtag) */}
         {posts.length > 0 && (
           <View style={styles.section}>
-            <PostGrid 
-              posts={posts} 
+            <PostGrid
+              posts={posts}
               onPostPress={(post) => {
                 console.log('Post selezionato:', post);
               }}
@@ -242,7 +242,7 @@ const HomeScreen = ({ onViewProfile, onHashtagPress }) => {
                       onViewProfile(item.nomeSalone);
                     }
                   }}
-                  onPress={() => {}}
+                  onPress={() => { }}
                   onViewProfile={() => onViewProfile && onViewProfile(item.nomeSalone)}
                 />
               )}
@@ -309,7 +309,7 @@ const HomeScreen = ({ onViewProfile, onHashtagPress }) => {
     return (
       <View style={styles.screen}>
         <BlurView intensity={28} tint="light" style={styles.backgroundBlur} pointerEvents="none" />
-        <ScrollView 
+        <ScrollView
           style={styles.mainContent}
           contentContainerStyle={styles.emptyContainer}
           refreshControl={
@@ -321,7 +321,7 @@ const HomeScreen = ({ onViewProfile, onHashtagPress }) => {
               {hasConnectionError ? '🌐 Connessione lenta' : 'Nessun post disponibile'}
             </Text>
             <Text style={styles.emptyDescription}>
-              {hasConnectionError 
+              {hasConnectionError
                 ? 'Verifica la tua connessione internet e tira per aggiornare'
                 : 'I parrucchieri non hanno ancora caricato foto. Torna più tardi per vedere i loro lavori!'
               }
@@ -335,7 +335,7 @@ const HomeScreen = ({ onViewProfile, onHashtagPress }) => {
   return (
     <View style={styles.screen}>
       <BlurView intensity={28} tint="light" style={styles.backgroundBlur} pointerEvents="none" />
-      <ScrollView 
+      <ScrollView
         style={styles.mainContent}
         showsVerticalScrollIndicator={false}
         refreshControl={
@@ -374,8 +374,8 @@ const HomeScreen = ({ onViewProfile, onHashtagPress }) => {
               tint="light"
               style={styles.glassCard}
             >
-              <BarberPost 
-                barber={barber} 
+              <BarberPost
+                barber={barber}
                 onViewProfile={onViewProfile}
                 onHashtagPress={onHashtagPress}
               />

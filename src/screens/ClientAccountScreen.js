@@ -1,16 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  View, 
-  Text, 
-  TouchableOpacity, 
-  StyleSheet, 
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
   SafeAreaView,
   ScrollView,
   Alert,
   Image
 } from 'react-native';
 import { logoutUser, getCurrentUserData } from '../services/authService';
-import { auth } from '../config/firebase';
+import { auth } from '../../config/firebase';
 
 export default function ClientAccountScreen({ userData: propUserData, onLogout, navigate }) {
   const [userData, setUserData] = useState(null);
@@ -45,9 +45,9 @@ export default function ClientAccountScreen({ userData: propUserData, onLogout, 
   const closeMenu = () => setMenuOpen(false);
 
   const goToEditProfile = () => {
-    navigate('EditClientProfile', { 
+    navigate('EditClientProfile', {
       userId: userData?.id || auth.currentUser?.uid,
-      currentUserData: userData 
+      currentUserData: userData
     });
   };
 
@@ -57,8 +57,8 @@ export default function ClientAccountScreen({ userData: propUserData, onLogout, 
       'Sei sicuro di voler uscire?',
       [
         { text: 'Annulla', style: 'cancel' },
-        { 
-          text: 'Esci', 
+        {
+          text: 'Esci',
           style: 'destructive',
           onPress: async () => {
             try {
@@ -89,7 +89,7 @@ export default function ClientAccountScreen({ userData: propUserData, onLogout, 
     <SafeAreaView style={styles.container}>
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         <View style={styles.content}>
-          
+
           {/* Header Account */}
           <View style={styles.header}>
             <TouchableOpacity
@@ -101,7 +101,7 @@ export default function ClientAccountScreen({ userData: propUserData, onLogout, 
               <View style={styles.menuLine} />
               <View style={styles.menuLine} />
             </TouchableOpacity>
-            
+
             {menuOpen && (
               <>
                 <TouchableOpacity style={styles.headerOverlay} onPress={closeMenu} />
@@ -112,12 +112,12 @@ export default function ClientAccountScreen({ userData: propUserData, onLogout, 
                 </View>
               </>
             )}
-            
+
             <View style={styles.headerContent}>
               <View style={styles.profileAvatar}>
                 <Text style={styles.profileInitial}>{profileInitial}</Text>
               </View>
-              
+
               <View style={styles.userInfo}>
                 <Text style={styles.welcomeText}>{userData?.nomeUtente || 'Cliente'}</Text>
                 <Text style={styles.roleText}>Account Cliente</Text>
@@ -128,22 +128,22 @@ export default function ClientAccountScreen({ userData: propUserData, onLogout, 
           {/* Dati Personali */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>I tuoi dati</Text>
-            
+
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>Email</Text>
               <Text style={styles.infoValue}>{userData?.email}</Text>
             </View>
-            
+
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>Età</Text>
               <Text style={styles.infoValue}>{userData?.eta} anni</Text>
             </View>
-            
+
             {/*<View style={styles.infoRow}>
               <Text style={styles.infoLabel}>Indirizzo</Text>
               <Text style={styles.infoValue}>{userData?.via}</Text>
             </View>*/}
-            
+
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>Sesso</Text>
               <Text style={styles.infoValue}>{userData?.sesso === 'M' ? 'Maschio' : 'Femmina'}</Text>
@@ -153,7 +153,7 @@ export default function ClientAccountScreen({ userData: propUserData, onLogout, 
           {/* Preferenze */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Le tue preferenze</Text>
-            
+
             {userData?.preferenzaTaglio && userData.preferenzaTaglio.length > 0 && (
               <>
                 <Text style={styles.infoLabel}>Tipi di taglio preferiti</Text>
@@ -166,7 +166,7 @@ export default function ClientAccountScreen({ userData: propUserData, onLogout, 
                 </View>
               </>
             )}
-            
+
             {/*<View style={styles.infoRow}>
               <Text style={styles.infoLabel}>Raggio di ricerca</Text>
               <Text style={styles.infoValue}>{userData?.raggio} km</Text>
@@ -235,7 +235,7 @@ const styles = StyleSheet.create({
     color: '#666',
     fontWeight: '500',
   },
-  
+
   // Header Card
   header: {
     backgroundColor: 'white',
@@ -339,7 +339,7 @@ const styles = StyleSheet.create({
     color: '#00BCD4',
     fontWeight: '500',
   },
-  
+
   // Section Card
   section: {
     backgroundColor: 'white',
@@ -396,7 +396,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
   },
-  
+
   // Action Buttons
   actionButton: {
     backgroundColor: 'rgba(255,255,255,0.65)',
@@ -415,7 +415,7 @@ const styles = StyleSheet.create({
     color: '#0f172a',
     fontWeight: '600',
   },
-  
+
   // Logout Button
   logoutButton: {
     backgroundColor: 'rgba(255, 107, 107, 0.25)',

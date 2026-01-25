@@ -1,13 +1,13 @@
 import React from 'react';
-import { 
-  StyleSheet, 
-  Text, 
-  View, 
+import {
+  StyleSheet,
+  Text,
+  View,
   ScrollView,
   Image
 } from 'react-native';
 
-const logoBook = require('../assets/icons8-più-48.png');
+const logoBook = require('../../assets/icons8-più-48.png');
 
 const PrenotazioniScreen = () => (
   <ScrollView style={styles.container} contentContainerStyle={styles.content}>

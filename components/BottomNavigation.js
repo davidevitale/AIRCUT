@@ -1,10 +1,10 @@
 import React from 'react';
-import { 
-  StyleSheet, 
-  Text, 
-  View, 
-  Image, 
-  TouchableOpacity 
+import {
+  StyleSheet,
+  Text,
+  View,
+  Image,
+  TouchableOpacity
 } from 'react-native';
 
 const logoHome = require('../assets/icons8-casa-256.png');
@@ -24,13 +24,13 @@ const BottomNavigation = ({ activeTab, setActiveTab }) => (
       <Image source={logoLikeB} style={[styles.logoIcon, { tintColor: activeTab === 'like' ? '#00BCD4' : '#000' }]} />
       <Text style={activeTab === 'like' ? styles.navLabelActive : styles.navLabel}>Like</Text>
     </TouchableOpacity>
-   {/*  <TouchableOpacity style={styles.navItem} onPress={() => setActiveTab('search')}>
+    {/*  <TouchableOpacity style={styles.navItem} onPress={() => setActiveTab('search')}>
       <Image source={logoSearch} style={[styles.logoIcon, { tintColor: activeTab === 'search' ? '#00BCD4' : '#000' }]} />
       <Text style={activeTab === 'search' ? styles.navLabelActive : styles.navLabel}>Cerca</Text> 
     </TouchableOpacity> */}
     <TouchableOpacity style={styles.navItem} onPress={() => setActiveTab('shop')}>
       <Image source={logobag} style={[styles.logoIcon, { tintColor: activeTab === 'shop' ? '#00BCD4' : '#000' }]} />
-      <Text style={activeTab === 'shop' ? styles.navLabelActive : styles.navLabel}>Shop</Text> 
+      <Text style={activeTab === 'shop' ? styles.navLabelActive : styles.navLabel}>Shop</Text>
     </TouchableOpacity>
     <TouchableOpacity style={styles.navItem} onPress={() => setActiveTab('account')}>
       <Image source={logoAccount} style={[styles.logoIcon, { tintColor: activeTab === 'account' ? '#00BCD4' : '#000' }]} />

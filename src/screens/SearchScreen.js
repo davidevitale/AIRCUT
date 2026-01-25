@@ -10,8 +10,8 @@ import {
   StyleSheet,
 } from 'react-native';
 import { smartSearch } from '../services/authService';
-import PostGrid from '../components/PostGrid';
-import UserListItem from '../components/UserListItem';
+import PostGrid from '../../components/PostGrid';
+import UserListItem from '../../components/UserListItem';
 
 const SearchScreen = ({ onHashtagPress, onUserPress, onViewProfile }) => {
   const [searchText, setSearchText] = useState('');
@@ -133,7 +133,7 @@ const SearchScreen = ({ onHashtagPress, onUserPress, onViewProfile }) => {
             <Text style={styles.emptyIcon}></Text>
             <Text style={styles.emptyTitle}>Nessun risultato</Text>
             <Text style={styles.emptyDescription}>
-              {isHashtagSearch 
+              {isHashtagSearch
                 ? `Nessun post trovato per ${searchText}`
                 : 'Prova con parole chiave diverse'}
             </Text>
@@ -156,8 +156,8 @@ const SearchScreen = ({ onHashtagPress, onUserPress, onViewProfile }) => {
         {/* Post (per hashtag) */}
         {posts.length > 0 && (
           <View style={styles.section}>
-            <PostGrid 
-              posts={posts} 
+            <PostGrid
+              posts={posts}
               onPostPress={(post) => {
                 // Gestisci navigazione al post
                 console.log('Post selezionato:', post);
@@ -235,7 +235,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  
+
   // Search Header
   searchHeader: {
     backgroundColor: 'rgba(255,255,255,0.78)',
@@ -280,7 +280,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#8e8e8e',
   },
-  
+
   // Loading
   loadingContainer: {
     flex: 1,
@@ -293,7 +293,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#8e8e8e',
   },
-  
+
   // Empty State
   emptyContainer: {
     flex: 1,
@@ -323,7 +323,7 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     marginBottom: 32,
   },
-  
+
   // Results Badge
   resultsBadgeContainer: {
     paddingHorizontal: 16,
@@ -347,7 +347,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#334155',
   },
-  
+
   // Sections
   section: {
     paddingHorizontal: 16,
@@ -360,7 +360,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     marginTop: 8,
   },
-  
+
   // Recent Searches
   recentSearchesSection: {
     width: '100%',
@@ -387,7 +387,7 @@ const styles = StyleSheet.create({
     color: '#262626',
     flex: 1,
   },
-  
+
   // Popular Hashtags
   popularHashtagsSection: {
     width: '100%',
@@ -409,7 +409,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
   },
-  
+
   // User List
   userListContent: {
     paddingBottom: 20,

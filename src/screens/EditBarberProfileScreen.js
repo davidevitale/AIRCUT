@@ -10,19 +10,19 @@ import {
   ActivityIndicator,
   SafeAreaView
 } from 'react-native';
-import { 
-  updateUserProfile, 
-  updateUserEmail, 
-  updateUserPassword, 
+import {
+  updateUserProfile,
+  updateUserEmail,
+  updateUserPassword,
   sendPasswordResetEmailToUser,
-  getUserProfileData 
+  getUserProfileData
 } from '../services/authService';
-import { auth } from '../config/firebase';
+import { auth } from '../../config/firebase'
 
 export default function EditBarberProfileScreen({ userData, onGoBack }) {
   const userId = userData?.id || auth.currentUser?.uid;
   const currentUserData = userData;
-  
+
   const [formData, setFormData] = useState({
     nomeSalone: '',
     via: '',
@@ -37,13 +37,13 @@ export default function EditBarberProfileScreen({ userData, onGoBack }) {
     orari: '',
     prezziServizi: [] // Array per i prezzi dei servizi
   });
-  
+
   const [passwordData, setPasswordData] = useState({
     currentPassword: '',
     newPassword: '',
     confirmPassword: ''
   });
-  
+
   const [loading, setLoading] = useState(false);
   const [showPasswordSection, setShowPasswordSection] = useState(false);
   const [showEmailSection, setShowEmailSection] = useState(false);
@@ -85,7 +85,7 @@ export default function EditBarberProfileScreen({ userData, onGoBack }) {
   const handleSaveProfile = async () => {
     try {
       setLoading(true);
-      
+
       // Validazione base
       if (!formData.nomeSalone.trim() || !formData.via.trim() || !formData.telefono.trim()) {
         Alert.alert('Errore', 'Nome salone, indirizzo e telefono sono obbligatori');
@@ -112,7 +112,7 @@ export default function EditBarberProfileScreen({ userData, onGoBack }) {
 
       setLoading(true);
       await updateUserEmail(passwordData.currentPassword, formData.email);
-      
+
       Alert.alert('Successo', 'Email aggiornata con successo');
       setShowEmailSection(false);
       setPasswordData({ ...passwordData, currentPassword: '' });
@@ -142,7 +142,7 @@ export default function EditBarberProfileScreen({ userData, onGoBack }) {
 
       setLoading(true);
       await updateUserPassword(passwordData.currentPassword, passwordData.newPassword);
-      
+
       Alert.alert('Successo', 'Password aggiornata con successo');
       setShowPasswordSection(false);
       setPasswordData({
@@ -253,7 +253,7 @@ export default function EditBarberProfileScreen({ userData, onGoBack }) {
         {/* Dati Salone */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Dati del Salone</Text>
-          
+
           <View style={styles.inputContainer}>
             <Text style={styles.label}>Nome Salone *</Text>
             <TextInput
@@ -373,7 +373,7 @@ export default function EditBarberProfileScreen({ userData, onGoBack }) {
         {/* Gestione Prezzi */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Prezzi e Servizi</Text>
-          
+
           {/* Lista prezzi esistenti */}
           {formData.prezziServizi && formData.prezziServizi.length > 0 && (
             <View style={styles.pricesList}>
@@ -386,7 +386,7 @@ export default function EditBarberProfileScreen({ userData, onGoBack }) {
                   </View>
                   <View style={styles.serviceActions}>
                     <Text style={styles.existingServicePrice}>€{servizio.prezzo}</Text>
-                    <TouchableOpacity 
+                    <TouchableOpacity
                       style={styles.deleteServiceButton}
                       onPress={() => removeService(index)}
                     >
@@ -400,13 +400,13 @@ export default function EditBarberProfileScreen({ userData, onGoBack }) {
 
           {/* Aggiungi nuovo servizio */}
           <Text style={styles.subsectionTitle}>Aggiungi nuovo servizio:</Text>
-          
+
           <View style={styles.inputContainer}>
             <Text style={styles.label}>Nome Servizio</Text>
             <TextInput
               style={styles.input}
               value={newService.servizio}
-              onChangeText={(value) => setNewService({...newService, servizio: value})}
+              onChangeText={(value) => setNewService({ ...newService, servizio: value })}
               placeholder="Es: Taglio uomo, Colore donna..."
             />
           </View>
@@ -416,7 +416,7 @@ export default function EditBarberProfileScreen({ userData, onGoBack }) {
             <TextInput
               style={styles.input}
               value={newService.descrizione}
-              onChangeText={(value) => setNewService({...newService, descrizione: value})}
+              onChangeText={(value) => setNewService({ ...newService, descrizione: value })}
               placeholder="Breve descrizione del servizio"
             />
           </View>
@@ -426,7 +426,7 @@ export default function EditBarberProfileScreen({ userData, onGoBack }) {
             <TextInput
               style={styles.input}
               value={newService.prezzo}
-              onChangeText={(value) => setNewService({...newService, prezzo: value})}
+              onChangeText={(value) => setNewService({ ...newService, prezzo: value })}
               placeholder="0.00"
               keyboardType="numeric"
             />
@@ -440,7 +440,7 @@ export default function EditBarberProfileScreen({ userData, onGoBack }) {
         {/* Gestione Email */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Email Account</Text>
-          
+
           <View style={styles.inputContainer}>
             <Text style={styles.label}>Email Account Attuale</Text>
             <View style={styles.emailRow}>
@@ -453,7 +453,7 @@ export default function EditBarberProfileScreen({ userData, onGoBack }) {
                 autoCapitalize="none"
                 editable={showEmailSection}
               />
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.editButton}
                 onPress={() => setShowEmailSection(!showEmailSection)}
               >
@@ -487,8 +487,8 @@ export default function EditBarberProfileScreen({ userData, onGoBack }) {
         {/* Gestione Password */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Sicurezza Account</Text>
-          
-          <TouchableOpacity 
+
+          <TouchableOpacity
             style={styles.toggleButton}
             onPress={() => setShowPasswordSection(!showPasswordSection)}
           >

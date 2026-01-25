@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  StyleSheet, 
-  Text, 
-  View, 
+import {
+  StyleSheet,
+  Text,
+  View,
   ScrollView,
   Image,
   FlatList,
@@ -13,9 +13,9 @@ import {
 } from 'react-native';
 import { getCurrentUserData } from '../services/authService';
 import { collection, query, where, getDocs, doc, updateDoc, arrayRemove } from 'firebase/firestore';
-import { db } from '../config/firebase';
+import { db } from '../../config/firebase'
 
-const logoLike = require('../assets/icons8-cuore-48.png');
+const logoLike = require('../../assets/icons8-cuore-48.png');
 const { width } = Dimensions.get('window');
 const itemSize = width - 48; // 1 colonna fullwidth
 
@@ -50,16 +50,16 @@ const LikeScreen = () => {
       if (userData) {
         setCurrentUser(userData);
         console.log('LikeScreen: Loading liked posts for user:', userData.user.uid);
-        
+
         // Carica tutti i post che contengono l'userId nell'array likes
         const postsQuery = query(
           collection(db, 'posts'),
           where('likes', 'array-contains', userData.user.uid)
         );
-        
+
         const querySnapshot = await getDocs(postsQuery);
         const likedPostsData = [];
-        
+
         querySnapshot.forEach((doc) => {
           const postData = doc.data();
           likedPostsData.push({
@@ -71,7 +71,7 @@ const LikeScreen = () => {
             ...postData
           });
         });
-        
+
         console.log('LikeScreen: Loaded liked posts:', likedPostsData.length);
         setLikedPosts(likedPostsData);
       } else {
@@ -99,13 +99,13 @@ const LikeScreen = () => {
             try {
               if (currentUser) {
                 console.log('LikeScreen: Removing like for post:', postId);
-                
+
                 // Rimuovi l'userId dall'array likes del post
                 const postRef = doc(db, 'posts', postId);
                 await updateDoc(postRef, {
                   likes: arrayRemove(currentUser.user.uid)
                 });
-                
+
                 // Aggiorna la lista locale
                 setLikedPosts(prev => prev.filter(post => post.postId !== postId));
                 console.log('LikeScreen: Like rimosso con successo');
@@ -121,12 +121,12 @@ const LikeScreen = () => {
   };
 
   const renderLikedPost = ({ item }) => (
-    <TouchableOpacity 
+    <TouchableOpacity
       style={styles.postContainer}
       onLongPress={() => handleRemoveLike(item.postId)}
     >
-      <Image 
-        source={{ uri: item.imageUrl || item.mediaUrl }} 
+      <Image
+        source={{ uri: item.imageUrl || item.mediaUrl }}
         style={styles.postImage}
         resizeMode="cover"
       />
@@ -135,7 +135,7 @@ const LikeScreen = () => {
           {item.barberName || 'Parrucchiere'}
         </Text>
       </View>
-      <TouchableOpacity 
+      <TouchableOpacity
         style={styles.unlikeButton}
         onPress={() => handleRemoveLike(item.postId)}
       >
@@ -172,7 +172,7 @@ const LikeScreen = () => {
         <Text style={styles.headerTitle}>I tuoi preferiti</Text>
         <Text style={styles.headerCount}>{likedPosts.length} foto</Text>
       </View>
-      
+
       <FlatList
         data={likedPosts}
         renderItem={renderLikedPost}

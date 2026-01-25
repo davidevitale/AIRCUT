@@ -10,19 +10,19 @@ import {
   ActivityIndicator,
   SafeAreaView
 } from 'react-native';
-import { 
-  updateUserProfile, 
-  updateUserEmail, 
-  updateUserPassword, 
+import {
+  updateUserProfile,
+  updateUserEmail,
+  updateUserPassword,
   sendPasswordResetEmailToUser,
-  getUserProfileData 
+  getUserProfileData
 } from '../services/authService';
-import { auth } from '../config/firebase';
+import { auth } from '../../config/firebase';
 
 export default function EditClientProfileScreen({ userData, onGoBack }) {
   const userId = userData?.id || auth.currentUser?.uid;
   const currentUserData = userData;
-  
+
   const [formData, setFormData] = useState({
     nome: '',
     cognome: '',
@@ -32,13 +32,13 @@ export default function EditClientProfileScreen({ userData, onGoBack }) {
     citta: '',
     provincia: ''
   });
-  
+
   const [passwordData, setPasswordData] = useState({
     currentPassword: '',
     newPassword: '',
     confirmPassword: ''
   });
-  
+
   const [loading, setLoading] = useState(false);
   const [showPasswordSection, setShowPasswordSection] = useState(false);
   const [showEmailSection, setShowEmailSection] = useState(false);
@@ -70,7 +70,7 @@ export default function EditClientProfileScreen({ userData, onGoBack }) {
   const handleSaveProfile = async () => {
     try {
       setLoading(true);
-      
+
       // Validazione base
       if (!formData.nome.trim() || !formData.cognome.trim() || !formData.username.trim()) {
         Alert.alert('Errore', 'Nome, cognome e username sono obbligatori');
@@ -97,7 +97,7 @@ export default function EditClientProfileScreen({ userData, onGoBack }) {
 
       setLoading(true);
       await updateUserEmail(passwordData.currentPassword, formData.email);
-      
+
       Alert.alert('Successo', 'Email aggiornata con successo');
       setShowEmailSection(false);
       setPasswordData({ ...passwordData, currentPassword: '' });
@@ -127,7 +127,7 @@ export default function EditClientProfileScreen({ userData, onGoBack }) {
 
       setLoading(true);
       await updateUserPassword(passwordData.currentPassword, passwordData.newPassword);
-      
+
       Alert.alert('Successo', 'Password aggiornata con successo');
       setShowPasswordSection(false);
       setPasswordData({
@@ -196,7 +196,7 @@ export default function EditClientProfileScreen({ userData, onGoBack }) {
         {/* Dati Personali */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Dati Personali</Text>
-          
+
           <View style={styles.inputContainer}>
             <Text style={styles.label}>Nome *</Text>
             <TextInput
@@ -266,7 +266,7 @@ export default function EditClientProfileScreen({ userData, onGoBack }) {
         {/* Gestione Email */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Email</Text>
-          
+
           <View style={styles.inputContainer}>
             <Text style={styles.label}>Email Attuale</Text>
             <View style={styles.emailRow}>
@@ -279,7 +279,7 @@ export default function EditClientProfileScreen({ userData, onGoBack }) {
                 autoCapitalize="none"
                 editable={showEmailSection}
               />
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.editButton}
                 onPress={() => setShowEmailSection(!showEmailSection)}
               >
@@ -313,8 +313,8 @@ export default function EditClientProfileScreen({ userData, onGoBack }) {
         {/* Gestione Password */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Sicurezza</Text>
-          
-          <TouchableOpacity 
+
+          <TouchableOpacity
             style={styles.toggleButton}
             onPress={() => setShowPasswordSection(!showPasswordSection)}
           >

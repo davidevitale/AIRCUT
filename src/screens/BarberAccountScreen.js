@@ -1,28 +1,40 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  View, 
-  Text, 
-  TouchableOpacity, 
-  StyleSheet, 
-  SafeAreaView,
+import React, { useState, useEffect } from "react";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
   ScrollView,
   Alert,
   Image,
   FlatList,
   TextInput,
-  Modal
-} from 'react-native';
-import { logoutUser, getCurrentUserData, updateBarberPortfolio } from '../services/authService';
-import { auth } from '../config/firebase';
-import { pickImages, pickVideos, uploadMultipleFiles } from '../services/mediaService';
+  Modal,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import {
+  logoutUser,
+  getCurrentUserData,
+  updateBarberPortfolio,
+} from "../services/authService";
+import { auth } from '../../config/firebase';
+import {
+  pickImages,
+  pickVideos,
+  uploadMultipleFiles,
+} from "../services/mediaService";
 
-export default function BarberAccountScreen({ userData: propUserData, onLogout, navigate }) {
+export default function BarberAccountScreen({
+  userData: propUserData,
+  onLogout,
+  navigate,
+}) {
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
   const [showPriceModal, setShowPriceModal] = useState(false);
-  const [newService, setNewService] = useState({ name: '', price: '' });
+  const [newService, setNewService] = useState({ name: "", price: "" });
   const [editingService, setEditingService] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -30,7 +42,7 @@ export default function BarberAccountScreen({ userData: propUserData, onLogout, 
   const [localProfileUri, setLocalProfileUri] = useState(null);
 
   useEffect(() => {
-    console.log('BarberAccountScreen received userData:', propUserData);
+    console.log("BarberAccountScreen received userData:", propUserData);
     if (propUserData) {
       setUserData(propUserData);
       setCurrentUser(auth.currentUser || null);
@@ -43,13 +55,13 @@ export default function BarberAccountScreen({ userData: propUserData, onLogout, 
   const loadUserData = async () => {
     try {
       const data = await getCurrentUserData();
-      console.log('Loaded user data from service:', data);
-      if (data && data.role === 'barber') {
+      console.log("Loaded user data from service:", data);
+      if (data && data.role === "barber") {
         setUserData(data.userData);
         setCurrentUser(data.user);
       }
     } catch (error) {
-      console.error('Errore nel caricamento dati:', error);
+      console.error("Errore nel caricamento dati:", error);
     } finally {
       setLoading(false);
     }
@@ -60,41 +72,45 @@ export default function BarberAccountScreen({ userData: propUserData, onLogout, 
       const images = await pickImages(true);
       if (images && currentUser) {
         setUploading(true);
-        
+
         const uploadedImages = await uploadMultipleFiles(
-          images, 
-          currentUser.uid, 
-          'portfolio/images',
+          images,
+          currentUser.uid,
+          "portfolio/images",
           (current, total) => {
             // Progresso upload
             console.log(`Upload ${current}/${total}`);
-          }
+          },
         );
 
         if (uploadedImages.length > 0) {
           // Estrai solo gli URL dalle immagini caricate
-          const imageUrls = uploadedImages.map(img => img.url);
-          
+          const imageUrls = uploadedImages.map((img) => img.url);
+
           const updatedImages = [
             ...(userData.portfolioImages || []),
-            ...imageUrls
+            ...imageUrls,
           ];
-          
+
           await updateBarberPortfolio(currentUser.uid, {
-            portfolioImages: updatedImages
+            portfolioImages: updatedImages,
           });
-          
-          setUserData(prev => ({
+
+          setUserData((prev) => ({
             ...prev,
-            portfolioImages: updatedImages
+            portfolioImages: updatedImages,
           }));
-          
-          Alert.alert('Successo', `${uploadedImages.length} foto caricate!`);
+
+          Alert.alert("Successo", `${uploadedImages.length} foto caricate!`);
         }
       }
     } catch (error) {
-      console.error('handleAddImages error:', error);
-      Alert.alert('Errore', 'Impossibile caricare le foto: ' + (error?.message || 'Errore sconosciuto'));
+      console.error("handleAddImages error:", error);
+      Alert.alert(
+        "Errore",
+        "Impossibile caricare le foto: " +
+        (error?.message || "Errore sconosciuto"),
+      );
     } finally {
       setUploading(false);
     }
@@ -105,40 +121,44 @@ export default function BarberAccountScreen({ userData: propUserData, onLogout, 
       const videos = await pickVideos(true);
       if (videos && currentUser) {
         setUploading(true);
-        
+
         const uploadedVideos = await uploadMultipleFiles(
-          videos, 
-          currentUser.uid, 
-          'portfolio/videos',
+          videos,
+          currentUser.uid,
+          "portfolio/videos",
           (current, total) => {
             console.log(`Upload ${current}/${total}`);
-          }
+          },
         );
 
         if (uploadedVideos.length > 0) {
           // Estrai solo gli URL dai video caricati
-          const videoUrls = uploadedVideos.map(vid => vid.url);
-          
+          const videoUrls = uploadedVideos.map((vid) => vid.url);
+
           const updatedVideos = [
             ...(userData.portfolioVideos || []),
-            ...videoUrls
+            ...videoUrls,
           ];
-          
+
           await updateBarberPortfolio(currentUser.uid, {
-            portfolioVideos: updatedVideos
+            portfolioVideos: updatedVideos,
           });
-          
-          setUserData(prev => ({
+
+          setUserData((prev) => ({
             ...prev,
-            portfolioVideos: updatedVideos
+            portfolioVideos: updatedVideos,
           }));
-          
-          Alert.alert('Successo', `${uploadedVideos.length} video caricati!`);
+
+          Alert.alert("Successo", `${uploadedVideos.length} video caricati!`);
         }
       }
     } catch (error) {
-      console.error('handleAddVideos error:', error);
-      Alert.alert('Errore', 'Impossibile caricare i video: ' + (error?.message || 'Errore sconosciuto'));
+      console.error("handleAddVideos error:", error);
+      Alert.alert(
+        "Errore",
+        "Impossibile caricare i video: " +
+        (error?.message || "Errore sconosciuto"),
+      );
     } finally {
       setUploading(false);
     }
@@ -146,126 +166,135 @@ export default function BarberAccountScreen({ userData: propUserData, onLogout, 
 
   const removeMedia = async (index, type) => {
     try {
-      const isImage = type === 'image';
-      const mediaArray = isImage ? userData.portfolioImages : userData.portfolioVideos;
+      const isImage = type === "image";
+      const mediaArray = isImage
+        ? userData.portfolioImages
+        : userData.portfolioVideos;
       const updatedArray = mediaArray.filter((_, i) => i !== index);
-      
-      const updateData = isImage 
+
+      const updateData = isImage
         ? { portfolioImages: updatedArray }
         : { portfolioVideos: updatedArray };
-      
+
       await updateBarberPortfolio(currentUser.uid, updateData);
-      
-      setUserData(prev => ({
+
+      setUserData((prev) => ({
         ...prev,
-        ...updateData
+        ...updateData,
       }));
-      
-      Alert.alert('Successo', `${isImage ? 'Foto' : 'Video'} rimosso!`);
+
+      Alert.alert("Successo", `${isImage ? "Foto" : "Video"} rimosso!`);
     } catch (error) {
-      Alert.alert('Errore', 'Impossibile rimuovere il file');
+      Alert.alert("Errore", "Impossibile rimuovere il file");
     }
   };
 
   const handleLogout = async () => {
-    Alert.alert(
-      'Disconnessione',
-      'Sei sicuro di voler uscire?',
-      [
-        { text: 'Annulla', style: 'cancel' },
-        { 
-          text: 'Esci', 
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await logoutUser();
-              onLogout();
-            } catch (error) {
-              Alert.alert('Errore', 'Impossibile disconnettersi');
-            }
+    Alert.alert("Disconnessione", "Sei sicuro di voler uscire?", [
+      { text: "Annulla", style: "cancel" },
+      {
+        text: "Esci",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            await logoutUser();
+            onLogout();
+          } catch (error) {
+            Alert.alert("Errore", "Impossibile disconnettersi");
           }
-        }
-      ]
-    );
+        },
+      },
+    ]);
   };
 
   const addServiceToPrice = async () => {
     if (!newService.name.trim() || !newService.price.trim()) {
-      Alert.alert('Errore', 'Inserisci nome del servizio e prezzo');
+      Alert.alert("Errore", "Inserisci nome del servizio e prezzo");
       return;
     }
 
     try {
-      console.log('addServiceToPrice: Adding service:', newService);
-      
+      console.log("addServiceToPrice: Adding service:", newService);
+
       const currentPriceList = userData.listinoPrezzo || [];
-      console.log('addServiceToPrice: Current price list:', currentPriceList);
-      
+      console.log("addServiceToPrice: Current price list:", currentPriceList);
+
       const newServiceItem = {
         id: Date.now().toString(),
         name: newService.name.trim(),
         price: parseFloat(newService.price).toFixed(2),
-        addedAt: new Date().toISOString()
+        addedAt: new Date().toISOString(),
       };
-      
-      const updatedPriceList = [
-        ...currentPriceList,
-        newServiceItem
-      ];
-      
-      console.log('addServiceToPrice: Updated price list:', updatedPriceList);
+
+      const updatedPriceList = [...currentPriceList, newServiceItem];
+
+      console.log("addServiceToPrice: Updated price list:", updatedPriceList);
 
       await updateBarberPortfolio(currentUser.uid, {
-        listinoPrezzo: updatedPriceList
+        listinoPrezzo: updatedPriceList,
       });
 
-      setUserData(prev => ({
+      setUserData((prev) => ({
         ...prev,
-        listinoPrezzo: updatedPriceList
+        listinoPrezzo: updatedPriceList,
       }));
 
-      setNewService({ name: '', price: '' });
+      setNewService({ name: "", price: "" });
       setShowPriceModal(false);
-      Alert.alert('Successo', 'Servizio aggiunto al listino!');
+      Alert.alert("Successo", "Servizio aggiunto al listino!");
     } catch (error) {
-      console.error('addServiceToPrice: Error:', error);
-      Alert.alert('Errore', 'Impossibile aggiungere il servizio: ' + error.message);
+      console.error("addServiceToPrice: Error:", error);
+      Alert.alert(
+        "Errore",
+        "Impossibile aggiungere il servizio: " + error.message,
+      );
     }
   };
 
   const removeServiceFromPrice = async (serviceId) => {
     Alert.alert(
-      'Rimuovi servizio',
-      'Vuoi rimuovere questo servizio dal listino?',
+      "Rimuovi servizio",
+      "Vuoi rimuovere questo servizio dal listino?",
       [
-        { text: 'Annulla', style: 'cancel' },
+        { text: "Annulla", style: "cancel" },
         {
-          text: 'Rimuovi',
-          style: 'destructive',
+          text: "Rimuovi",
+          style: "destructive",
           onPress: async () => {
             try {
-              console.log('removeServiceFromPrice: Removing service:', serviceId);
-              
-              const updatedPriceList = userData.listinoPrezzo.filter(service => service.id !== serviceId);
-              console.log('removeServiceFromPrice: Updated list:', updatedPriceList);
-              
+              console.log(
+                "removeServiceFromPrice: Removing service:",
+                serviceId,
+              );
+
+              const updatedPriceList = userData.listinoPrezzo.filter(
+                (service) => service.id !== serviceId,
+              );
+              console.log(
+                "removeServiceFromPrice: Updated list:",
+                updatedPriceList,
+              );
+
               await updateBarberPortfolio(currentUser.uid, {
-                listinoPrezzo: updatedPriceList
+                listinoPrezzo: updatedPriceList,
               });
 
-              setUserData(prev => ({
+              setUserData((prev) => ({
                 ...prev,
-                listinoPrezzo: updatedPriceList
+                listinoPrezzo: updatedPriceList,
               }));
 
-              Alert.alert('Successo', 'Servizio rimosso dal listino');
+              Alert.alert("Successo", "Servizio rimosso dal listino");
             } catch (error) {
-              console.error('removeServiceFromPrice: Error:', error);
-              Alert.alert('Errore', 'Impossibile rimuovere il servizio: ' + error.message);
+              console.error("removeServiceFromPrice: Error:", error);
+              Alert.alert(
+                "Errore",
+                "Impossibile rimuovere il servizio: " + error.message,
+              );
             }
-          }
-        }
-      ]
+          },
+        },
+      ],
     );
   };
 
@@ -278,48 +307,51 @@ export default function BarberAccountScreen({ userData: propUserData, onLogout, 
 
   const updateService = async () => {
     if (!newService.name.trim() || !newService.price.trim()) {
-      Alert.alert('Errore', 'Inserisci nome del servizio e prezzo');
+      Alert.alert("Errore", "Inserisci nome del servizio e prezzo");
       return;
     }
 
     try {
-      console.log('updateService: Updating service:', editingService.id);
-      
-      const updatedPriceList = userData.listinoPrezzo.map(service => 
-        service.id === editingService.id 
+      console.log("updateService: Updating service:", editingService.id);
+
+      const updatedPriceList = userData.listinoPrezzo.map((service) =>
+        service.id === editingService.id
           ? {
-              ...service,
-              name: newService.name.trim(),
-              price: parseFloat(newService.price).toFixed(2),
-              updatedAt: new Date().toISOString()
-            }
-          : service
+            ...service,
+            name: newService.name.trim(),
+            price: parseFloat(newService.price).toFixed(2),
+            updatedAt: new Date().toISOString(),
+          }
+          : service,
       );
-      
-      console.log('updateService: Updated list:', updatedPriceList);
+
+      console.log("updateService: Updated list:", updatedPriceList);
 
       await updateBarberPortfolio(currentUser.uid, {
-        listinoPrezzo: updatedPriceList
+        listinoPrezzo: updatedPriceList,
       });
 
-      setUserData(prev => ({
+      setUserData((prev) => ({
         ...prev,
-        listinoPrezzo: updatedPriceList
+        listinoPrezzo: updatedPriceList,
       }));
 
-      setNewService({ name: '', price: '' });
+      setNewService({ name: "", price: "" });
       setEditingService(null);
       setIsEditing(false);
       setShowPriceModal(false);
-      Alert.alert('Successo', 'Servizio aggiornato!');
+      Alert.alert("Successo", "Servizio aggiornato!");
     } catch (error) {
-      console.error('updateService: Error:', error);
-      Alert.alert('Errore', 'Impossibile aggiornare il servizio: ' + error.message);
+      console.error("updateService: Error:", error);
+      Alert.alert(
+        "Errore",
+        "Impossibile aggiornare il servizio: " + error.message,
+      );
     }
   };
 
   const cancelEdit = () => {
-    setNewService({ name: '', price: '' });
+    setNewService({ name: "", price: "" });
     setEditingService(null);
     setIsEditing(false);
     setShowPriceModal(false);
@@ -327,16 +359,16 @@ export default function BarberAccountScreen({ userData: propUserData, onLogout, 
 
   const goToEditProfile = () => {
     if (navigate) {
-      navigate('EditBarberProfile', {
+      navigate("EditBarberProfile", {
         userId: userData?.id || auth.currentUser?.uid,
         currentUserData: userData,
       });
     } else {
-      Alert.alert('Navigazione', 'Modifica profilo non disponibile.');
+      Alert.alert("Navigazione", "Modifica profilo non disponibile.");
     }
   };
-  
-  const toggleMenu = () => setMenuOpen(prev => !prev);
+
+  const toggleMenu = () => setMenuOpen((prev) => !prev);
   const closeMenu = () => setMenuOpen(false);
 
   const handleProfileImageUpload = async () => {
@@ -349,35 +381,39 @@ export default function BarberAccountScreen({ userData: propUserData, onLogout, 
         if (picked?.uri) {
           setLocalProfileUri(picked.uri);
         }
-        
+
         const uploadedImages = await uploadMultipleFiles(
-          [picked], 
-          currentUser.uid, 
-          'profile',
+          [picked],
+          currentUser.uid,
+          "profile",
           (current, total) => {
             console.log(`Upload immagine profilo ${current}/${total}`);
-          }
+          },
         );
 
         if (uploadedImages.length > 0) {
           const imageUrl = uploadedImages[0].url;
-          
+
           await updateBarberPortfolio(currentUser.uid, {
-            profileImage: imageUrl
+            profileImage: imageUrl,
           });
-          
-          setUserData(prev => ({
+
+          setUserData((prev) => ({
             ...prev,
-            profileImage: imageUrl
+            profileImage: imageUrl,
           }));
           setLocalProfileUri(null);
-          
-          Alert.alert('Successo', 'Immagine profilo aggiornata!');
+
+          Alert.alert("Successo", "Immagine profilo aggiornata!");
         }
       }
     } catch (error) {
-      console.error('handleProfileImageUpload error:', error);
-      Alert.alert('Errore', 'Impossibile caricare l\'immagine profilo: ' + (error?.message || 'Errore sconosciuto'));
+      console.error("handleProfileImageUpload error:", error);
+      Alert.alert(
+        "Errore",
+        "Impossibile caricare l'immagine profilo: " +
+        (error?.message || "Errore sconosciuto"),
+      );
     } finally {
       setUploadingProfileImage(false);
     }
@@ -397,7 +433,6 @@ export default function BarberAccountScreen({ userData: propUserData, onLogout, 
     <SafeAreaView style={styles.container}>
       <ScrollView style={styles.scrollView}>
         <View style={styles.content}>
-          
           {/* Header Account */}
           <View style={styles.header}>
             <TouchableOpacity
@@ -411,14 +446,31 @@ export default function BarberAccountScreen({ userData: propUserData, onLogout, 
             </TouchableOpacity>
             {menuOpen && (
               <>
-                <TouchableOpacity style={styles.headerOverlay} onPress={closeMenu} />
+                <TouchableOpacity
+                  style={styles.headerOverlay}
+                  onPress={closeMenu}
+                />
                 <View style={styles.menuContainer}>
-                  <TouchableOpacity style={styles.menuItem} onPress={() => { closeMenu(); goToEditProfile(); }}>
+                  <TouchableOpacity
+                    style={styles.menuItem}
+                    onPress={() => {
+                      closeMenu();
+                      goToEditProfile();
+                    }}
+                  >
                     <Text style={styles.menuItemText}>Modifica profilo</Text>
                   </TouchableOpacity>
                   <View style={styles.menuDivider} />
-                  <TouchableOpacity style={styles.menuItem} onPress={() => { closeMenu(); handleProfileImageUpload(); }}>
-                    <Text style={styles.menuItemText}>Cambia immagine profilo</Text>
+                  <TouchableOpacity
+                    style={styles.menuItem}
+                    onPress={() => {
+                      closeMenu();
+                      handleProfileImageUpload();
+                    }}
+                  >
+                    <Text style={styles.menuItemText}>
+                      Cambia immagine profilo
+                    </Text>
                   </TouchableOpacity>
                   {/*<View style={styles.menuDivider} />
                   <TouchableOpacity style={styles.menuItem} onPress={() => { closeMenu(); handleLogout(); }}>
@@ -434,17 +486,22 @@ export default function BarberAccountScreen({ userData: propUserData, onLogout, 
                 onPress={handleProfileImageUpload}
                 disabled={uploadingProfileImage}
               >
-                {(localProfileUri || userData?.profileImage) ? (
-                  <Image source={{ uri: localProfileUri || userData.profileImage }} style={styles.profileImage} />
+                {localProfileUri || userData?.profileImage ? (
+                  <Image
+                    source={{ uri: localProfileUri || userData.profileImage }}
+                    style={styles.profileImage}
+                  />
                 ) : (
                   <View style={styles.profileImagePlaceholder}>
                     <Text style={styles.profileImagePlaceholderText}>
-                      {userData?.nomeSalone?.charAt(0) || 'S'}
+                      {userData?.nomeSalone?.charAt(0) || "S"}
                     </Text>
                   </View>
                 )}
                 <View style={styles.addImageButton}>
-                  <Text style={styles.addImageButtonText}>{uploadingProfileImage ? '··' : '+'}</Text>
+                  <Text style={styles.addImageButtonText}>
+                    {uploadingProfileImage ? "··" : "+"}
+                  </Text>
                 </View>
               </TouchableOpacity>
 
@@ -459,27 +516,27 @@ export default function BarberAccountScreen({ userData: propUserData, onLogout, 
           {/* Dati Salone */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Il tuo salone</Text>
-            
+
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>Nome:</Text>
               <Text style={styles.infoValue}>{userData?.nomeSalone}</Text>
             </View>
-            
+
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>Indirizzo:</Text>
               <Text style={styles.infoValue}>{userData?.via}</Text>
             </View>
-            
+
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>Telefono:</Text>
               <Text style={styles.infoValue}>{userData?.telefono}</Text>
             </View>
-            
+
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>Email contatti:</Text>
               <Text style={styles.infoValue}>{userData?.emailContatto}</Text>
             </View>
-            
+
             {userData?.sitoWeb && (
               <View style={styles.infoRow}>
                 <Text style={styles.infoLabel}>Sito web:</Text>
@@ -501,7 +558,7 @@ export default function BarberAccountScreen({ userData: propUserData, onLogout, 
           {/* Specializzazioni */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Le tue specializzazioni</Text>
-            
+
             <View style={styles.tagsContainer}>
               {userData?.tipiTaglio?.map((taglio, index) => (
                 <View key={index} style={styles.tag}>
@@ -519,23 +576,28 @@ export default function BarberAccountScreen({ userData: propUserData, onLogout, 
 
           {/* Promozione */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Posts {userData?.portfolioImages?.length || 0} </Text> 
-            
+            <Text style={styles.sectionTitle}>
+              Posts {userData?.portfolioImages?.length || 0}{" "}
+            </Text>
+
             {/* Foto Portfolio */}
             <View style={styles.portfolioSection}>
               <View style={styles.portfolioHeader}>
                 {/*<Text style={styles.portfolioTitle}> ({userData?.portfolioImages?.length || 0})</Text>*/}
-                <TouchableOpacity 
-                  style={[styles.addButton, uploading && styles.addButtonDisabled]} 
+                <TouchableOpacity
+                  style={[
+                    styles.addButton,
+                    uploading && styles.addButtonDisabled,
+                  ]}
                   onPress={handleAddImages}
                   disabled={uploading}
                 >
                   <Text style={styles.addButtonText}>
-                    {uploading ? 'Caricando...' : '+ Aggiungi'}
+                    {uploading ? "Caricando..." : "+ Aggiungi"}
                   </Text>
                 </TouchableOpacity>
               </View>
-              
+
               {userData?.portfolioImages?.length > 0 ? (
                 <FlatList
                   data={userData.portfolioImages}
@@ -545,12 +607,17 @@ export default function BarberAccountScreen({ userData: propUserData, onLogout, 
                   renderItem={({ item, index }) => (
                     <View style={styles.mediaItem}>
                       <Image
-                        source={{ uri: typeof item === "string" ? item : (item?.url ?? item?.uri) }}
+                        source={{
+                          uri:
+                            typeof item === "string"
+                              ? item
+                              : (item?.url ?? item?.uri),
+                        }}
                         style={styles.mediaPreview}
                       />
-                      <TouchableOpacity 
-                        style={styles.removeButton} 
-                        onPress={() => removeMedia(index, 'image')}
+                      <TouchableOpacity
+                        style={styles.removeButton}
+                        onPress={() => removeMedia(index, "image")}
                       >
                         <Text style={styles.removeButtonText}>✕</Text>
                       </TouchableOpacity>
@@ -559,7 +626,8 @@ export default function BarberAccountScreen({ userData: propUserData, onLogout, 
                 />
               ) : (
                 <Text style={styles.emptyPortfolioText}>
-                  Nessuna foto nel portfolio. Aggiungi foto dei tuoi lavori per attirare più clienti!
+                  Nessuna foto nel portfolio. Aggiungi foto dei tuoi lavori per
+                  attirare più clienti!
                 </Text>
               )}
             </View>
@@ -675,7 +743,6 @@ export default function BarberAccountScreen({ userData: propUserData, onLogout, 
           <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
             <Text style={styles.logoutButtonText}> Disconnetti</Text>
           </TouchableOpacity>
-
         </View>
       </ScrollView>
 
@@ -687,42 +754,45 @@ export default function BarberAccountScreen({ userData: propUserData, onLogout, 
         onRequestClose={() => setShowPriceModal(false)}
       >
         <View style={styles.modalOverlay}>
-        <View style={styles.modalContent}>
-          <Text style={styles.modalTitle}>
-            {isEditing ? 'Modifica Servizio' : 'Aggiungi Servizio'}
-          </Text>            <Text style={styles.inputLabel}>Nome del servizio</Text>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>
+              {isEditing ? "Modifica Servizio" : "Aggiungi Servizio"}
+            </Text>{" "}
+            <Text style={styles.inputLabel}>Nome del servizio</Text>
             <TextInput
               style={styles.textInput}
               value={newService.name}
-              onChangeText={(text) => setNewService(prev => ({ ...prev, name: text }))}
+              onChangeText={(text) =>
+                setNewService((prev) => ({ ...prev, name: text }))
+              }
               placeholder="es. Taglio uomo"
               placeholderTextColor="#999"
             />
-            
             <Text style={styles.inputLabel}>Prezzo (€)</Text>
             <TextInput
               style={styles.textInput}
               value={newService.price}
-              onChangeText={(text) => setNewService(prev => ({ ...prev, price: text }))}
+              onChangeText={(text) =>
+                setNewService((prev) => ({ ...prev, price: text }))
+              }
               placeholder="es. 15.00"
               placeholderTextColor="#999"
               keyboardType="decimal-pad"
             />
-            
             <View style={styles.modalButtons}>
-              <TouchableOpacity 
-                style={[styles.modalButton, styles.cancelButton]} 
+              <TouchableOpacity
+                style={[styles.modalButton, styles.cancelButton]}
                 onPress={cancelEdit}
               >
                 <Text style={styles.cancelButtonText}>Annulla</Text>
               </TouchableOpacity>
-              
-              <TouchableOpacity 
-                style={[styles.modalButton, styles.confirmButton]} 
+
+              <TouchableOpacity
+                style={[styles.modalButton, styles.confirmButton]}
                 onPress={isEditing ? updateService : addServiceToPrice}
               >
                 <Text style={styles.confirmButtonText}>
-                  {isEditing ? 'Aggiorna' : 'Aggiungi'}
+                  {isEditing ? "Aggiorna" : "Aggiungi"}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -736,7 +806,7 @@ export default function BarberAccountScreen({ userData: propUserData, onLogout, 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#ffffffff',
+    backgroundColor: "#ffffffff",
   },
   scrollView: {
     flex: 1,
@@ -746,49 +816,49 @@ const styles = StyleSheet.create({
   },
   loadingContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   loadingText: {
     fontSize: 16,
-    color: '#666',
+    color: "#666",
   },
   header: {
-    backgroundColor: 'white',
+    backgroundColor: "white",
     borderRadius: 0,
     padding: 25,
     marginBottom: 20,
-    shadowColor: '#ffffffff',
+    shadowColor: "#ffffffff",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
   },
   headerContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    width: '100%',
+    flexDirection: "row",
+    alignItems: "center",
+    width: "100%",
   },
   profileImageContainer: {
-    position: 'relative',
+    position: "relative",
     marginRight: 15,
   },
   profileImage: {
     width: 70,
     height: 70,
     borderRadius: 35,
-    backgroundColor: '#F0F0F0',
+    backgroundColor: "#F0F0F0",
   },
   profileImagePlaceholder: {
     width: 70,
     height: 70,
     borderRadius: 35,
-    backgroundColor: 'rgba(0, 188, 212, 0.35)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "rgba(0, 188, 212, 0.35)",
+    justifyContent: "center",
+    alignItems: "center",
     borderWidth: 1.5,
-    borderColor: 'rgba(255, 255, 255, 0.6)',
-    shadowColor: '#00BCD4',
+    borderColor: "rgba(255, 255, 255, 0.6)",
+    shadowColor: "#00BCD4",
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.2,
     shadowRadius: 6,
@@ -796,56 +866,56 @@ const styles = StyleSheet.create({
   },
   profileImagePlaceholderText: {
     fontSize: 28,
-    fontWeight: 'bold',
-    color: 'white',
+    fontWeight: "bold",
+    color: "white",
   },
   addImageButton: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 0,
     right: 0,
-    backgroundColor: 'rgba(0, 188, 212, 0.4)',
+    backgroundColor: "rgba(0, 188, 212, 0.4)",
     width: 24,
     height: 24,
     borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.7)',
-    shadowColor: '#00BCD4',
+    borderColor: "rgba(255, 255, 255, 0.7)",
+    shadowColor: "#00BCD4",
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.25,
     shadowRadius: 6,
     elevation: 4,
   },
   addImageButtonText: {
-    color: 'white',
+    color: "white",
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     lineHeight: 18,
   },
   salonInfo: {
     flex: 1,
-    justifyContent: 'center',
+    justifyContent: "center",
   },
   menuButton: {
-    position: 'absolute',
+    position: "absolute",
     top: 12,
     right: 12,
     width: 32,
     height: 28,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     zIndex: 3,
   },
   menuLine: {
     width: 20,
     height: 2,
-    backgroundColor: '#333',
+    backgroundColor: "#333",
     borderRadius: 2,
     marginVertical: 2,
   },
   headerOverlay: {
-    position: 'absolute',
+    position: "absolute",
     top: 0,
     left: 0,
     right: 0,
@@ -853,16 +923,16 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   menuContainer: {
-    position: 'absolute',
+    position: "absolute",
     top: 44,
     right: 10,
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    backgroundColor: "rgba(255, 255, 255, 0.9)",
     borderRadius: 18,
     paddingVertical: 6,
     minWidth: 180,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.5)',
-    shadowColor: '#000',
+    borderColor: "rgba(255, 255, 255, 0.5)",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.15,
     shadowRadius: 12,
@@ -875,37 +945,37 @@ const styles = StyleSheet.create({
   },
   menuItemText: {
     fontSize: 16,
-    color: '#333',
-    fontWeight: '500',
+    color: "#333",
+    fontWeight: "500",
   },
   menuDivider: {
     height: 1,
-    backgroundColor: '#EEE',
+    backgroundColor: "#EEE",
     marginVertical: 4,
   },
   welcomeText: {
     fontSize: 20,
-    fontWeight: '600',
-    color: '#333',
+    fontWeight: "600",
+    color: "#333",
     marginBottom: 5,
   },
   salonName: {
     fontSize: 24,
-    fontWeight: 'bold',
-    color: '#00BCD4',
+    fontWeight: "bold",
+    color: "#00BCD4",
     marginBottom: 3,
   },
   roleText: {
     fontSize: 15,
-    color: '#666',
-    fontWeight: '500',
+    color: "#666",
+    fontWeight: "500",
   },
   section: {
-    backgroundColor: 'white',
+    backgroundColor: "white",
     borderRadius: 5,
     padding: 5,
     marginBottom: 15,
-    shadowColor: '#ffffffff',
+    shadowColor: "#ffffffff",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -913,41 +983,41 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
+    fontWeight: "bold",
+    color: "#333",
     marginBottom: 15,
   },
   infoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
     marginBottom: 10,
-    alignItems: 'center',
+    alignItems: "center",
   },
   infoLabel: {
     fontSize: 16,
-    color: '#666',
+    color: "#666",
     flex: 1,
   },
   infoValue: {
     fontSize: 16,
-    color: '#333',
-    fontWeight: '500',
+    color: "#333",
+    fontWeight: "500",
     flex: 2,
-    textAlign: 'right',
+    textAlign: "right",
   },
   staffText: {
     fontSize: 16,
-    color: '#333',
-    fontStyle: 'italic',
+    color: "#333",
+    fontStyle: "italic",
     lineHeight: 22,
     marginTop: 5,
   },
   tagsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
   },
   tag: {
-    backgroundColor: '#ffffffff',
+    backgroundColor: "#ffffffff",
     borderRadius: 20,
     paddingHorizontal: 12,
     paddingVertical: 6,
@@ -955,20 +1025,20 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   tagText: {
-    color: '#00BCD4',
+    color: "#00BCD4",
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   actionButton: {
-    backgroundColor: 'rgba(0, 188, 212, 0.15)',
+    backgroundColor: "rgba(0, 188, 212, 0.15)",
     borderRadius: 16,
     padding: 15,
     marginBottom: 10,
     borderLeftWidth: 3,
-    borderLeftColor: 'rgba(0, 188, 212, 0.6)',
+    borderLeftColor: "rgba(0, 188, 212, 0.6)",
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
-    shadowColor: '#00BCD4',
+    borderColor: "rgba(255, 255, 255, 0.3)",
+    shadowColor: "#00BCD4",
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.15,
     shadowRadius: 6,
@@ -976,85 +1046,85 @@ const styles = StyleSheet.create({
   },
   actionButtonText: {
     fontSize: 16,
-    color: '#00BCD4',
-    fontWeight: '600',
+    color: "#00BCD4",
+    fontWeight: "600",
   },
   logoutButton: {
-    backgroundColor: 'rgba(255, 107, 107, 0.25)',
+    backgroundColor: "rgba(255, 107, 107, 0.25)",
     borderRadius: 18,
     padding: 18,
-    alignItems: 'center',
+    alignItems: "center",
     marginTop: 20,
     borderWidth: 1.5,
-    borderColor: 'rgba(255, 255, 255, 0.4)',
-    shadowColor: '#FF6B6B',
+    borderColor: "rgba(255, 255, 255, 0.4)",
+    shadowColor: "#FF6B6B",
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.25,
     shadowRadius: 10,
     elevation: 6,
   },
   logoutButtonText: {
-    color: '#FF6B6B',
+    color: "#FF6B6B",
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   portfolioSection: {
     marginBottom: 20,
   },
   portfolioHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 15,
   },
   portfolioTitle: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
+    fontWeight: "600",
+    color: "#333",
     flex: 1,
   },
   addButton: {
-    backgroundColor: 'rgba(0, 188, 212, 0.3)',
+    backgroundColor: "rgba(0, 188, 212, 0.3)",
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 16,
     borderWidth: 1.5,
-    borderColor: 'rgba(255, 255, 255, 0.5)',
-    shadowColor: '#00BCD4',
+    borderColor: "rgba(255, 255, 255, 0.5)",
+    shadowColor: "#00BCD4",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 8,
     elevation: 5,
   },
   addButtonDisabled: {
-    backgroundColor: 'rgba(200, 200, 200, 0.2)',
-    borderColor: 'rgba(200, 200, 200, 0.3)',
+    backgroundColor: "rgba(200, 200, 200, 0.2)",
+    borderColor: "rgba(200, 200, 200, 0.3)",
   },
   addButtonText: {
-    color: '#00BCD4',
+    color: "#00BCD4",
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   mediaItem: {
     marginRight: 15,
-    position: 'relative',
+    position: "relative",
   },
   mediaPreview: {
     width: 100,
     height: 100,
     borderRadius: 10,
-    backgroundColor: '#F0F0F0',
+    backgroundColor: "#F0F0F0",
   },
   videoPreview: {
     width: 100,
     height: 100,
     borderRadius: 10,
-    backgroundColor: '#E8F8F5',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "#E8F8F5",
+    justifyContent: "center",
+    alignItems: "center",
     borderWidth: 2,
-    borderColor: '#00BCD4',
-    borderStyle: 'dashed',
+    borderColor: "#00BCD4",
+    borderStyle: "dashed",
   },
   videoIcon: {
     fontSize: 24,
@@ -1062,32 +1132,32 @@ const styles = StyleSheet.create({
   },
   videoText: {
     fontSize: 12,
-    color: '#00BCD4',
-    fontWeight: '600',
+    color: "#00BCD4",
+    fontWeight: "600",
   },
   removeButton: {
-    position: 'absolute',
+    position: "absolute",
     top: -5,
     right: -5,
-    backgroundColor: '#FF6B6B',
+    backgroundColor: "#FF6B6B",
     borderRadius: 12,
     width: 24,
     height: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   removeButtonText: {
-    color: 'white',
+    color: "white",
     fontSize: 14,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   emptyPortfolioText: {
     fontSize: 14,
-    color: '#999',
-    fontStyle: 'italic',
-    textAlign: 'center',
+    color: "#999",
+    fontStyle: "italic",
+    textAlign: "center",
     padding: 20,
-    backgroundColor: '#F8F8F8',
+    backgroundColor: "#F8F8F8",
     borderRadius: 10,
   },
   // Stili Listino Prezzi
@@ -1095,14 +1165,14 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   priceItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: '#fff',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    backgroundColor: "#fff",
     padding: 15,
     marginBottom: 8,
     borderRadius: 10,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
@@ -1113,66 +1183,66 @@ const styles = StyleSheet.create({
   },
   serviceName: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#000',
+    fontWeight: "600",
+    color: "#000",
     marginBottom: 2,
   },
   servicePrice: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#00BCD4',
+    fontWeight: "bold",
+    color: "#00BCD4",
   },
   serviceButtons: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
   },
   editServiceButton: {
-    backgroundColor: 'rgba(33, 150, 243, 0.3)',
+    backgroundColor: "rgba(33, 150, 243, 0.3)",
     borderRadius: 15,
     width: 30,
     height: 30,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     borderWidth: 1.2,
-    borderColor: 'rgba(33, 150, 243, 0.5)',
+    borderColor: "rgba(33, 150, 243, 0.5)",
   },
   editServiceText: {
     fontSize: 14,
   },
   removeServiceButton: {
-    backgroundColor: 'rgba(255, 82, 82, 0.3)',
+    backgroundColor: "rgba(255, 82, 82, 0.3)",
     borderRadius: 15,
     width: 30,
     height: 30,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     marginLeft: 10,
     borderWidth: 1.2,
-    borderColor: 'rgba(255, 82, 82, 0.5)',
+    borderColor: "rgba(255, 82, 82, 0.5)",
   },
   removeServiceText: {
-    color: '#FF5252',
+    color: "#FF5252",
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   // Stili Modal
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
   },
   modalContent: {
-    backgroundColor: 'rgba(255, 255, 255, 0.85)',
+    backgroundColor: "rgba(255, 255, 255, 0.85)",
     borderRadius: 30,
     padding: 25,
     margin: 20,
-    width: '90%',
+    width: "90%",
     maxWidth: 400,
     borderWidth: 1.5,
-    borderColor: 'rgba(255, 255, 255, 0.6)',
-    shadowColor: '#000',
+    borderColor: "rgba(255, 255, 255, 0.6)",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.2,
     shadowRadius: 20,
@@ -1180,30 +1250,30 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: 20,
-    fontWeight: 'bold',
-    color: '#000',
-    textAlign: 'center',
+    fontWeight: "bold",
+    color: "#000",
+    textAlign: "center",
     marginBottom: 20,
   },
   inputLabel: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#000',
+    fontWeight: "600",
+    color: "#000",
     marginBottom: 5,
     marginTop: 15,
   },
   textInput: {
-    backgroundColor: 'rgba(248, 248, 248, 0.6)',
+    backgroundColor: "rgba(248, 248, 248, 0.6)",
     borderRadius: 14,
     padding: 15,
     fontSize: 16,
-    color: '#000',
+    color: "#000",
     borderWidth: 1.5,
-    borderColor: 'rgba(0, 188, 212, 0.2)',
+    borderColor: "rgba(0, 188, 212, 0.2)",
   },
   modalButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
     marginTop: 25,
     gap: 15,
   },
@@ -1211,26 +1281,26 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 15,
     borderRadius: 10,
-    alignItems: 'center',
+    alignItems: "center",
   },
   cancelButton: {
-    backgroundColor: 'rgba(245, 245, 245, 0.6)',
+    backgroundColor: "rgba(245, 245, 245, 0.6)",
     borderWidth: 1.5,
-    borderColor: 'rgba(0, 188, 212, 0.3)',
+    borderColor: "rgba(0, 188, 212, 0.3)",
   },
   confirmButton: {
-    backgroundColor: 'rgba(0, 188, 212, 0.35)',
+    backgroundColor: "rgba(0, 188, 212, 0.35)",
     borderWidth: 1.5,
-    borderColor: 'rgba(0, 188, 212, 0.7)',
+    borderColor: "rgba(0, 188, 212, 0.7)",
   },
   cancelButtonText: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#666',
+    fontWeight: "600",
+    color: "#666",
   },
   confirmButtonText: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#00BCD4',
+    fontWeight: "600",
+    color: "#00BCD4",
   },
 });

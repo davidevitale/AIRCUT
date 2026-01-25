@@ -1,8 +1,8 @@
 import React from 'react';
-import { 
-  StyleSheet, 
-  Text, 
-  View, 
+import {
+  StyleSheet,
+  Text,
+  View,
   ScrollView,
   Image,
   TouchableOpacity,
@@ -10,18 +10,18 @@ import {
 } from 'react-native';
 import { logoutUser } from '../services/authService';
 
-const logoAccount = require('../assets/icons8-user-96.png');
+const logoAccount = require('../../assets/icons8-user-96.png');
 
 const AccountScreen = ({ onLogout }) => {
-  
+
   const handleLogout = async () => {
     Alert.alert(
       'Disconnessione',
       'Sei sicuro di voler uscire?',
       [
         { text: 'Annulla', style: 'cancel' },
-        { 
-          text: 'Esci', 
+        {
+          text: 'Esci',
           style: 'destructive',
           onPress: async () => {
             try {
@@ -44,15 +44,15 @@ const AccountScreen = ({ onLogout }) => {
         <Text style={styles.emptyDescription}>
           Gestisci il tuo account, impostazioni e preferenze
         </Text>
-        
+
         {/* Pulsante di logout temporaneo */}
-        <TouchableOpacity 
-          style={styles.logoutButton} 
+        <TouchableOpacity
+          style={styles.logoutButton}
           onPress={handleLogout}
         >
           <Text style={styles.logoutText}> Disconnetti</Text>
         </TouchableOpacity>
-        
+
         <Text style={styles.debugText}>
           DEBUG: Se vedi questa schermata, il sistema non ha riconosciuto il tuo ruolo
         </Text>

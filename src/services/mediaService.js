@@ -1,7 +1,7 @@
 import { ref, uploadString, getDownloadURL } from "firebase/storage";
 import * as FileSystem from "expo-file-system";
 import * as ImagePicker from "expo-image-picker";
-import { storage } from "../config/firebase";
+import { storage } from '../../config/firebase';
 
 console.log("✅ mediaService.js caricato (NO BLOB + MediaType)", new Date().toISOString());
 
@@ -173,7 +173,7 @@ export const uploadFile = async (uri, fileName, userId, folder = "portfolio", co
 /* -------------------------------------------------------
    UPLOAD MULTIPLI (sequenziale)
 ------------------------------------------------------- */
-export const uploadMultipleFiles = async (files, userId, folder = "portfolio", onProgress = () => {}) => {
+export const uploadMultipleFiles = async (files, userId, folder = "portfolio", onProgress = () => { }) => {
   try {
     if (!Array.isArray(files) || files.length === 0) return [];
 

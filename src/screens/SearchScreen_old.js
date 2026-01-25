@@ -4,8 +4,8 @@ import {
   Image, FlatList, ActivityIndicator, Alert, Keyboard
 } from 'react-native';
 import { smartSearch, parseHashtagsFromCaption } from '../services/authService';
-import PostGrid from '../components/PostGrid';
-import UserListItem from '../components/UserListItem';
+import PostGrid from '../../components/PostGrid';
+import UserListItem from '../../components/UserListItem';
 
 const SearchScreen = ({ onViewProfile, initialHashtag }) => {
   const [searchText, setSearchText] = useState(initialHashtag || '');
@@ -14,7 +14,7 @@ const SearchScreen = ({ onViewProfile, initialHashtag }) => {
   const [recentSearches, setRecentSearches] = useState([
     '#sfumato', '#barba', '#taglio', 'Barber Napoli', 'Salone Milano'
   ]);
-  
+
   const searchTimeoutRef = useRef(null);
 
   // Se viene passato un hashtag iniziale, effettua la ricerca
@@ -50,15 +50,15 @@ const SearchScreen = ({ onViewProfile, initialHashtag }) => {
     try {
       setLoading(true);
       console.log('SearchScreen: Performing search for:', searchText);
-      
+
       const results = await smartSearch(searchText.trim());
       setSearchResults(results);
-      
+
       // Aggiungi alle ricerche recenti se non è vuoto
       if (results.results.length > 0) {
         addToRecentSearches(searchText.trim());
       }
-      
+
       console.log('SearchScreen: Search completed:', results.type, results.results.length);
     } catch (error) {
       console.error('SearchScreen: Error performing search:', error);
@@ -150,14 +150,14 @@ const SearchScreen = ({ onViewProfile, initialHashtag }) => {
   const renderEmptyState = () => (
     <ScrollView style={styles.emptyContainer} showsVerticalScrollIndicator={false}>
       {renderSearchHeader()}
-      
+
       <View style={styles.emptyContent}>
         <Text style={styles.emptyIcon}>🔍</Text>
         <Text style={styles.emptyTitle}>Inizia a cercare</Text>
         <Text style={styles.emptyDescription}>
           Cerca hashtag come #sfumato o nomi di saloni come "Barber Napoli"
         </Text>
-        
+
         {/* Ricerche recenti */}
         {recentSearches.length > 0 && (
           <View style={styles.recentSearchesSection}>
@@ -178,7 +178,7 @@ const SearchScreen = ({ onViewProfile, initialHashtag }) => {
             </View>
           </View>
         )}
-        
+
         {/* Hashtag popolari */}
         <View style={styles.popularHashtagsSection}>
           <Text style={styles.sectionTitle}>Hashtag popolari</Text>
@@ -207,7 +207,7 @@ const SearchScreen = ({ onViewProfile, initialHashtag }) => {
       return (
         <View style={styles.container}>
           {renderSearchHeader()}
-          
+
           <View style={styles.resultsHeader}>
             <Text style={styles.resultsTitle}>
               Risultati per {searchResults.hashtag}
@@ -216,7 +216,7 @@ const SearchScreen = ({ onViewProfile, initialHashtag }) => {
               {searchResults.results.length} post
             </Text>
           </View>
-          
+
           <PostGrid
             posts={searchResults.results}
             onPostPress={handlePostPress}
@@ -229,7 +229,7 @@ const SearchScreen = ({ onViewProfile, initialHashtag }) => {
       return (
         <View style={styles.container}>
           {renderSearchHeader()}
-          
+
           <View style={styles.resultsHeader}>
             <Text style={styles.resultsTitle}>
               Risultati per "{searchResults.searchText}"
@@ -238,7 +238,7 @@ const SearchScreen = ({ onViewProfile, initialHashtag }) => {
               {searchResults.results.length} saloni
             </Text>
           </View>
-          
+
           <FlatList
             data={searchResults.results}
             renderItem={({ item }) => (
@@ -263,126 +263,126 @@ const SearchScreen = ({ onViewProfile, initialHashtag }) => {
 };
 
 const styles = StyleSheet.create({
-  };
+};
 
-  const renderSearchResult = ({ item }) => (
-    <TouchableOpacity 
-      style={styles.searchResultItem}
-      onPress={() => handleSelectBarber(item)}
-    >
-      <Image 
-        source={{ uri: item.portfolioImages?.[0] || 'https://via.placeholder.com/50' }}
-        style={styles.resultAvatar}
+const renderSearchResult = ({ item }) => (
+  <TouchableOpacity
+    style={styles.searchResultItem}
+    onPress={() => handleSelectBarber(item)}
+  >
+    <Image
+      source={{ uri: item.portfolioImages?.[0] || 'https://via.placeholder.com/50' }}
+      style={styles.resultAvatar}
+    />
+    <View style={styles.resultInfo}>
+      <Text style={styles.resultName}>{item.nomeSalone}</Text>
+      <Text style={styles.resultLocation}>📍 {item.via}</Text>
+      {item.nomiDipendenti && (
+        <Text style={styles.resultBarbers}>👨‍💼 {item.nomiDipendenti}</Text>
+      )}
+      <View style={styles.specialtiesContainer}>
+        {item.tipiTaglio?.slice(0, 2).map((taglio, index) => (
+          <View style={styles.specialtyTag} key={index}>
+            <Text style={styles.specialtyText}>{taglio}</Text>
+          </View>
+        ))}
+      </View>
+    </View>
+    <Text style={styles.arrowIcon}>→</Text>
+  </TouchableOpacity>
+);
+
+const renderRecentSearch = ({ item }) => (
+  <TouchableOpacity
+    style={styles.recentItem}
+    onPress={() => handleSelectBarber(item)}
+  >
+    <Text style={styles.clockIcon}>🕐</Text>
+    <View style={styles.recentInfo}>
+      <Text style={styles.recentName}>{item.nomeSalone}</Text>
+      <Text style={styles.recentLocation}>{item.via}</Text>
+    </View>
+  </TouchableOpacity>
+);
+
+return (
+  <View style={styles.container}>
+    {/* Barra di ricerca */}
+    <View style={styles.searchContainer}>
+      <Text style={styles.searchIcon}>🔍</Text>
+      <TextInput
+        style={styles.searchInput}
+        placeholder="Cerca saloni..."
+        value={searchText}
+        onChangeText={setSearchText}
+        autoCapitalize="none"
+        autoCorrect={false}
       />
-      <View style={styles.resultInfo}>
-        <Text style={styles.resultName}>{item.nomeSalone}</Text>
-        <Text style={styles.resultLocation}>📍 {item.via}</Text>
-        {item.nomiDipendenti && (
-          <Text style={styles.resultBarbers}>👨‍💼 {item.nomiDipendenti}</Text>
-        )}
-        <View style={styles.specialtiesContainer}>
-          {item.tipiTaglio?.slice(0, 2).map((taglio, index) => (
-            <View style={styles.specialtyTag} key={index}>
-              <Text style={styles.specialtyText}>{taglio}</Text>
-            </View>
-          ))}
+      {searchText.length > 0 && (
+        <TouchableOpacity
+          style={styles.clearButton}
+          onPress={() => setSearchText('')}
+        >
+          <Text style={styles.clearIcon}>✕</Text>
+        </TouchableOpacity>
+      )}
+    </View>
+
+    <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      {/* Loading */}
+      {loading && (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="small" color="#00BCD4" />
+          <Text style={styles.loadingText}>Ricerca in corso...</Text>
         </View>
-      </View>
-      <Text style={styles.arrowIcon}>→</Text>
-    </TouchableOpacity>
-  );
+      )}
 
-  const renderRecentSearch = ({ item }) => (
-    <TouchableOpacity 
-      style={styles.recentItem}
-      onPress={() => handleSelectBarber(item)}
-    >
-      <Text style={styles.clockIcon}>🕐</Text>
-      <View style={styles.recentInfo}>
-        <Text style={styles.recentName}>{item.nomeSalone}</Text>
-        <Text style={styles.recentLocation}>{item.via}</Text>
-      </View>
-    </TouchableOpacity>
-  );
-
-  return (
-    <View style={styles.container}>
-      {/* Barra di ricerca */}
-      <View style={styles.searchContainer}>
-        <Text style={styles.searchIcon}>🔍</Text>
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Cerca saloni..."
-          value={searchText}
-          onChangeText={setSearchText}
-          autoCapitalize="none"
-          autoCorrect={false}
-        />
-        {searchText.length > 0 && (
-          <TouchableOpacity 
-            style={styles.clearButton}
-            onPress={() => setSearchText('')}
-          >
-            <Text style={styles.clearIcon}>✕</Text>
-          </TouchableOpacity>
-        )}
-      </View>
-
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Loading */}
-        {loading && (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="small" color="#00BCD4" />
-            <Text style={styles.loadingText}>Ricerca in corso...</Text>
-          </View>
-        )}
-
-        {/* Risultati di ricerca */}
-        {searchText.length >= 2 && !loading && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>
-              Risultati ({searchResults.length})
-            </Text>
-            {searchResults.length > 0 ? (
-              <FlatList
-                data={searchResults}
-                renderItem={renderSearchResult}
-                keyExtractor={(item) => item.id}
-                scrollEnabled={false}
-              />
-            ) : (
-              <Text style={styles.noResultsText}>Nessun salone trovato</Text>
-            )}
-          </View>
-        )}
-
-        {/* Ricerche recenti */}
-        {searchText.length === 0 && recentSearches.length > 0 && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Ricerche recenti</Text>
+      {/* Risultati di ricerca */}
+      {searchText.length >= 2 && !loading && (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>
+            Risultati ({searchResults.length})
+          </Text>
+          {searchResults.length > 0 ? (
             <FlatList
-              data={recentSearches}
-              renderItem={renderRecentSearch}
+              data={searchResults}
+              renderItem={renderSearchResult}
               keyExtractor={(item) => item.id}
               scrollEnabled={false}
             />
-          </View>
-        )}
+          ) : (
+            <Text style={styles.noResultsText}>Nessun salone trovato</Text>
+          )}
+        </View>
+      )}
 
-        {/* Suggerimenti iniziali */}
-        {searchText.length === 0 && recentSearches.length === 0 && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>💡 Suggerimenti</Text>
-            <Text style={styles.hintText}>
-              • Cerca per nome del salone{'\n'}
-              • Usa almeno 2 caratteri{'\n'}
-              • I risultati appaiono in tempo reale
-            </Text>
-          </View>
-        )}
-      </ScrollView>
-    </View>
-  );
+      {/* Ricerche recenti */}
+      {searchText.length === 0 && recentSearches.length > 0 && (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Ricerche recenti</Text>
+          <FlatList
+            data={recentSearches}
+            renderItem={renderRecentSearch}
+            keyExtractor={(item) => item.id}
+            scrollEnabled={false}
+          />
+        </View>
+      )}
+
+      {/* Suggerimenti iniziali */}
+      {searchText.length === 0 && recentSearches.length === 0 && (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>💡 Suggerimenti</Text>
+          <Text style={styles.hintText}>
+            • Cerca per nome del salone{'\n'}
+            • Usa almeno 2 caratteri{'\n'}
+            • I risultati appaiono in tempo reale
+          </Text>
+        </View>
+      )}
+    </ScrollView>
+  </View>
+);
 };
 
 const styles = StyleSheet.create({
