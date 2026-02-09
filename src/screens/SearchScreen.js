@@ -10,8 +10,8 @@ import {
   StyleSheet,
 } from 'react-native';
 import { smartSearch } from '../services/authService';
-import PostGrid from '../../components/PostGrid';
-import UserListItem from '../../components/UserListItem';
+import PostGrid from '../components/PostGrid';
+import UserListItem from '../components/UserListItem';
 
 const SearchScreen = ({ onHashtagPress, onUserPress, onViewProfile }) => {
   const [searchText, setSearchText] = useState('');

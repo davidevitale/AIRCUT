@@ -7,12 +7,13 @@ import {
   updateEmail,
   updatePassword,
   EmailAuthProvider,
-  reauthenticateWithCredential
+  reauthenticateWithCredential,
+  deleteUser
 } from 'firebase/auth';
 import { doc, setDoc, getDoc, getDocs, collection, query, where, updateDoc, arrayUnion, arrayRemove, orderBy, limit } from 'firebase/firestore';
 import { auth, db } from '../../config/firebase';
 
-// Funzione helper per gestire errori di connessione Firebase
+// Funzione helper per gestire errori di connessione Firebase || Helper function to handle Firebase connection errors
 const handleFirebaseConnectionError = (error) => {
   console.error('Firebase connection error:', error);
 
@@ -35,7 +36,7 @@ const handleFirebaseConnectionError = (error) => {
   };
 };
 
-// Wrapper per operazioni Firebase con retry automatico
+// Wrapper per operazioni Firebase con retry automatico || Wrapper for Firebase operations with automatic retry
 const withRetry = async (operation, maxRetries = 3, delay = 1000) => {
   let lastError;
 
@@ -61,7 +62,7 @@ const withRetry = async (operation, maxRetries = 3, delay = 1000) => {
   throw lastError;
 };
 
-// Verifica unicità del nome utente
+// Verifica unicità del nome utente || Check username uniqueness
 export const checkUsernameUniqueness = async (username) => {
   try {
     return await withRetry(async () => {
@@ -96,7 +97,7 @@ export const checkUsernameUniqueness = async (username) => {
   }
 };
 
-// Gestione Like per Portfolio Images
+// Gestione Like per Portfolio Images || Like Management for Portfolio Images
 export const addPortfolioImageLike = async (userId, imageId, imageData) => {
   try {
     const imageDocRef = doc(db, 'portfolioImages', imageId);
@@ -115,7 +116,7 @@ export const addPortfolioImageLike = async (userId, imageId, imageData) => {
         });
       }
     } else {
-      // Crea nuovo documento
+      // Crea nuovo documento && Create new document
       await setDoc(imageDocRef, {
         imageUrl: imageData.imageUrl,
         barberId: imageData.barberId,
@@ -314,110 +315,130 @@ export const getUserByName = async (username) => {
 
 // Registrazione Cliente
 export const registerClient = async (userData) => {
+  let createdUser = null; // ✅ declared safely
+
   try {
     // Verifica unicità del nome utente (solo se fornito)
-    if (userData.nomeUtente) {
-      const isUnique = await checkUsernameUniqueness(userData.nomeUtente);
+    if (userData.email) {
+      const isUnique = await checkUsernameUniqueness(userData.email);
       if (!isUnique) {
-        throw new Error('Nome utente già esistente. Scegli un nome diverso.');
+        console.log('isUnique')
+        throw new Error('emailAlreadyExist');
       }
     }
 
-    // Crea account Firebase Auth
+    // Create account Firebase Auth
     const { user } = await createUserWithEmailAndPassword(
       auth,
       userData.email,
       userData.password
     );
 
-    // Costruisci l'oggetto con SOLO i campi forniti
-    const clientData = {
-      role: 'client',
-      roleCode: 0, // 0 per client
-      createdAt: new Date().toISOString(),
-    };
+    createdUser = user; // 🔑 save reference
+    const {
+      password,
+      confirmPassword,
+      ...safeUserData
+    } = userData;
 
-    // Aggiungi solo i campi che sono stati forniti (non undefined)
-    if (userData.email) clientData.email = userData.email;
-    if (userData.sesso) clientData.sesso = userData.sesso;
-    if (userData.nomeUtente) clientData.nomeUtente = userData.nomeUtente;
-    if (userData.preferenzaTaglio && userData.preferenzaTaglio.length > 0) {
-      clientData.preferenzaTaglio = userData.preferenzaTaglio;
-    }
-
+    // return console.log(JSON.stringify(userData, null, 2))
     // Salva dati specifici del cliente in Firestore
-    await setDoc(doc(db, 'clients', user.uid), clientData);
+    await setDoc(doc(db, 'clients', user.uid), safeUserData);
 
     return { user, role: 'client' };
   } catch (error) {
-    // Gestisci errori specifici di Firebase
-    let errorMessage = error.message;
-
-    if (error.code === 'auth/email-already-in-use') {
-      errorMessage = 'Questa email è già registrata. Prova a fare il login o usa un\'altra email.';
-    } else if (error.code === 'auth/weak-password') {
-      errorMessage = 'La password è troppo debole. Deve essere di almeno 6 caratteri.';
-    } else if (error.code === 'auth/invalid-email') {
-      errorMessage = 'L\'indirizzo email non è valido.';
-    } else if (error.code === 'auth/operation-not-allowed') {
-      errorMessage = 'Registrazione non permessa. Contatta il supporto.';
+    // 🔥 ROLLBACK
+    if (createdUser) {
+      try {
+        await deleteUser(createdUser);
+        console.log('🧹 Auth user rolled back');
+      } catch (deleteError) {
+        console.error('❌ Failed to rollback user:', deleteError);
+      }
     }
 
-    throw new Error(errorMessage);
+    let errorKey = error.message;
+
+    if (error.code === 'auth/email-already-in-use') {
+      console.log(error.code)
+      errorKey = 'emailAlreadyExist';
+    } else if (error.code === 'auth/weak-password') {
+      errorKey = 'passwordWeak';
+    } else if (error.code === 'auth/invalid-email') {
+      errorKey = 'invaildEmail';
+    } else if (error.code === 'auth/operation-not-allowed') {
+      errorKey = 'notAllowed';
+    }
+
+    throw new Error(errorKey);
   }
 };
 
 // Registrazione Parrucchiere
 export const registerBarber = async (userData) => {
+  let createdUser = null; // ✅ declared safely
+
   try {
-    // Verifica unicità del nome salone
-    const isUnique = await checkUsernameUniqueness(userData.nomeSalone);
+    const isUnique = await checkUsernameUniqueness(userData.salonName);
     if (!isUnique) {
-      throw new Error('Nome salone già esistente. Scegli un nome diverso.');
+      throw new Error('salonNameExists');
     }
 
-    // Crea account Firebase Auth
     const { user } = await createUserWithEmailAndPassword(
       auth,
       userData.email,
       userData.password
     );
+    createdUser = user; // 🔑 save reference
 
-    // Salva dati specifici del parrucchiere in Firestore
+
     await setDoc(doc(db, 'barbers', user.uid), {
       email: userData.email,
-      nomeSalone: userData.nomeSalone,
-      nomiDipendenti: userData.nomiDipendenti,
-      via: userData.via,
-      tipiTaglio: userData.tipiTaglio, // array specializzazioni
-      telefono: userData.telefono,
-      sitoWeb: userData.sitoWeb,
-      emailContatto: userData.emailContatto,
-      portfolioImages: userData.portfolioImages || [], // media opzionali
+      firstName: userData.firstName,
+      lastName: userData.lastName,
+      salonName: userData.salonName,
+      address: userData.salonAddress,
+      typesCut: userData.typesCut,
+      telephone: userData.phoneNumber,
+      website: userData.website,
+      emailContact: userData.contactEmail,
+      liabilityAccepted: userData.termsService,
+      termsAccepted: userData.termsService,
+      portfolioImages: userData.portfolioImages || [],
       portfolioVideos: userData.portfolioVideos || [],
       role: 'barber',
-      roleCode: 1, // 1 per barber
-      createdAt: new Date().toISOString(),
+      accountType: 'barber',
+      roleCode: 1,
+      createdAt: userData.createdAt || new Date().toISOString(),
     });
 
     return { user, role: 'barber' };
   } catch (error) {
-    // Gestisci errori specifici di Firebase
-    let errorMessage = error.message;
+    // 🔥 ROLLBACK
+    if (createdUser) {
+      try {
+        await deleteUser(createdUser);
+        console.log('🧹 Auth user rolled back');
+      } catch (deleteError) {
+        console.error('❌ Failed to rollback user:', deleteError);
+      }
+    }
+    let errorKey = error.message;
 
     if (error.code === 'auth/email-already-in-use') {
-      errorMessage = 'Questa email è già registrata. Prova a fare il login o usa un\'altra email.';
+      errorKey = 'emailAlreadyExist';
     } else if (error.code === 'auth/weak-password') {
-      errorMessage = 'La password è troppo debole. Deve essere di almeno 6 caratteri.';
+      errorKey = 'passwordWeak';
     } else if (error.code === 'auth/invalid-email') {
-      errorMessage = 'L\'indirizzo email non è valido.';
+      errorKey = 'invalidEmail';
     } else if (error.code === 'auth/operation-not-allowed') {
-      errorMessage = 'Registrazione non permessa. Contatta il supporto.';
+      errorKey = 'notAllowed';
     }
 
-    throw new Error(errorMessage);
+    throw new Error(errorKey);
   }
 };
+
 
 // Login universale
 export const loginUser = async (email, password) => {
@@ -469,9 +490,10 @@ export const logoutUser = async () => {
   }
 };
 
-// Observer per stato autenticazione
+// Observer per stato autenticazione || Observer for authentication status
 export const onAuthStateChange = (callback) => {
   return onAuthStateChanged(auth, async (user) => {
+    console.log('onAuthStateChanged', auth)
     console.log('onAuthStateChanged called with user:', user ? user.email : null);
     if (user) {
       // Utente loggato, recupera i dati

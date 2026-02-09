@@ -21,7 +21,7 @@ import {
   togglePostLike,
   getCurrentUserData,
   parseHashtagsFromCaption,
-} from "../src/services/authService";
+} from "../services/authService";
 
 // Componente Cuore SVG Instagram-style
 const HeartIcon = ({ size = 24, filled = false, color = "#262626" }) => (

@@ -1,4 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { router } from "expo-router";
 import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -6,14 +7,16 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
+  Animated,
   Dimensions,
 } from "react-native";
-import Animated from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { db } from "../../../config/firebase";
+import { collection, doc, getDocs, updateDoc } from "firebase/firestore";
 
 const { width, height } = Dimensions.get("window");
 
-export default function RoleSelectionScreen({ onRoleSelected }) {
+export default function RoleSelectionScreen({ }) {
   const [selectedRole, setSelectedRole] = useState(null);
   const scaleAnim = new Animated.Value(1);
   const { t, i18n } = useTranslation();
@@ -22,14 +25,89 @@ export default function RoleSelectionScreen({ onRoleSelected }) {
   const handlePress = (role) => {
     setSelectedRole(role);
 
-    // Ritardo per mostrare la selezione & Delay to show selection
+    // Animazione di feedback
+    Animated.sequence([
+      Animated.timing(scaleAnim, {
+        toValue: 0.95,
+        duration: 100,
+        useNativeDriver: true,
+      }),
+      Animated.timing(scaleAnim, {
+        toValue: 1,
+        duration: 100,
+        useNativeDriver: true,
+      }),
+    ]).start();
+
+    // Ritardo per mostrare la selezione
     setTimeout(() => {
-      onRoleSelected(role);
+      router.navigate(`/auth/LoginScreen?role=${role}`);
+      // onRoleSelected(role);
     }, 200);
   };
   const changeLanguage = async (lang) => {
     await AsyncStorage.setItem("language", lang);
     i18n.changeLanguage(lang);
+  };
+
+
+
+  const TAG_LABELS = {
+    bob: { en: "Bob", it: "Caschetto" },
+    balayage: { en: "Balayage", it: "Balayage" },
+    barba: { en: "Beard", it: "Barba" },
+    blonde: { en: "Blonde", it: "Biondo" },
+    frangia: { en: "Fringe", it: "Frangia" },
+    riccio: { en: "Curly", it: "Riccio" },
+    liscio: { en: "Straight", it: "Liscio" },
+    mosso: { en: "Wavy", it: "Mosso" },
+    sposa: { en: "Bride", it: "Sposa" },
+    taglio_lungo: { en: "Long Cut", it: "Taglio Lungo" },
+    vivid_colors: { en: "Vivid Colors", it: "Colori Vividi" },
+
+    // male_unisex
+    afro: { en: "Afro", it: "Afro" },
+    burst_fade: { en: "Burst Fade", it: "Burst Fade" },
+    edgar_cut: { en: "Edgar Cut", it: "Taglio Edgar" },
+    high_fade: { en: "High Fade", it: "Sfumatura Alta" },
+    low_fade: { en: "Low Fade", it: "Sfumatura Bassa" },
+    mid_fade: { en: "Mid Fade", it: "Sfumatura Media" },
+    middle_part: { en: "Middle Part", it: "Riga Centrale" },
+    side_part: { en: "Side Part", it: "Riga Laterale" },
+    slick_back: { en: "Slick Back", it: "Pettinato Indietro" },
+    taper_fade: { en: "Taper Fade", it: "Taper Fade" },
+    treccine: { en: "Braids", it: "Treccine" },
+  };
+
+
+  const migrateTagLabelsToMultilang = async () => {
+    try {
+      const tagsRef = collection(db, "tags");
+      const snapshot = await getDocs(tagsRef);
+
+      for (const docSnap of snapshot.docs) {
+        const tagId = docSnap.id;
+        const translations = TAG_LABELS[tagId];
+
+        if (!translations) {
+          console.warn(`⚠️ No translations found for tag: ${tagId}`);
+          continue;
+        }
+
+        await updateDoc(doc(db, "tags", tagId), {
+          label: {
+            en: translations.en,
+            it: translations.it,
+          },
+        });
+
+        console.log(`✅ Updated tag: ${tagId}`);
+      }
+
+      console.log("🎉 All tags migrated successfully!");
+    } catch (error) {
+      console.error("❌ Migration failed:", error);
+    }
   };
 
   return (
@@ -38,6 +116,9 @@ export default function RoleSelectionScreen({ onRoleSelected }) {
         {/* Logo/Brand */}
         <View style={styles.brandContainer}>
           <Text onPress={() => {
+            // migrateTagLabelsToMultilang()
+
+
             changeLanguage(i18n.language === "en-UK" ? "it-IT" : "en-UK")
           }} style={styles.brandText}>aircut</Text>
           <Text style={styles.subtitle}></Text>
@@ -140,7 +221,7 @@ const styles = StyleSheet.create({
     },
     shadowOpacity: 0.1,
     shadowRadius: 12,
-    // elevation: 5,
+    elevation: 5,
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.6)",
   },

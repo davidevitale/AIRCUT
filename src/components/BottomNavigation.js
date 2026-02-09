@@ -7,11 +7,11 @@ import {
   TouchableOpacity
 } from 'react-native';
 
-const logoHome = require('../assets/icons8-casa-256.png');
-const logoLikeB = require('../assets/icons8-cuore-48.png');
-const logoSearch = require('../assets/icons8-ricerca-480.png'); // Riutilizziamo questa icona per search
-const logobag = require('../assets/icons8-borsa-della-spesa-96.png');
-const logoAccount = require('../assets/icons8-user-96.png');
+const logoHome = require('../../assets/icons8-casa-256.png');
+const logoLikeB = require('../../assets/icons8-cuore-48.png');
+const logoSearch = require('../../assets/icons8-ricerca-480.png'); // Riutilizziamo questa icona per search
+const logobag = require('../../assets/icons8-borsa-della-spesa-96.png');
+const logoAccount = require('../../assets/icons8-user-96.png');
 
 // Componente Bottom Navigation
 const BottomNavigation = ({ activeTab, setActiveTab }) => (

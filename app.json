@@ -7,6 +7,7 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
+    "scheme": "aircut",
     "splash": {
       "image": "./assets/splash-icon.png",
       "backgroundColor": "#ffffff",
@@ -33,7 +34,8 @@
       }
     },
     "plugins": [
-      "expo-localization"
+      "expo-localization",
+      "expo-router"
     ]
   }
 }

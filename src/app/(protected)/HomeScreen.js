@@ -11,10 +11,10 @@ import {
   FlatList
 } from 'react-native';
 import { BlurView } from 'expo-blur';
-import BarberPost from '../components/BarberPost';
-import PostGrid from '../components/PostGrid';
-import UserListItem from '../components/UserListItem';
-import { getAllPostsWithLikeStatus, getCurrentUserData, smartSearch } from '../services/authService';
+// import BarberPost from '../components/BarberPost';
+// import PostGrid from '../components/PostGrid';
+// import UserListItem from '../components/UserListItem';
+import { getAllPostsWithLikeStatus, getCurrentUserData, smartSearch } from '../../services/authService';
 
 /* CODICE COMMENTATO - DA RIUTILIZZARE NEL SEARCH COMPONENT
   // Debounced search
@@ -219,12 +219,12 @@ const HomeScreen = ({ onViewProfile, onHashtagPress }) => {
         {/* Post (per hashtag) */}
         {posts.length > 0 && (
           <View style={styles.section}>
-            <PostGrid
+            {/* <PostGrid
               posts={posts}
               onPostPress={(post) => {
                 console.log('Post selezionato:', post);
               }}
-            />
+            /> */}
           </View>
         )}
 
@@ -233,19 +233,12 @@ const HomeScreen = ({ onViewProfile, onHashtagPress }) => {
           <View style={styles.section}>
             <FlatList
               data={users}
-              renderItem={({ item }) => (
-                <UserListItem
-                  user={item}
-                  onUserPress={() => {
-                    console.log('HomeScreen: User clicked:', item.nomeSalone);
-                    if (onViewProfile && item.nomeSalone) {
-                      onViewProfile(item.nomeSalone);
-                    }
-                  }}
-                  onPress={() => { }}
-                  onViewProfile={() => onViewProfile && onViewProfile(item.nomeSalone)}
-                />
-              )}
+              renderItem={({ item }) => {
+                return (<View>
+                  <Text>{item.nomeSalone}</Text>
+                </View>)
+
+              }}
               keyExtractor={(item) => item.id}
               scrollEnabled={false}
               style={styles.userListContent}
@@ -374,11 +367,11 @@ const HomeScreen = ({ onViewProfile, onHashtagPress }) => {
               tint="light"
               style={styles.glassCard}
             >
-              <BarberPost
+              {/* <BarberPost
                 barber={barber}
                 onViewProfile={onViewProfile}
                 onHashtagPress={onHashtagPress}
-              />
+              /> */}
             </BlurView>
           ))}
         </View>

@@ -10,11 +10,11 @@ import {
 import "./src/i18n"; // i18n configuration
 
 // Import components
-import Header from "./components/Header";
-import BarberPost from "./components/BarberPost";
-import BottomNavigation from "./components/BottomNavigation";
-import SplashScreen from "./components/SplashScreen";
-import ConnectionStatus from "./components/ConnectionStatus";
+import Header from "./src/components/Header";
+import BarberPost from "./src/components/BarberPost";
+import BottomNavigation from "./src/components/BottomNavigation";
+import SplashScreen from "./src/components/SplashScreen";
+import ConnectionStatus from "./src/components/ConnectionStatus";
 
 // Import screens
 import RoleSelectionScreen from "./src/screens/RoleSelectionScreen";
