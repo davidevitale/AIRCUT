@@ -2,7 +2,6 @@ import React, { useState, useRef, useEffect } from "react";
 import {
   View,
   Text,
-  TextInput,
   TouchableOpacity,
   StyleSheet,
   ScrollView,
@@ -11,7 +10,7 @@ import {
 import { registerBarber } from "../../services/authService";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
-import { Checkbox } from "react-native-paper";
+import { Checkbox, TextInput } from "react-native-paper";
 import { router } from "expo-router";
 import { Formik } from "formik";
 import * as Yup from "yup";
@@ -114,9 +113,15 @@ export default function RegisterBarberScreen({ onGoToLogin, navigation }) {
       Alert.alert(
         t("BarberRegistrationScreen.successTitle"),
         t("BarberRegistrationScreen.successMessage"),
+        [
+          {
+            text: 'OK',
+            onPress: () => {
+              router.replace("/(protected)");
+            },
+          },
+        ]
       );
-      router.replace("/(protected)");
-      // Firebase observer gestirà automaticamente lo stato
     } catch (error) {
       const knownErrorKeys = [
         "emailAlreadyExist",
@@ -137,6 +142,28 @@ export default function RegisterBarberScreen({ onGoToLogin, navigation }) {
 
       Alert.alert(t("BarberRegistrationScreen.errorTitle"), message);
     }
+  };
+
+  const commonProps = {
+    mode: "outlined",
+    outlineColor: "#00BCD4",
+    activeOutlineColor: "#00BCD4",
+    placeholderTextColor: "#737373",
+    textColor: "#737373",
+    cursorColor: "#737373",
+    contentStyle: {
+      fontSize: 14,
+      color: "#737373",
+    },
+    style: {
+      height: 48,
+      backgroundColor: "#ffffff",
+      fontSize: 14,
+    },
+    outlineStyle: {
+      borderRadius: 4,
+      borderColor: "rgba(0, 188, 212, 0.2)",
+    },
   };
 
   return (
@@ -202,10 +229,13 @@ export default function RegisterBarberScreen({ onGoToLogin, navigation }) {
 
                   <View style={styles.inputContainer}>
                     <TextInput
-                      style={styles.input}
+                      label={t(
+                        "BarberRegistrationScreen.emailPlaceholder",
+                      )}
                       placeholder={t(
                         "BarberRegistrationScreen.emailPlaceholder",
                       )}
+                      {...commonProps}
                       value={values.email}
                       onChangeText={handleChange("email")}
                       onBlur={handleBlur("email")}
@@ -227,20 +257,19 @@ export default function RegisterBarberScreen({ onGoToLogin, navigation }) {
 
                   <View style={styles.inputContainer}>
                     <TextInput
-                      style={styles.input}
+                      label={t(
+                        "BarberRegistrationScreen.passwordPlaceholder",
+                      )}
                       placeholder={t(
                         "BarberRegistrationScreen.passwordPlaceholder",
                       )}
+                      {...commonProps}
                       value={values.password}
                       onChangeText={handleChange("password")}
                       onBlur={handleBlur("password")}
                       secureTextEntry
-                      autoCompleteType="off"
-                      textContentType="none"
-                      autoCorrect={false}
-                      autoCapitalize="none"
                       keyboardType="default"
-                      passwordRules=""
+                      autoCapitalize="none"
                     />
                     <Text
                       style={{
@@ -258,20 +287,19 @@ export default function RegisterBarberScreen({ onGoToLogin, navigation }) {
 
                   <View style={styles.inputContainer}>
                     <TextInput
-                      style={styles.input}
+                      label={t(
+                        "BarberRegistrationScreen.confirmPasswordPlaceholder",
+                      )}
                       placeholder={t(
                         "BarberRegistrationScreen.confirmPasswordPlaceholder",
                       )}
+                      {...commonProps}
                       value={values.confirmPassword}
                       onChangeText={handleChange("confirmPassword")}
                       onBlur={handleBlur("confirmPassword")}
                       secureTextEntry
-                      autoCompleteType="off"
-                      textContentType="none"
-                      autoCorrect={false}
-                      autoCapitalize="none"
                       keyboardType="default"
-                      passwordRules=""
+                      autoCapitalize="none"
                     />
                     <Text
                       style={{
@@ -298,10 +326,13 @@ export default function RegisterBarberScreen({ onGoToLogin, navigation }) {
 
                   <View style={styles.inputContainer}>
                     <TextInput
-                      style={styles.input}
+                      label={t(
+                        "BarberRegistrationScreen.BarberFirstNamePlaceholder",
+                      )}
                       placeholder={t(
                         "BarberRegistrationScreen.BarberFirstNamePlaceholder",
                       )}
+                      {...commonProps}
                       value={values.firstName}
                       onChangeText={handleChange("firstName")}
                       onBlur={handleBlur("firstName")}
@@ -322,10 +353,13 @@ export default function RegisterBarberScreen({ onGoToLogin, navigation }) {
 
                   <View style={styles.inputContainer}>
                     <TextInput
-                      style={styles.input}
+                      label={t(
+                        "BarberRegistrationScreen.BarberLastNamePlaceholder",
+                      )}
                       placeholder={t(
                         "BarberRegistrationScreen.BarberLastNamePlaceholder",
                       )}
+                      {...commonProps}
                       value={values.lastName}
                       onChangeText={handleChange("lastName")}
                       onBlur={handleBlur("lastName")}
@@ -345,10 +379,13 @@ export default function RegisterBarberScreen({ onGoToLogin, navigation }) {
                   </View>
                   <View style={styles.inputContainer}>
                     <TextInput
-                      style={styles.input}
+                      label={t(
+                        "BarberRegistrationScreen.studioNamePlaceholder",
+                      )}
                       placeholder={t(
                         "BarberRegistrationScreen.studioNamePlaceholder",
                       )}
+                      {...commonProps}
                       value={values.salonName}
                       onChangeText={handleChange("salonName")}
                       onBlur={handleBlur("salonName")}
@@ -369,10 +406,13 @@ export default function RegisterBarberScreen({ onGoToLogin, navigation }) {
 
                   <View style={styles.inputContainer}>
                     <TextInput
-                      style={styles.input}
+                      label={t(
+                        "BarberRegistrationScreen.addressPlaceholder",
+                      )}
                       placeholder={t(
                         "BarberRegistrationScreen.addressPlaceholder",
                       )}
+                      {...commonProps}
                       value={values.salonAddress}
                       onChangeText={handleChange("salonAddress")}
                       onBlur={handleBlur("salonAddress")}
@@ -444,10 +484,13 @@ export default function RegisterBarberScreen({ onGoToLogin, navigation }) {
 
                   <View style={styles.inputContainer}>
                     <TextInput
-                      style={styles.input}
+                      label={t(
+                        "BarberRegistrationScreen.phonePlaceholder",
+                      )}
                       placeholder={t(
                         "BarberRegistrationScreen.phonePlaceholder",
                       )}
+                      {...commonProps}
                       value={values.phoneNumber}
                       onChangeText={handleChange("phoneNumber")}
                       onBlur={handleBlur("phoneNumber")}
@@ -472,10 +515,13 @@ export default function RegisterBarberScreen({ onGoToLogin, navigation }) {
 
                   <View style={styles.inputContainer}>
                     <TextInput
-                      style={styles.input}
+                      label={t(
+                        "BarberRegistrationScreen.websitePlaceholder",
+                      )}
                       placeholder={t(
                         "BarberRegistrationScreen.websitePlaceholder",
                       )}
+                      {...commonProps}
                       value={values.website}
                       onChangeText={handleChange("website")}
                       onBlur={handleBlur("website")}
@@ -486,10 +532,13 @@ export default function RegisterBarberScreen({ onGoToLogin, navigation }) {
 
                   <View style={styles.inputContainer}>
                     <TextInput
-                      style={styles.input}
+                      label={t(
+                        "BarberRegistrationScreen.emailBookingPlaceholder",
+                      )}
                       placeholder={t(
                         "BarberRegistrationScreen.emailBookingPlaceholder",
                       )}
+                      {...commonProps}
                       value={values.contactEmail}
                       onChangeText={handleChange("contactEmail")}
                       onBlur={handleBlur("contactEmail")}

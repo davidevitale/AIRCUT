@@ -2,94 +2,165 @@ import React, { useState } from 'react';
 import {
   View,
   Text,
-  TextInput,
   TouchableOpacity,
   StyleSheet,
-
-  Alert
+  Alert,
+  ScrollView,
 } from 'react-native';
 import { loginUser } from '../../services/authService';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { router, useLocalSearchParams } from 'expo-router';
+import { TextInput } from 'react-native-paper';
+import { Formik } from 'formik';
+import * as Yup from 'yup';
 
 export default function LoginScreen({ }) {
   const params = useLocalSearchParams();
   const { role } = params;
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
 
-  const handleLogin = async () => {
-    if (!email || !password) {
-      Alert.alert('Errore', 'Inserisci email e password');
-      return;
-    }
+  const validationSchema = Yup.object().shape({
+    email: Yup.string()
+      .email(t('LoginScreen.emailValidation'))
+      .required(t('LoginScreen.requiredValidation')),
 
+    password: Yup.string()
+      .min(8, t('LoginScreen.passwordValidation'))
+      .required(t('LoginScreen.requiredValidation')),
+  });
+
+  const handleLogin = async (values) => {
     try {
-      const { user, userData, role } = await loginUser(email, password);
+      const { user, userData, role } = await loginUser(values.email, values.password);
       console.log('Login successo:', { user: user.email, role });
       // Firebase observer gestirà automaticamente lo stato
     } catch (error) {
-      Alert.alert('Errore', 'Email o password non corretti');
+      Alert.alert(t('LoginScreen.errorTitle'), t('LoginScreen.invalidCredentials'));
     }
+  };
+
+  const commonProps = {
+    mode: 'outlined',
+    outlineColor: '#00BCD4',
+    activeOutlineColor: '#00BCD4',
+    placeholderTextColor: '#737373',
+    textColor: '#737373',
+    cursorColor: '#737373',
+    contentStyle: {
+      fontSize: 14,
+      color: '#737373',
+    },
+    style: {
+      height: 48,
+      backgroundColor: '#ffffff',
+      fontSize: 14,
+    },
+    outlineStyle: {
+      borderRadius: 4,
+      borderColor: 'rgba(0, 188, 212, 0.2)',
+    },
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.content}>
-        <Text style={styles.title}>
-          {t('LoginScreen.title')} {role === 'client' ? t('LoginScreen.client') : t('LoginScreen.hairArtist')}
-        </Text>
+      <ScrollView style={styles.scrollView}>
+        <View style={styles.content}>
+          <Text style={styles.title}>
+            {t('LoginScreen.title')} {role === 'client' ? t('LoginScreen.client') : t('LoginScreen.hairArtist')}
+          </Text>
 
-        <View style={styles.loginBox}>
-          <View style={styles.inputContainer}>
-            <TextInput
-              style={styles.input}
-              placeholder={t('LoginScreen.emailPlaceholder')}
-              value={email}
-              onChangeText={setEmail}
-              keyboardType="email-address"
-              autoCapitalize="none"
-            />
+          <Formik
+            initialValues={{
+              email: '',
+              password: '',
+            }}
+            validationSchema={validationSchema}
+            onSubmit={(values) => {
+              handleLogin(values);
+            }}
+          >
+            {({
+              handleChange,
+              handleBlur,
+              handleSubmit,
+              values,
+              errors,
+              touched,
+            }) => (
+              <>
+                <View style={styles.loginBox}>
+                  <View style={styles.inputContainer}>
+                    <TextInput
+                      label={t('LoginScreen.emailPlaceholder')}
+                      placeholder={t('LoginScreen.emailPlaceholder')}
+                      {...commonProps}
+                      onChangeText={handleChange('email')}
+                      onBlur={handleBlur('email')}
+                      value={values.email}
+                      autoCapitalize="none"
+                      keyboardType="email-address"
+                    />
+                    <Text
+                      style={{
+                        color: 'red',
+                        fontSize: 12,
+                        display: touched.email && errors.email ? 'flex' : 'none',
+                      }}
+                    >
+                      {touched.email && typeof errors.email === 'string'
+                        ? errors.email
+                        : ' '}
+                    </Text>
+                  </View>
+
+                  <View style={styles.inputContainer}>
+                    <TextInput
+                      label={t('LoginScreen.passwordPlaceholder')}
+                      placeholder={t('LoginScreen.passwordPlaceholder')}
+                      {...commonProps}
+                      onChangeText={handleChange('password')}
+                      onBlur={handleBlur('password')}
+                      value={values.password}
+                      secureTextEntry
+                      keyboardType="default"
+                      autoCapitalize="none"
+                    />
+                    <Text
+                      style={{
+                        color: 'red',
+                        fontSize: 12,
+                        display: touched.password && errors.password ? 'flex' : 'none',
+                      }}
+                    >
+                      {touched.password && typeof errors.password === 'string'
+                        ? errors.password
+                        : ' '}
+                    </Text>
+                  </View>
+
+                  <TouchableOpacity style={styles.loginButton} onPress={handleSubmit}>
+                    <Text style={styles.loginButtonText}>{t('LoginScreen.loginButton')}</Text>
+                  </TouchableOpacity>
+                </View>
+              </>
+            )}
+          </Formik>
+
+          <View style={styles.registerSection}>
+            <Text style={styles.registerText}>{t('LoginScreen.noAccount')}</Text>
+            <TouchableOpacity
+              onPress={() => {
+                role === 'client'
+                  ? router.navigate(`/auth/RegisterClientScreen`)
+                  : router.navigate(`/auth/RegisterBarberScreen`);
+              }}
+            >
+              <Text style={styles.registerLink}>{t('LoginScreen.register')}</Text>
+            </TouchableOpacity>
           </View>
-
-          <View style={styles.inputContainer}>
-            <TextInput
-              style={styles.input}
-              placeholder={t('LoginScreen.passwordPlaceholder')}
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-              autoCompleteType="off"
-              textContentType="none"
-              autoCorrect={false}
-              autoCapitalize="none"
-              keyboardType="default"
-              passwordRules=""
-            />
-          </View>
-
-          <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
-            <Text style={styles.loginButtonText}>{t('LoginScreen.loginButton')}</Text>
-          </TouchableOpacity>
         </View>
-
-        <View style={styles.registerSection}>
-          <Text style={styles.registerText}>{t('LoginScreen.noAccount')}</Text>
-          <TouchableOpacity onPress={() => {
-            role === 'client' ?
-              router.navigate(
-                `/auth/RegisterClientScreen`
-              ) : router.navigate(
-                `/auth/RegisterBarberScreen`
-              );
-          }
-          }>
-            <Text style={styles.registerLink}>{t('LoginScreen.register')}</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }

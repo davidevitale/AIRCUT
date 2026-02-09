@@ -123,8 +123,18 @@ export default function RegisterClientScreen({ }) {
 
     try {
       await registerClient(values);
-      Alert.alert(t('ClientRegistrationScreen.successTitle'), t('successMessage'));
-      // Firebase observer gestirà automaticamente lo stato
+      Alert.alert(
+        t('ClientRegistrationScreen.successTitle'),
+        t('ClientRegistrationScreen.successMessage'),
+        [
+          {
+            text: 'OK',
+            onPress: () => {
+              router.replace('/(protected)');
+            },
+          },
+        ]
+      );
     } catch (error) {
       const knownErrorKeys = [
         'emailAlreadyExist',
@@ -209,7 +219,7 @@ export default function RegisterClientScreen({ }) {
                 liabilityAccepted: values.termsService,
               };
               // return console.log(payload)
-              handleRegister(values)
+              handleRegister(payload)
             }}>
             {({ handleChange,
               handleBlur,

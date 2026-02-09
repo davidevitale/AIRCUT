@@ -23,7 +23,12 @@
     "loginButton": "Login",
     "forgotPassword": "Forgot your password?",
     "noAccount": "Don't have an account?",
-    "register": "Sign up"
+    "register": "Sign up",
+    "emailValidation": "Please enter a valid email address.",
+    "passwordValidation": "Password must be at least 8 characters long.",
+    "requiredValidation": "This field is required.",
+    "errorTitle": "Login Error",
+    "invalidCredentials": "Email or password is incorrect, please try again."
   },
   "ClientRegistrationScreen": {
     "Credentials": "Credentials",

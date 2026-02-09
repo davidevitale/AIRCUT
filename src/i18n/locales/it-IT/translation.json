@@ -23,7 +23,12 @@
     "loginButton": "Accedi",
     "forgotPassword": "Hai dimenticato la password?",
     "noAccount": "Non hai un account?",
-    "register": "Registrati"
+    "register": "Registrati",
+    "emailValidation": "Inserisci un indirizzo email valido.",
+    "passwordValidation": "La password deve contenere almeno 8 caratteri.",
+    "requiredValidation": "Questo campo è obbligatorio.",
+    "errorTitle": "Errore di accesso",
+    "invalidCredentials": "Email o password non corretti, riprova."
   },
   "ClientRegistrationScreen": {
     "Credentials": "Credenziali",
