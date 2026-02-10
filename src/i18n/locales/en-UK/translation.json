@@ -28,7 +28,8 @@
     "passwordValidation": "Password must be at least 8 characters long.",
     "requiredValidation": "This field is required.",
     "errorTitle": "Login Error",
-    "invalidCredentials": "Email or password is incorrect, please try again."
+    "invalidCredentials": "Email or password is incorrect, please try again.",
+    "successTitle": "Login success"
   },
   "ClientRegistrationScreen": {
     "Credentials": "Credentials",

@@ -28,7 +28,8 @@
     "passwordValidation": "La password deve contenere almeno 8 caratteri.",
     "requiredValidation": "Questo campo è obbligatorio.",
     "errorTitle": "Errore di accesso",
-    "invalidCredentials": "Email o password non corretti, riprova."
+    "invalidCredentials": "Email o password non corretti, riprova.",
+    "successTitle": "Accesso riuscito"
   },
   "ClientRegistrationScreen": {
     "Credentials": "Credenziali",

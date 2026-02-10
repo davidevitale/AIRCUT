@@ -97,3 +97,181 @@ Once logged in, you'll see the main app interface with a header and bottom navig
 ## License
 
 This project is licensed under the MIT License.
+
+## M1
+
+Perfect — this is a **Milestone 1 (M1) README**, focused on **what is implemented**, aligned with the spec, and written in a **professional, audit-safe way** (important for approvals and payments).
+
+You can copy-paste this directly as `README.md` for **M1**.
+
+---
+
+# AIRCUT – Milestone 1 (M1)
+
+**Core Infrastructure, Onboarding & Security**
+
+This document describes the work completed for **Milestone 1 (M1)** of the AIRCUT project, based strictly on the agreed scope and execution roadmap(few thing will be seem to be working in future as it require other milestone work on inner screens).
+
+---
+
+## ✅ 1.1 Core Infrastructure Setup
+
+### Project Initialization
+
+- React Native project initialized using **Expo Managed Workflow**
+- Clean, scalable folder structure introduced (`src/app`)
+- Navigation architecture prepared for long-term scalability (supports deep linking)
+
+### Backend Setup
+
+- Firebase configured with:
+  - **Authentication**
+  - **Firestore**
+  - **Storage**
+
+### Internationalization (I18N)
+
+- Internationalization framework set up
+- Language files created:
+  - `en.json`
+  - `it.json`
+
+- No hardcoded text in the app(as i will start working on other screen there hardcoded languages will be dynamic)
+- Language can currently be switched by tapping the **“Aircut”** label on the role selection screen
+- Architecture prepared for a proper in-app language toggle in later milestones
+
+### Technical Architecture Goals
+
+- Architecture prepared with a focus on:
+  - Zero wait times (cache-ready structure, context for auth implemented)
+  - Stability and scalability
+  - Clean separation of concerns for future features
+
+---
+
+## ✅ 1.2 Tag Taxonomy Implementation (Database v1.8)
+
+### Tag Taxonomy Structure
+
+- Centralized **Tag Taxonomy** defined in Firestore(in both Language)
+- Each tag includes category attributes:
+  - `male_unisex`
+  - `female_unisex`
+
+### Male / Unisex Tags Implemented
+
+- Low Fade
+- Mid Fade
+- High Fade
+- Taper Fade
+- Burst Fade
+- Slick Back
+- Side Part
+- Middle Part
+- Edgar Cut
+- Barba
+- Afro
+- Treccine
+
+### Female / Unisex Tags Implemented
+
+- Bob / Caschetto
+- Taglio Lungo / Scalato
+- Frangia
+- Riccio
+- Liscio
+- Mosso
+- Balayage / Shatush
+- Blonde / Colpi di Sole
+- Vivid Colors
+- Sposa / Eventi
+
+All tags are stored in the database and consumed dynamically by the app (no hardcoded tags).
+
+---
+
+## ✅ 1.3 Barber Onboarding & Registration
+
+### UI Implementation
+
+- Registration collects:
+  - Professional’s First and Last Name (Username)
+  - Salon Name
+
+- Both values are structured to be searchable (e.g. _“John – X Barbershop”_)
+
+### Legal Consent
+
+- Mandatory checkbox implemented with the exact text defined in **Section 4.1**
+- User cannot proceed without accepting
+
+### Database Schema (Barber)
+
+The following fields are stored on registration:
+
+```json
+{
+  "accountType": "barber",
+  "termsAccepted": true,
+  "liabilityAccepted": true
+}
+```
+
+---
+
+## ✅ 1.4 Client Onboarding & Registration
+
+### Preferences Selection
+
+- Preferences screen implemented using the **Tag Taxonomy**
+- Tags are loaded dynamically from Firestore
+
+### Gender-Based Logic
+
+- Female users see only **Female / Unisex** tags
+- Male users see only **Male / Unisex** tags
+
+### Legal Consent
+
+- Mandatory checkbox implemented with the exact text defined in **Section 4.2**
+
+### Database Schema (Client)
+
+The following fields are stored on registration:
+
+```json
+{
+  "accountType": "client",
+  "termsAccepted": true,
+  "liabilityAccepted": false,
+  "preferredTags": []
+}
+```
+
+---
+
+## ✅ 1.5 Security & Data Protection (Phase 1)
+
+### Client-Side Input Sanitization
+
+- Basic sanitization applied to user inputs to prevent injection and malformed data
+- Applied to all relevant registration fields
+
+### Firestore Security Rules (Users)
+
+Implemented and enforced:
+
+- `isAuthenticated()` – only authenticated users can access protected data
+- `isOwner(userId)` – users can only modify their own data
+- `isBarber()` – barber-only logic enforced where required
+- Users collection rules:
+  - Create / Update / Delete only allowed for the document owner
+  - **User role is immutable** — a client cannot become a barber after registration
+
+---
+
+## 📌 Notes
+
+- This milestone is **architecture- and foundation-focused**
+- Profile editing, inner screens, and advanced UI refinements are intentionally excluded and planned for upcoming milestones
+- All implementations strictly follow the provided specification (no features removed)

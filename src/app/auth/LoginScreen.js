@@ -33,6 +33,8 @@ export default function LoginScreen({ }) {
   const handleLogin = async (values) => {
     try {
       const { user, userData, role } = await loginUser(values.email, values.password);
+
+      router.replace('/(protected)');
       console.log('Login successo:', { user: user.email, role });
       // Firebase observer gestirà automaticamente lo stato
     } catch (error) {
