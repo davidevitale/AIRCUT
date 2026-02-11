@@ -275,3 +275,5 @@ Implemented and enforced:
 - This milestone is **architecture- and foundation-focused**
 - Profile editing, inner screens, and advanced UI refinements are intentionally excluded and planned for upcoming milestones
 - All implementations strictly follow the provided specification (no features removed)
+
+# AIRCUT – Milestone 2 (M2)
