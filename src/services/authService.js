@@ -493,8 +493,8 @@ export const logoutUser = async () => {
 // Observer per stato autenticazione || Observer for authentication status
 export const onAuthStateChange = (callback) => {
   return onAuthStateChanged(auth, async (user) => {
-    console.log('onAuthStateChanged', auth)
-    console.log('onAuthStateChanged called with user:', user ? user.email : null);
+    // console.log('onAuthStateChanged', auth)
+    // console.log('onAuthStateChanged called with user:', user ? user.email : null);
     if (user) {
       // Utente loggato, recupera i dati
       console.log('Checking user documents for uid:', user.uid);

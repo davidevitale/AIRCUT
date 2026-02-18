@@ -9,6 +9,7 @@ import {
   StyleSheet,
   Animated,
   Dimensions,
+  Pressable,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { db } from "../../../config/firebase";
@@ -115,12 +116,13 @@ export default function RoleSelectionScreen({ }) {
       <View style={styles.content}>
         {/* Logo/Brand */}
         <View style={styles.brandContainer}>
-          <Text onPress={() => {
+          <Pressable onPress={() => {
             // migrateTagLabelsToMultilang()
-
-
             changeLanguage(i18n.language === "en-UK" ? "it-IT" : "en-UK")
-          }} style={styles.brandText}>aircut</Text>
+          }}>
+
+            <Text style={styles.brandText}>aircut</Text>
+          </Pressable>
           <Text style={styles.subtitle}></Text>
         </View>
 

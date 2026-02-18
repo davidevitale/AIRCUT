@@ -3,13 +3,13 @@ import { Tabs } from 'expo-router';
 import { useAuth } from '../../context/AuthContext';
 import { Redirect } from 'expo-router';
 import { View, ActivityIndicator } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 export default function _layout() {
-  const { authStatus,
-    user,
-    role,
-    userData, } = useAuth();
+  const { authStatus, role } = useAuth();
   console.log("_layout", role)
+  const { t } = useTranslation()
+  const isClient = role === 'client';
 
   // 1️⃣ Still checking auth → block everything
   if (authStatus === 'loading') {
@@ -34,7 +34,7 @@ export default function _layout() {
       <Tabs.Screen
         name="HomeScreen"
         options={{
-          title: 'Home',
+          title: t('Navigation.home'),
           tabBarIcon: ({ color }) => <MaterialIcons size={28} name="house" color={color} />,
           headerShown: false,
         }}
@@ -42,15 +42,25 @@ export default function _layout() {
       <Tabs.Screen
         name="LikeScreen"
         options={{
-          title: 'Preferiti',
+          title: t('Navigation.likes'),
           tabBarIcon: ({ color }) => <MaterialIcons size={28} name="favorite" color={color} />,
           headerShown: false,
         }}
       />
+      {!isClient && (
+        <Tabs.Screen
+          name="AddScreen"
+          options={{
+            title: t('Navigation.add'),
+            tabBarIcon: ({ color }) => <MaterialIcons size={28} name="add-circle" color={color} />,
+            headerShown: false,
+          }}
+        />
+      )}
       <Tabs.Screen
         name="ShopScreen"
         options={{
-          title: 'Shop',
+          title: t('Navigation.shop'),
           tabBarIcon: ({ color }) => <MaterialIcons size={28} name="shopping-cart" color={color} />,
           headerShown: false,
         }}
@@ -58,7 +68,7 @@ export default function _layout() {
       <Tabs.Screen
         name="account/index"
         options={{
-          title: 'Account',
+          title: t('Navigation.account'),
           tabBarIcon: ({ color }) => (
             <MaterialIcons name="person" size={28} color={color} />
           ),
