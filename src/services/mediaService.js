@@ -158,7 +158,7 @@ export const uploadFile = async (uri, fileName, userId, folder = "portfolio", co
       console.log("uploadFile -> uploaded via data_url");
     } catch (e1) {
       console.warn("uploadFile data_url failed, retry base64", e1?.message || e1);
-      // 2) Fallback a base64 semplice
+      // 2) Fallback a base64 semplice || Simple fallback to base64
       await uploadString(storageRef, base64, 'base64', { contentType: ct });
       console.log("uploadFile -> uploaded via base64 fallback");
     }

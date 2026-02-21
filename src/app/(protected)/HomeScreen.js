@@ -11,6 +11,7 @@ import {
   FlatList
 } from 'react-native';
 import { BlurView } from 'expo-blur';
+import { useTranslation } from 'react-i18next';
 // import BarberPost from '../components/BarberPost';
 // import PostGrid from '../components/PostGrid';
 // import UserListItem from '../components/UserListItem';
@@ -63,6 +64,7 @@ import { getAllPostsWithLikeStatus, getCurrentUserData, smartSearch } from '../.
 */
 
 const HomeScreen = ({ onViewProfile, onHashtagPress }) => {
+  const { t } = useTranslation();
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -177,7 +179,7 @@ const HomeScreen = ({ onViewProfile, onHashtagPress }) => {
       return (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#00BCD4" />
-          <Text style={styles.loadingText}>Ricerca in corso...</Text>
+          <Text style={styles.loadingText}>{t('HomeScreen.searchInProgress')}</Text>
         </View>
       );
     }
@@ -186,9 +188,9 @@ const HomeScreen = ({ onViewProfile, onHashtagPress }) => {
       return (
         <View style={styles.searchEmptyContainer}>
           <View style={styles.emptyContent}>
-            <Text style={styles.emptyTitle}>Scopri il mondo del beauty</Text>
+            <Text style={styles.emptyTitle}>{t('HomeScreen.discoverBeautyWorld')}</Text>
             <Text style={styles.emptyDescription}>
-              Cerca hashtag per trovare ispirazione o trova barbieri e saloni nella tua zona
+              {t('HomeScreen.searchHintDescription')}
             </Text>
           </View>
         </View>
@@ -203,11 +205,11 @@ const HomeScreen = ({ onViewProfile, onHashtagPress }) => {
       return (
         <View style={styles.searchEmptyContainer}>
           <View style={styles.emptyContent}>
-            <Text style={styles.emptyTitle}>Nessun risultato</Text>
+            <Text style={styles.emptyTitle}>{t('HomeScreen.noResults')}</Text>
             <Text style={styles.emptyDescription}>
               {isHashtagSearch
-                ? `Nessun post trovato per ${searchText}`
-                : 'Prova con parole chiave diverse'}
+                ? t('HomeScreen.noPostsForTag', { tag: searchText })
+                : t('HomeScreen.tryDifferentKeywords')}
             </Text>
           </View>
         </View>
@@ -255,7 +257,7 @@ const HomeScreen = ({ onViewProfile, onHashtagPress }) => {
         <BlurView intensity={28} tint="light" style={styles.backgroundBlur} pointerEvents="none" />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#00BCD4" />
-          <Text style={styles.loadingText}>Caricamento feed...</Text>
+          <Text style={styles.loadingText}>{t('HomeScreen.loadingFeed')}</Text>
         </View>
       </View>
     );
@@ -273,7 +275,7 @@ const HomeScreen = ({ onViewProfile, onHashtagPress }) => {
               <View style={styles.searchInputContainer}>
                 <TextInput
                   style={styles.searchInput}
-                  placeholder="Cerca hashtag o saloni..."
+                  placeholder={t('HomeScreen.searchPlaceholder')}
                   placeholderTextColor="#8e8e8e"
                   value={searchText}
                   onChangeText={setSearchText}
@@ -311,12 +313,12 @@ const HomeScreen = ({ onViewProfile, onHashtagPress }) => {
         >
           <View style={styles.emptyState}>
             <Text style={styles.emptyTitle}>
-              {hasConnectionError ? '🌐 Connessione lenta' : 'Nessun post disponibile'}
+              {hasConnectionError ? t('HomeScreen.slowConnection') : t('HomeScreen.noPostsAvailable')}
             </Text>
             <Text style={styles.emptyDescription}>
               {hasConnectionError
-                ? 'Verifica la tua connessione internet e tira per aggiornare'
-                : 'I parrucchieri non hanno ancora caricato foto. Torna più tardi per vedere i loro lavori!'
+                ? t('HomeScreen.checkConnectionAndPullToRefresh')
+                : t('HomeScreen.noPhotosYet')
               }
             </Text>
           </View>
@@ -341,7 +343,7 @@ const HomeScreen = ({ onViewProfile, onHashtagPress }) => {
             <View style={styles.searchInputContainer}>
               <TextInput
                 style={styles.searchInput}
-                placeholder="Cerca hashtag o saloni..."
+                placeholder={t('HomeScreen.searchPlaceholder')}
                 placeholderTextColor="#8e8e8e"
                 value={searchText}
                 onChangeText={setSearchText}
@@ -513,3 +515,5 @@ const styles = StyleSheet.create({
 });
 
 export default HomeScreen;
+
+

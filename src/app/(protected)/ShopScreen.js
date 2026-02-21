@@ -5,35 +5,34 @@ import {
   FlatList,
   Text,
   TouchableOpacity,
-  Image,
 } from 'react-native';
 import { BlurView } from 'expo-blur';
-
-// Dati casuali per i prodotti con brand e colori vivaci
-const RANDOM_PRODUCTS = [
-  { id: '1', name: 'Shampoo Profesionale', brand: 'Luxe Hair', price: '12,99€', color: '#FF6B6B' },
-  { id: '2', name: 'Balsamo Nutriente', brand: 'Silky Threads', price: '14,99€', color: '#4ECDC4' },
-  { id: '3', name: 'Gel Fissante', brand: 'Style Max', price: '9,99€', color: '#FFE66D' },
-  { id: '4', name: 'Mousse Volume', brand: 'Cloud Care', price: '10,99€', color: '#95E1D3' },
-  { id: '5', name: 'Olio Capelli', brand: 'Pure Essence', price: '18,99€', color: '#F38181' },
-  { id: '6', name: 'Siero Lisciante', brand: 'Sleek Pro', price: '16,99€', color: '#AA96DA' },
-  { id: '7', name: 'Pettine Professionlae', brand: 'Precision', price: '7,99€', color: '#FCBAD3' },
-  { id: '8', name: 'Spazzola Premium', brand: 'Brush Masters', price: '8,99€', color: '#A8D8EA' },
-];
+import { useTranslation } from 'react-i18next';
 
 const ShopScreen = () => {
+  const { t } = useTranslation();
   const [products, setProducts] = useState([]);
 
+  const randomProducts = [
+    { id: '1', name: t('ShopScreen.products.shampoo'), brand: 'Luxe Hair', price: 'EUR 12.99', color: '#FF6B6B' },
+    { id: '2', name: t('ShopScreen.products.conditioner'), brand: 'Silky Threads', price: 'EUR 14.99', color: '#4ECDC4' },
+    { id: '3', name: t('ShopScreen.products.gel'), brand: 'Style Max', price: 'EUR 9.99', color: '#FFE66D' },
+    { id: '4', name: t('ShopScreen.products.mousse'), brand: 'Cloud Care', price: 'EUR 10.99', color: '#95E1D3' },
+    { id: '5', name: t('ShopScreen.products.hairOil'), brand: 'Pure Essence', price: 'EUR 18.99', color: '#F38181' },
+    { id: '6', name: t('ShopScreen.products.serum'), brand: 'Sleek Pro', price: 'EUR 16.99', color: '#AA96DA' },
+    { id: '7', name: t('ShopScreen.products.comb'), brand: 'Precision', price: 'EUR 7.99', color: '#FCBAD3' },
+    { id: '8', name: t('ShopScreen.products.brush'), brand: 'Brush Masters', price: 'EUR 8.99', color: '#A8D8EA' },
+  ];
+
   useEffect(() => {
-    // Mescola i prodotti in ordine casuale
-    const shuffled = [...RANDOM_PRODUCTS].sort(() => Math.random() - 0.5);
+    const shuffled = [...randomProducts].sort(() => Math.random() - 0.5);
     setProducts(shuffled);
-  }, []);
+  }, [t]);
 
   const renderProductItem = ({ item }) => (
     <TouchableOpacity style={styles.productCard}>
       <View style={[styles.productImagePlaceholder, { backgroundColor: item.color }]}>
-        <Text style={styles.productIcon}>✨</Text>
+        <Text style={styles.productIcon}>*</Text>
       </View>
       <View style={styles.productInfo}>
         <Text style={styles.productBrand}>{item.brand}</Text>
@@ -41,7 +40,7 @@ const ShopScreen = () => {
         <View style={styles.productFooter}>
           <Text style={styles.productPrice}>{item.price}</Text>
           <TouchableOpacity style={styles.addButton}>
-            <Text style={styles.addButtonText}>add +</Text>
+            <Text style={styles.addButtonText}>{t('ShopScreen.addButton')}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -50,24 +49,21 @@ const ShopScreen = () => {
 
   return (
     <View style={styles.container}>
-
-    
       <FlatList
         data={products}
         renderItem={renderProductItem}
-        keyExtractor={item => item.id}
+        keyExtractor={(item) => item.id}
         numColumns={1}
         contentContainerStyle={styles.listContent}
-        scrollEnabled={true}
+        scrollEnabled
       />
 
-      {/* Overlay con blur e messaggio "Disponibile a breve" */}
-       <BlurView intensity={35} style={styles.blurOverlay}>
+      <BlurView intensity={35} style={styles.blurOverlay}>
         <View style={styles.glassmorphicContainer}>
-          <Text style={styles.comingSoonText}>Disponibile a breve</Text>
-          <Text style={styles.subText}>Questo servizio sarà presto disponibile</Text>
+          <Text style={styles.comingSoonText}>{t('ShopScreen.comingSoonTitle')}</Text>
+          <Text style={styles.subText}>{t('ShopScreen.comingSoonDescription')}</Text>
         </View>
-      </BlurView> 
+      </BlurView>
     </View>
   );
 };
@@ -77,21 +73,9 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#fff',
   },
-  header: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#00BCD4',
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 10,
-  },
   listContent: {
     paddingHorizontal: 15,
     paddingBottom: 20,
-  },
-  row: {
-    justifyContent: 'space-between',
-    marginBottom: 15,
   },
   productCard: {
     backgroundColor: '#fff',
@@ -195,3 +179,4 @@ const styles = StyleSheet.create({
 });
 
 export default ShopScreen;
+

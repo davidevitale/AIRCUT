@@ -8,16 +8,18 @@ import {
   ScrollView,
   Alert,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { logoutUser, getCurrentUserData } from '../../services/authService';
 import { auth } from '../../../config/firebase';
+import LanguageToggle from '../../components/LanguageToggle';
 
 export default function ClientAccountScreen({ userData: propUserData, onLogout, navigate }) {
+  const { t } = useTranslation();
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
-    console.log('ClientAccountScreen received userData:', propUserData);
     if (propUserData) {
       setUserData(propUserData);
       setLoading(false);
@@ -29,7 +31,6 @@ export default function ClientAccountScreen({ userData: propUserData, onLogout, 
   const loadUserData = async () => {
     try {
       const data = await getCurrentUserData();
-      console.log('Loaded user data from service:', data);
       if (data && data.role === 'client') {
         setUserData(data.userData);
       }
@@ -40,35 +41,35 @@ export default function ClientAccountScreen({ userData: propUserData, onLogout, 
     }
   };
 
-  const toggleMenu = () => setMenuOpen(prev => !prev);
+  const toggleMenu = () => setMenuOpen((prev) => !prev);
   const closeMenu = () => setMenuOpen(false);
 
   const goToEditProfile = () => {
     navigate('EditClientProfile', {
       userId: userData?.id || auth.currentUser?.uid,
-      currentUserData: userData
+      currentUserData: userData,
     });
   };
 
   const handleLogout = async () => {
     Alert.alert(
-      'Disconnessione',
-      'Sei sicuro di voler uscire?',
+      t('ClientAccountScreen.logoutTitle'),
+      t('ClientAccountScreen.logoutMessage'),
       [
-        { text: 'Annulla', style: 'cancel' },
+        { text: t('ClientAccountScreen.cancel'), style: 'cancel' },
         {
-          text: 'Esci',
+          text: t('ClientAccountScreen.logout'),
           style: 'destructive',
           onPress: async () => {
             try {
               await logoutUser();
               onLogout();
             } catch (error) {
-              Alert.alert('Errore', 'Impossibile disconnettersi');
+              Alert.alert(t('ClientAccountScreen.errorTitle'), t('ClientAccountScreen.logoutError'));
             }
-          }
-        }
-      ]
+          },
+        },
+      ],
     );
   };
 
@@ -76,20 +77,18 @@ export default function ClientAccountScreen({ userData: propUserData, onLogout, 
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Caricamento...</Text>
+          <Text style={styles.loadingText}>{t('ClientAccountScreen.loading')}</Text>
         </View>
       </SafeAreaView>
     );
   }
 
-  const profileInitial = userData?.nomeUtente?.charAt(0)?.toUpperCase() || 'C';
+  const profileInitial = userData?.nomeUtente?.charAt(0)?.toUpperCase() || t('ClientAccountScreen.defaultInitial');
 
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         <View style={styles.content}>
-
-          {/* Header Account */}
           <View style={styles.header}>
             <TouchableOpacity
               onPress={toggleMenu}
@@ -101,61 +100,68 @@ export default function ClientAccountScreen({ userData: propUserData, onLogout, 
               <View style={styles.menuLine} />
             </TouchableOpacity>
 
-            {menuOpen && (
-              <>
-                <TouchableOpacity style={styles.headerOverlay} onPress={closeMenu} />
-                <View style={styles.menuContainer}>
-                  <TouchableOpacity style={styles.menuItem} onPress={() => { closeMenu(); goToEditProfile(); }}>
-                    <Text style={styles.menuItemText}>Modifica profilo</Text>
-                  </TouchableOpacity>
-                </View>
-              </>
-            )}
-
             <View style={styles.headerContent}>
               <View style={styles.profileAvatar}>
                 <Text style={styles.profileInitial}>{profileInitial}</Text>
               </View>
 
               <View style={styles.userInfo}>
-                <Text style={styles.welcomeText}>{userData?.nomeUtente || 'Cliente'}</Text>
-                <Text style={styles.roleText}>Account Cliente</Text>
+                <Text style={styles.welcomeText}>{userData?.nomeUtente || t('ClientAccountScreen.client')}</Text>
+                <Text style={styles.roleText}>{t('ClientAccountScreen.clientAccount')}</Text>
               </View>
             </View>
           </View>
+          {menuOpen && (
+            <View style={styles.menuPortal} pointerEvents="box-none">
+              <TouchableOpacity style={styles.menuOverlay} onPress={closeMenu} />
+              <View style={styles.menuContainer}>
+                <TouchableOpacity
+                  style={styles.menuItem}
+                  onPress={() => {
+                    closeMenu();
+                    goToEditProfile();
+                  }}
+                >
+                  <Text style={styles.menuItemText}>{t('ClientAccountScreen.editProfile')}</Text>
+                </TouchableOpacity>
+                <View style={styles.menuDivider} />
+                <View style={styles.menuToggleRow}>
+                  <Text style={styles.menuItemText}>{t('language')}</Text>
+                  <View style={styles.menuToggleControl}>
+                    <LanguageToggle />
+                  </View>
+                </View>
+              </View>
+            </View>
+          )}
 
-          {/* Dati Personali */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>I tuoi dati</Text>
+            <Text style={styles.sectionTitle}>{t('ClientAccountScreen.yourData')}</Text>
 
             <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Email</Text>
+              <Text style={styles.infoLabel}>{t('ClientAccountScreen.email')}</Text>
               <Text style={styles.infoValue}>{userData?.email}</Text>
             </View>
 
             <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Età</Text>
-              <Text style={styles.infoValue}>{userData?.eta} anni</Text>
+              <Text style={styles.infoLabel}>{t('ClientAccountScreen.age')}</Text>
+              <Text style={styles.infoValue}>{t('ClientAccountScreen.ageValue', { age: userData?.eta })}</Text>
             </View>
 
-            {/*<View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Indirizzo</Text>
-              <Text style={styles.infoValue}>{userData?.via}</Text>
-            </View>*/}
-
             <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Sesso</Text>
-              <Text style={styles.infoValue}>{userData?.sesso === 'M' ? 'Maschio' : 'Femmina'}</Text>
+              <Text style={styles.infoLabel}>{t('ClientAccountScreen.gender')}</Text>
+              <Text style={styles.infoValue}>
+                {userData?.sesso === 'M' ? t('ClientAccountScreen.male') : t('ClientAccountScreen.female')}
+              </Text>
             </View>
           </View>
 
-          {/* Preferenze */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Le tue preferenze</Text>
+            <Text style={styles.sectionTitle}>{t('ClientAccountScreen.yourPreferences')}</Text>
 
             {userData?.preferenzaTaglio && userData.preferenzaTaglio.length > 0 && (
               <>
-                <Text style={styles.infoLabel}>Tipi di taglio preferiti</Text>
+                <Text style={styles.infoLabel}>{t('ClientAccountScreen.favoriteCuts')}</Text>
                 <View style={styles.tagsContainer}>
                   {userData.preferenzaTaglio.map((taglio, index) => (
                     <View key={index} style={styles.tag}>
@@ -165,45 +171,11 @@ export default function ClientAccountScreen({ userData: propUserData, onLogout, 
                 </View>
               </>
             )}
-
-            {/*<View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Raggio di ricerca</Text>
-              <Text style={styles.infoValue}>{userData?.raggio} km</Text>
-            </View>*/}
           </View>
 
-          {/* Azioni rapide 
-          <BlurView intensity={24} tint="light" style={styles.section}>
-            <Text style={styles.sectionTitle}>Azioni rapide</Text>
-            
-            <TouchableOpacity style={styles.actionButton}>
-              <Text style={styles.actionButtonText}>✂️ Prenota un taglio</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity style={styles.actionButton}>
-              <Text style={styles.actionButtonText}>📍 Trova parrucchieri vicini</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity style={styles.actionButton}>
-              <Text style={styles.actionButtonText}>⭐ Le mie recensioni</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={styles.actionButton}
-              onPress={() => navigate('EditClientProfile', { 
-                userId: userData?.id || auth.currentUser?.uid,
-                currentUserData: userData 
-              })}
-            >
-              <Text style={styles.actionButtonText}>⚙️ Modifica profilo</Text>
-            </TouchableOpacity>
-          </BlurView>*/}
-
-          {/* Logout */}
           <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-            <Text style={styles.logoutButtonText}> Disconnetti</Text>
+            <Text style={styles.logoutButtonText}> {t('ClientAccountScreen.logout')}</Text>
           </TouchableOpacity>
-
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -223,6 +195,7 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 20,
+    position: 'relative',
   },
   loadingContainer: {
     flex: 1,
@@ -234,9 +207,8 @@ const styles = StyleSheet.create({
     color: '#666',
     fontWeight: '500',
   },
-
-  // Header Card
   header: {
+    position: 'relative',
     backgroundColor: 'white',
     borderRadius: 0,
     padding: 25,
@@ -246,6 +218,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
+    zIndex: 5,
   },
   menuButton: {
     position: 'absolute',
@@ -255,7 +228,8 @@ const styles = StyleSheet.create({
     height: 36,
     justifyContent: 'center',
     alignItems: 'center',
-    zIndex: 10,
+    zIndex: 40,
+    elevation: 40,
   },
   menuLine: {
     width: 24,
@@ -264,13 +238,17 @@ const styles = StyleSheet.create({
     marginVertical: 3,
     borderRadius: 2,
   },
-  headerOverlay: {
+  menuPortal: {
     ...StyleSheet.absoluteFillObject,
-    zIndex: 9,
+    zIndex: 100,
+    elevation: 100,
+  },
+  menuOverlay: {
+    ...StyleSheet.absoluteFillObject,
   },
   menuContainer: {
     position: 'absolute',
-    top: 50,
+    top: 40,
     right: 12,
     backgroundColor: 'rgba(255,255,255,0.9)',
     borderRadius: 18,
@@ -279,9 +257,9 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.15,
     shadowRadius: 12,
-    elevation: 8,
-    zIndex: 11,
-    overflow: 'hidden',
+    zIndex: 110,
+    elevation: 110,
+    overflow: 'visible',
     paddingVertical: 6,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.5)',
@@ -294,6 +272,24 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#0f172a',
     fontWeight: '600',
+  },
+  menuDivider: {
+    height: 1,
+    backgroundColor: '#EEE',
+    marginVertical: 4,
+  },
+  menuToggleRow: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    minHeight: 56,
+  },
+  menuToggleControl: {
+    zIndex: 2,
+    elevation: 2,
+    marginLeft: 10,
   },
   headerContent: {
     flexDirection: 'row',
@@ -338,8 +334,6 @@ const styles = StyleSheet.create({
     color: '#00BCD4',
     fontWeight: '500',
   },
-
-  // Section Card
   section: {
     backgroundColor: 'white',
     borderRadius: 5,
@@ -395,8 +389,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
   },
-
-  // Action Buttons
   actionButton: {
     backgroundColor: 'rgba(255,255,255,0.65)',
     borderRadius: 18,
@@ -414,8 +406,6 @@ const styles = StyleSheet.create({
     color: '#0f172a',
     fontWeight: '600',
   },
-
-  // Logout Button
   logoutButton: {
     backgroundColor: 'rgba(255, 107, 107, 0.25)',
     borderRadius: 18,
@@ -443,3 +433,4 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
 });
+

@@ -11,6 +11,7 @@ import {
   Alert,
   AppState
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { getCurrentUserData } from '../../services/authService';
 import { collection, query, where, getDocs, doc, updateDoc, arrayRemove } from 'firebase/firestore';
 import { db } from '../../../config/firebase'
@@ -20,6 +21,7 @@ const { width } = Dimensions.get('window');
 const itemSize = width - 48; // 1 colonna fullwidth
 
 const LikeScreen = () => {
+  const { t } = useTranslation();
   const [likedPosts, setLikedPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState(null);
@@ -65,7 +67,7 @@ const LikeScreen = () => {
           likedPostsData.push({
             postId: doc.id,
             imageUrl: postData.imageUrl,
-            barberName: postData.barberName || 'Parrucchiere',
+            barberName: postData.barberName || t('LikeScreen.defaultBarberName'),
             barberId: postData.barberId,
             likedAt: new Date().toISOString(), // Per ora usiamo data corrente
             ...postData
@@ -88,12 +90,12 @@ const LikeScreen = () => {
 
   const handleRemoveLike = async (postId) => {
     Alert.alert(
-      'Rimuovi dai preferiti',
-      'Vuoi rimuovere questa foto dai tuoi preferiti?',
+      t('LikeScreen.removeFavoriteTitle'),
+      t('LikeScreen.removeFavoriteMessage'),
       [
-        { text: 'Annulla', style: 'cancel' },
+        { text: t('LikeScreen.cancel'), style: 'cancel' },
         {
-          text: 'Rimuovi',
+          text: t('LikeScreen.remove'),
           style: 'destructive',
           onPress: async () => {
             try {
@@ -112,7 +114,7 @@ const LikeScreen = () => {
               }
             } catch (error) {
               console.error('LikeScreen: Errore rimozione like:', error);
-              Alert.alert('Errore', 'Impossibile rimuovere dai preferiti');
+              Alert.alert(t('LikeScreen.errorTitle'), t('LikeScreen.removeError'));
             }
           }
         }
@@ -132,7 +134,7 @@ const LikeScreen = () => {
       />
       <View style={styles.postInfo}>
         <Text style={styles.barberName} numberOfLines={1}>
-          {item.barberName || 'Parrucchiere'}
+          {item.barberName || t('LikeScreen.defaultBarberName')}
         </Text>
       </View>
       <TouchableOpacity
@@ -147,7 +149,7 @@ const LikeScreen = () => {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <Text style={styles.loadingText}>Caricamento preferiti...</Text>
+        <Text style={styles.loadingText}>{t('LikeScreen.loadingFavorites')}</Text>
       </View>
     );
   }
@@ -157,9 +159,9 @@ const LikeScreen = () => {
       <ScrollView style={styles.container} contentContainerStyle={styles.content}>
         <View style={styles.emptyState}>
           <Image source={logoLike} style={styles.emptyIcon} />
-          <Text style={styles.emptyTitle}>I tuoi "Mi piace"</Text>
+          <Text style={styles.emptyTitle}>{t('LikeScreen.yourLikesTitle')}</Text>
           <Text style={styles.emptyDescription}>
-            Qui vedrai tutti i post dei parrucchieri che hai messo "mi piace"
+            {t('LikeScreen.emptyDescription')}
           </Text>
         </View>
       </ScrollView>
@@ -169,8 +171,10 @@ const LikeScreen = () => {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>I tuoi preferiti</Text>
-        <Text style={styles.headerCount}>{likedPosts.length} foto</Text>
+        <Text style={styles.headerTitle}>{t('LikeScreen.yourFavoritesTitle')}</Text>
+        <Text style={styles.headerCount}>
+          {t('LikeScreen.photosCount', { count: likedPosts.length })}
+        </Text>
       </View>
 
       <FlatList

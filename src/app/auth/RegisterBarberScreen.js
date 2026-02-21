@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -14,9 +14,13 @@ import { Checkbox, TextInput } from "react-native-paper";
 import { router } from "expo-router";
 import { Formik } from "formik";
 import * as Yup from "yup";
+import { collection, getDocs } from "firebase/firestore";
+import { db } from "../../../config/firebase";
 
-export default function RegisterBarberScreen({ onGoToLogin, navigation }) {
-  const { t } = useTranslation();
+export default function RegisterBarberScreen({ onGoToLogin }) {
+  const { t, i18n } = useTranslation();
+  const [tags, setTags] = useState([]);
+
   const validationSchema = Yup.object().shape({
     email: Yup.string()
       .email(t("BarberRegistrationScreen.emailValidation"))
@@ -27,10 +31,7 @@ export default function RegisterBarberScreen({ onGoToLogin, navigation }) {
       .required(t("BarberRegistrationScreen.required")),
 
     confirmPassword: Yup.string()
-      .oneOf(
-        [Yup.ref("password")],
-        t("BarberRegistrationScreen.confirmPasswordValidation"),
-      )
+      .oneOf([Yup.ref("password")], t("BarberRegistrationScreen.confirmPasswordValidation"))
       .required(t("BarberRegistrationScreen.required")),
 
     firstName: Yup.string()
@@ -63,59 +64,36 @@ export default function RegisterBarberScreen({ onGoToLogin, navigation }) {
 
     termsService: Yup.boolean().oneOf(
       [true],
-      t("BarberRegistrationScreen.termsServiceValidation"),
+      t("BarberRegistrationScreen.termsServiceValidation")
     ),
   });
 
-  const tagliOptions = [
-    {
-      id: "classico",
-      name: "Classico",
-      description: "Taglio tradizionale e ordinato",
-      emoji: "✂️",
-    },
-    {
-      id: "fade",
-      name: "Fade",
-      description: "Sfumatura graduale",
-      emoji: "✨",
-    },
-    {
-      id: "rasati",
-      name: "Rasati",
-      description: "Taglio molto corto",
-      emoji: "💈",
-    },
-    {
-      id: "moderni",
-      name: "Moderni",
-      description: "Stili attuali e trendy",
-      emoji: "🚀",
-    },
-    {
-      id: "barba",
-      name: "Barba",
-      description: "Cura e styling barba",
-      emoji: "🧔",
-    },
-    {
-      id: "baffi",
-      name: "Baffi",
-      description: "Styling baffi",
-      emoji: "👨‍💼",
-    },
-  ];
+  const fetchAllTags = async () => {
+    try {
+      const tagsRef = collection(db, "tags");
+      const querySnapshot = await getDocs(tagsRef);
+      const allTags = querySnapshot.docs.map((docSnap) => ({
+        id: docSnap.id,
+        ...docSnap.data(),
+      }));
+      setTags(allTags);
+    } catch (error) {
+      console.error("Error fetching tags:", error);
+    }
+  };
+
+  const filterBarberTags = () =>
+    tags.filter((tag) => tag.active && tag.visibility === "barber");
 
   const handleRegister = async (values) => {
     try {
-      // return console.log(JSON.stringify(values, null, 2));
       await registerBarber(values);
       Alert.alert(
         t("BarberRegistrationScreen.successTitle"),
         t("BarberRegistrationScreen.successMessage"),
         [
           {
-            text: 'OK',
+            text: "OK",
             onPress: () => {
               router.replace("/(protected)");
             },
@@ -136,7 +114,6 @@ export default function RegisterBarberScreen({ onGoToLogin, navigation }) {
       if (knownErrorKeys.includes(error.message)) {
         message = t(`BarberRegistrationScreen.${error.message}`);
       } else {
-        // Fallback: show original error message
         message = error.message || t("common.genericError");
       }
 
@@ -166,6 +143,10 @@ export default function RegisterBarberScreen({ onGoToLogin, navigation }) {
     },
   };
 
+  useEffect(() => {
+    fetchAllTags();
+  }, []);
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView style={styles.content}>
@@ -185,7 +166,7 @@ export default function RegisterBarberScreen({ onGoToLogin, navigation }) {
             termsService: false,
             role: "barber",
             accountType: "barber",
-            roleCode: 1, // 1 for barber
+            roleCode: 1,
             createdAt: new Date().toISOString(),
           }}
           validationSchema={validationSchema}
@@ -194,29 +175,21 @@ export default function RegisterBarberScreen({ onGoToLogin, navigation }) {
               ...values,
               liabilityAccepted: values.termsService,
             };
-            // return console.log(payload)
-            handleRegister(values);
+            handleRegister(payload);
           }}
         >
-          {({
-            handleChange,
-            handleBlur,
-            handleSubmit,
-            setFieldValue,
-            values,
-            errors,
-            touched,
-          }) => {
+          {({ handleChange, handleBlur, handleSubmit, setFieldValue, values, errors, touched }) => {
+            const filteredTags = filterBarberTags();
             return (
               <>
                 <View style={styles.headerRow}>
                   <TouchableOpacity
                     style={styles.backButton}
                     onPress={() => {
-                      router.back()
+                      router.back();
                     }}
                   >
-                    <Text style={styles.backButtonText}>←</Text>
+                    <Text style={styles.backButtonText}>{"<"}</Text>
                   </TouchableOpacity>
                   <Text style={styles.title}>aircut</Text>
                   <View style={{ width: 44 }} />
@@ -229,12 +202,8 @@ export default function RegisterBarberScreen({ onGoToLogin, navigation }) {
 
                   <View style={styles.inputContainer}>
                     <TextInput
-                      label={t(
-                        "BarberRegistrationScreen.emailPlaceholder",
-                      )}
-                      placeholder={t(
-                        "BarberRegistrationScreen.emailPlaceholder",
-                      )}
+                      label={t("BarberRegistrationScreen.emailPlaceholder")}
+                      placeholder={t("BarberRegistrationScreen.emailPlaceholder")}
                       {...commonProps}
                       value={values.email}
                       onChangeText={handleChange("email")}
@@ -242,27 +211,15 @@ export default function RegisterBarberScreen({ onGoToLogin, navigation }) {
                       keyboardType="email-address"
                       autoCapitalize="none"
                     />
-                    <Text
-                      style={{
-                        color: "red",
-                        fontSize: 12,
-                        display: touched.email && errors.email ? "flex" : "none",
-                      }}
-                    >
-                      {touched.email && typeof errors.email === "string"
-                        ? errors.email
-                        : " "}
+                    <Text style={{ color: "red", fontSize: 12, display: touched.email && errors.email ? "flex" : "none" }}>
+                      {touched.email && typeof errors.email === "string" ? errors.email : " "}
                     </Text>
                   </View>
 
                   <View style={styles.inputContainer}>
                     <TextInput
-                      label={t(
-                        "BarberRegistrationScreen.passwordPlaceholder",
-                      )}
-                      placeholder={t(
-                        "BarberRegistrationScreen.passwordPlaceholder",
-                      )}
+                      label={t("BarberRegistrationScreen.passwordPlaceholder")}
+                      placeholder={t("BarberRegistrationScreen.passwordPlaceholder")}
                       {...commonProps}
                       value={values.password}
                       onChangeText={handleChange("password")}
@@ -271,28 +228,15 @@ export default function RegisterBarberScreen({ onGoToLogin, navigation }) {
                       keyboardType="default"
                       autoCapitalize="none"
                     />
-                    <Text
-                      style={{
-                        color: "red",
-                        fontSize: 12,
-                        display:
-                          touched.password && errors.password ? "flex" : "none",
-                      }}
-                    >
-                      {touched.password && typeof errors.password === "string"
-                        ? errors.password
-                        : " "}
+                    <Text style={{ color: "red", fontSize: 12, display: touched.password && errors.password ? "flex" : "none" }}>
+                      {touched.password && typeof errors.password === "string" ? errors.password : " "}
                     </Text>
                   </View>
 
                   <View style={styles.inputContainer}>
                     <TextInput
-                      label={t(
-                        "BarberRegistrationScreen.confirmPasswordPlaceholder",
-                      )}
-                      placeholder={t(
-                        "BarberRegistrationScreen.confirmPasswordPlaceholder",
-                      )}
+                      label={t("BarberRegistrationScreen.confirmPasswordPlaceholder")}
+                      placeholder={t("BarberRegistrationScreen.confirmPasswordPlaceholder")}
                       {...commonProps}
                       value={values.confirmPassword}
                       onChangeText={handleChange("confirmPassword")}
@@ -301,20 +245,8 @@ export default function RegisterBarberScreen({ onGoToLogin, navigation }) {
                       keyboardType="default"
                       autoCapitalize="none"
                     />
-                    <Text
-                      style={{
-                        color: "red",
-                        fontSize: 12,
-                        display:
-                          touched.confirmPassword && errors.confirmPassword
-                            ? "flex"
-                            : "none",
-                      }}
-                    >
-                      {touched.confirmPassword &&
-                        typeof errors.confirmPassword === "string"
-                        ? errors.confirmPassword
-                        : " "}
+                    <Text style={{ color: "red", fontSize: 12, display: touched.confirmPassword && errors.confirmPassword ? "flex" : "none" }}>
+                      {touched.confirmPassword && typeof errors.confirmPassword === "string" ? errors.confirmPassword : " "}
                     </Text>
                   </View>
                 </View>
@@ -326,111 +258,57 @@ export default function RegisterBarberScreen({ onGoToLogin, navigation }) {
 
                   <View style={styles.inputContainer}>
                     <TextInput
-                      label={t(
-                        "BarberRegistrationScreen.BarberFirstNamePlaceholder",
-                      )}
-                      placeholder={t(
-                        "BarberRegistrationScreen.BarberFirstNamePlaceholder",
-                      )}
+                      label={t("BarberRegistrationScreen.BarberFirstNamePlaceholder")}
+                      placeholder={t("BarberRegistrationScreen.BarberFirstNamePlaceholder")}
                       {...commonProps}
                       value={values.firstName}
                       onChangeText={handleChange("firstName")}
                       onBlur={handleBlur("firstName")}
                     />
-                    <Text
-                      style={{
-                        color: "red",
-                        fontSize: 12,
-                        display:
-                          touched.firstName && errors.firstName ? "flex" : "none",
-                      }}
-                    >
-                      {touched.firstName && typeof errors.firstName === "string"
-                        ? errors.firstName
-                        : " "}
+                    <Text style={{ color: "red", fontSize: 12, display: touched.firstName && errors.firstName ? "flex" : "none" }}>
+                      {touched.firstName && typeof errors.firstName === "string" ? errors.firstName : " "}
                     </Text>
                   </View>
 
                   <View style={styles.inputContainer}>
                     <TextInput
-                      label={t(
-                        "BarberRegistrationScreen.BarberLastNamePlaceholder",
-                      )}
-                      placeholder={t(
-                        "BarberRegistrationScreen.BarberLastNamePlaceholder",
-                      )}
+                      label={t("BarberRegistrationScreen.BarberLastNamePlaceholder")}
+                      placeholder={t("BarberRegistrationScreen.BarberLastNamePlaceholder")}
                       {...commonProps}
                       value={values.lastName}
                       onChangeText={handleChange("lastName")}
                       onBlur={handleBlur("lastName")}
                     />
-                    <Text
-                      style={{
-                        color: "red",
-                        fontSize: 12,
-                        display:
-                          touched.lastName && errors.lastName ? "flex" : "none",
-                      }}
-                    >
-                      {touched.lastName && typeof errors.lastName === "string"
-                        ? errors.lastName
-                        : " "}
-                    </Text>
-                  </View>
-                  <View style={styles.inputContainer}>
-                    <TextInput
-                      label={t(
-                        "BarberRegistrationScreen.studioNamePlaceholder",
-                      )}
-                      placeholder={t(
-                        "BarberRegistrationScreen.studioNamePlaceholder",
-                      )}
-                      {...commonProps}
-                      value={values.salonName}
-                      onChangeText={handleChange("salonName")}
-                      onBlur={handleBlur("salonName")}
-                    />
-                    <Text
-                      style={{
-                        color: "red",
-                        fontSize: 12,
-                        display:
-                          touched.salonName && errors.salonName ? "flex" : "none",
-                      }}
-                    >
-                      {touched.salonName && typeof errors.salonName === "string"
-                        ? errors.salonName
-                        : " "}
+                    <Text style={{ color: "red", fontSize: 12, display: touched.lastName && errors.lastName ? "flex" : "none" }}>
+                      {touched.lastName && typeof errors.lastName === "string" ? errors.lastName : " "}
                     </Text>
                   </View>
 
                   <View style={styles.inputContainer}>
                     <TextInput
-                      label={t(
-                        "BarberRegistrationScreen.addressPlaceholder",
-                      )}
-                      placeholder={t(
-                        "BarberRegistrationScreen.addressPlaceholder",
-                      )}
+                      label={t("BarberRegistrationScreen.studioNamePlaceholder")}
+                      placeholder={t("BarberRegistrationScreen.studioNamePlaceholder")}
+                      {...commonProps}
+                      value={values.salonName}
+                      onChangeText={handleChange("salonName")}
+                      onBlur={handleBlur("salonName")}
+                    />
+                    <Text style={{ color: "red", fontSize: 12, display: touched.salonName && errors.salonName ? "flex" : "none" }}>
+                      {touched.salonName && typeof errors.salonName === "string" ? errors.salonName : " "}
+                    </Text>
+                  </View>
+
+                  <View style={styles.inputContainer}>
+                    <TextInput
+                      label={t("BarberRegistrationScreen.addressPlaceholder")}
+                      placeholder={t("BarberRegistrationScreen.addressPlaceholder")}
                       {...commonProps}
                       value={values.salonAddress}
                       onChangeText={handleChange("salonAddress")}
                       onBlur={handleBlur("salonAddress")}
                     />
-                    <Text
-                      style={{
-                        color: "red",
-                        fontSize: 12,
-                        display:
-                          touched.salonAddress && errors.salonAddress
-                            ? "flex"
-                            : "none",
-                      }}
-                    >
-                      {touched.salonAddress &&
-                        typeof errors.salonAddress === "string"
-                        ? errors.salonAddress
-                        : " "}
+                    <Text style={{ color: "red", fontSize: 12, display: touched.salonAddress && errors.salonAddress ? "flex" : "none" }}>
+                      {touched.salonAddress && typeof errors.salonAddress === "string" ? errors.salonAddress : " "}
                     </Text>
                   </View>
 
@@ -438,15 +316,12 @@ export default function RegisterBarberScreen({ onGoToLogin, navigation }) {
                     {t("BarberRegistrationScreen.specializations")}
                   </Text>
                   <View style={styles.taglioGrid}>
-                    {tagliOptions.map((taglio) => {
+                    {filteredTags.map((taglio) => {
                       const isSelected = values.typesCut.includes(taglio.id);
                       return (
                         <TouchableOpacity
                           key={taglio.id}
-                          style={[
-                            styles.taglioCard,
-                            isSelected && styles.taglioCardActive,
-                          ]}
+                          style={[styles.taglioCard, isSelected && styles.taglioCardActive]}
                           onPress={() => {
                             const updated = isSelected
                               ? values.typesCut.filter((id) => id !== taglio.id)
@@ -454,26 +329,22 @@ export default function RegisterBarberScreen({ onGoToLogin, navigation }) {
                             setFieldValue("typesCut", updated);
                           }}
                         >
-                          <Text style={styles.taglioEmoji}>{taglio.emoji}</Text>
-                          <Text style={styles.taglioName}>{taglio.name}</Text>
+                          <Text style={styles.taglioName}>
+                            {i18n.language === "en-UK"
+                              ? taglio?.label?.en ?? taglio.id
+                              : taglio?.label?.it ?? taglio?.label?.en ?? taglio.id}
+                          </Text>
                           <Text style={styles.taglioDescription}>
-                            {taglio.description}
+                            {i18n.language === "en-UK"
+                              ? taglio?.description?.en ?? ""
+                              : taglio?.description?.it ?? taglio?.description?.en ?? ""}
                           </Text>
                         </TouchableOpacity>
                       );
                     })}
                   </View>
-                  <Text
-                    style={{
-                      color: "red",
-                      fontSize: 12,
-                      display:
-                        touched.typesCut && errors.typesCut ? "flex" : "none",
-                    }}
-                  >
-                    {touched.typesCut && typeof errors.typesCut === "string"
-                      ? errors.typesCut
-                      : " "}
+                  <Text style={{ color: "red", fontSize: 12, display: touched.typesCut && errors.typesCut ? "flex" : "none" }}>
+                    {touched.typesCut && typeof errors.typesCut === "string" ? errors.typesCut : " "}
                   </Text>
                 </View>
 
@@ -484,43 +355,23 @@ export default function RegisterBarberScreen({ onGoToLogin, navigation }) {
 
                   <View style={styles.inputContainer}>
                     <TextInput
-                      label={t(
-                        "BarberRegistrationScreen.phonePlaceholder",
-                      )}
-                      placeholder={t(
-                        "BarberRegistrationScreen.phonePlaceholder",
-                      )}
+                      label={t("BarberRegistrationScreen.phonePlaceholder")}
+                      placeholder={t("BarberRegistrationScreen.phonePlaceholder")}
                       {...commonProps}
                       value={values.phoneNumber}
                       onChangeText={handleChange("phoneNumber")}
                       onBlur={handleBlur("phoneNumber")}
                       keyboardType="phone-pad"
                     />
-                    <Text
-                      style={{
-                        color: "red",
-                        fontSize: 12,
-                        display:
-                          touched.phoneNumber && errors.phoneNumber
-                            ? "flex"
-                            : "none",
-                      }}
-                    >
-                      {touched.phoneNumber &&
-                        typeof errors.phoneNumber === "string"
-                        ? errors.phoneNumber
-                        : " "}
+                    <Text style={{ color: "red", fontSize: 12, display: touched.phoneNumber && errors.phoneNumber ? "flex" : "none" }}>
+                      {touched.phoneNumber && typeof errors.phoneNumber === "string" ? errors.phoneNumber : " "}
                     </Text>
                   </View>
 
                   <View style={styles.inputContainer}>
                     <TextInput
-                      label={t(
-                        "BarberRegistrationScreen.websitePlaceholder",
-                      )}
-                      placeholder={t(
-                        "BarberRegistrationScreen.websitePlaceholder",
-                      )}
+                      label={t("BarberRegistrationScreen.websitePlaceholder")}
+                      placeholder={t("BarberRegistrationScreen.websitePlaceholder")}
                       {...commonProps}
                       value={values.website}
                       onChangeText={handleChange("website")}
@@ -532,12 +383,8 @@ export default function RegisterBarberScreen({ onGoToLogin, navigation }) {
 
                   <View style={styles.inputContainer}>
                     <TextInput
-                      label={t(
-                        "BarberRegistrationScreen.emailBookingPlaceholder",
-                      )}
-                      placeholder={t(
-                        "BarberRegistrationScreen.emailBookingPlaceholder",
-                      )}
+                      label={t("BarberRegistrationScreen.emailBookingPlaceholder")}
+                      placeholder={t("BarberRegistrationScreen.emailBookingPlaceholder")}
                       {...commonProps}
                       value={values.contactEmail}
                       onChangeText={handleChange("contactEmail")}
@@ -545,56 +392,28 @@ export default function RegisterBarberScreen({ onGoToLogin, navigation }) {
                       keyboardType="email-address"
                       autoCapitalize="none"
                     />
-                    <Text
-                      style={{
-                        color: "red",
-                        fontSize: 12,
-                        display:
-                          touched.contactEmail && errors.contactEmail
-                            ? "flex"
-                            : "none",
-                      }}
-                    >
-                      {touched.contactEmail &&
-                        typeof errors.contactEmail === "string"
-                        ? errors.contactEmail
-                        : " "}
+                    <Text style={{ color: "red", fontSize: 12, display: touched.contactEmail && errors.contactEmail ? "flex" : "none" }}>
+                      {touched.contactEmail && typeof errors.contactEmail === "string" ? errors.contactEmail : " "}
                     </Text>
                   </View>
                 </View>
+
                 <View style={[styles.sectionBox, { flexDirection: "row" }]}>
                   <Checkbox.Android
                     uncheckedColor="rgba(0, 188, 212, 0.7)"
                     color="#00BCD4"
                     status={values.termsService ? "checked" : "unchecked"}
-                    onPress={() =>
-                      setFieldValue("termsService", !values.termsService)
-                    }
+                    onPress={() => setFieldValue("termsService", !values.termsService)}
                   />
                   <Text style={styles.checkboxLabel}>
                     {t("BarberRegistrationScreen.termsAndConditions")}
                   </Text>
                 </View>
-                <Text
-                  style={{
-                    color: "red",
-                    fontSize: 12,
-                    display:
-                      touched.termsService && errors.termsService
-                        ? "flex"
-                        : "none",
-                  }}
-                >
-                  {touched.termsService &&
-                    typeof errors.termsService === "string"
-                    ? errors.termsService
-                    : " "}
+                <Text style={{ color: "red", fontSize: 12, display: touched.termsService && errors.termsService ? "flex" : "none" }}>
+                  {touched.termsService && typeof errors.termsService === "string" ? errors.termsService : " "}
                 </Text>
 
-                <TouchableOpacity
-                  style={styles.registerButton}
-                  onPress={handleSubmit}
-                >
+                <TouchableOpacity style={styles.registerButton} onPress={handleSubmit}>
                   <Text style={styles.registerButtonText}>
                     {t("BarberRegistrationScreen.registerButton")}
                   </Text>
@@ -678,21 +497,6 @@ const styles = StyleSheet.create({
   inputContainer: {
     marginBottom: 15,
   },
-  input: {
-    height: 50,
-    borderWidth: 1.5,
-    borderColor: "rgba(0, 188, 212, 0.2)",
-    borderRadius: 14,
-    paddingHorizontal: 15,
-    fontSize: 16,
-    backgroundColor: "rgba(248, 248, 248, 0.6)",
-    color: "#0f172a",
-    shadowColor: "#00BCD4",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-  },
   taglioGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -718,19 +522,17 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0, 188, 212, 0.15)",
     borderColor: "rgba(0, 188, 212, 0.5)",
   },
-  taglioEmoji: {
-    fontSize: 35,
-    marginBottom: 8,
-  },
   taglioName: {
     fontSize: 16,
     fontWeight: "bold",
     color: "#0f172a",
     marginBottom: 5,
+    textAlign: "center",
   },
   taglioDescription: {
-    fontSize: 11,
-    color: "#334155",
+    fontSize: 12,
+    color: "#475569",
+    lineHeight: 16,
     textAlign: "center",
   },
   sectionBox: {
@@ -745,86 +547,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 12,
     elevation: 3,
-  },
-  mediaSection: {
-    marginBottom: 25,
-  },
-  mediaSectionHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 15,
-  },
-  mediaSectionTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#333",
-  },
-  addMediaButton: {
-    backgroundColor: "#00BCD4",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-  },
-  addMediaButtonText: {
-    color: "white",
-    fontSize: 12,
-    fontWeight: "600",
-  },
-  mediaItem: {
-    marginRight: 15,
-    position: "relative",
-  },
-  mediaPreview: {
-    width: 100,
-    height: 100,
-    borderRadius: 10,
-    backgroundColor: "#F0F0F0",
-  },
-  videoPreview: {
-    width: 100,
-    height: 100,
-    borderRadius: 10,
-    backgroundColor: "#E8F8F5",
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 2,
-    borderColor: "#00BCD4",
-    borderStyle: "dashed",
-  },
-  videoIcon: {
-    fontSize: 24,
-    marginBottom: 5,
-  },
-  videoText: {
-    fontSize: 12,
-    color: "#00BCD4",
-    fontWeight: "600",
-  },
-  removeMediaButton: {
-    position: "absolute",
-    top: -5,
-    right: -5,
-    backgroundColor: "#FF6B6B",
-    borderRadius: 12,
-    width: 24,
-    height: 24,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  removeMediaText: {
-    color: "white",
-    fontSize: 14,
-    fontWeight: "bold",
-  },
-  noMediaText: {
-    fontSize: 14,
-    color: "#999",
-    fontStyle: "italic",
-    textAlign: "center",
-    padding: 20,
-    backgroundColor: "#F8F8F8",
-    borderRadius: 10,
   },
   registerButton: {
     backgroundColor: "rgba(0, 188, 212, 0.35)",

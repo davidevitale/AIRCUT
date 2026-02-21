@@ -23,7 +23,6 @@ import { router } from 'expo-router';
 
 
 export default function RegisterClientScreen({ }) {
-  const { t, i18n } = useTranslation();
   const validationSchema = Yup.object().shape({
     email: Yup.string()
       .email(t("ClientRegistrationScreen.emailValidation"))
@@ -52,33 +51,10 @@ export default function RegisterClientScreen({ }) {
     termsService: Yup.boolean()
       .oneOf([true], t("ClientRegistrationScreen.termsServiceValidation")),
   });
+  const { t, i18n } = useTranslation();
 
-
-  const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-    confirmPassword: '',
-    nomeUtente: '',
-    sesso: '',
-    preferenzaTaglio: [],
-    terminiServizio: false,
-  });
   const [tags, setTags] = useState([])
-
   const scrollViewRef = useRef(null);
-
-  const updateField = (field, value) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-  };
-
-  const toggleTaglio = (taglioId) => {
-    setFormData(prev => ({
-      ...prev,
-      preferenzaTaglio: prev.preferenzaTaglio.includes(taglioId)
-        ? prev.preferenzaTaglio.filter(id => id !== taglioId)
-        : [...prev.preferenzaTaglio, taglioId]
-    }));
-  };
 
   const fetchAllTags = async () => {
     try {
@@ -115,9 +91,6 @@ export default function RegisterClientScreen({ }) {
       return false;
     });
   };
-
-
-
 
   const handleRegister = async (values) => {
 
@@ -161,6 +134,7 @@ export default function RegisterClientScreen({ }) {
 
     }
   };
+
   const commonProps = {
     mode: "outlined",
     outlineColor: "#00BCD4",

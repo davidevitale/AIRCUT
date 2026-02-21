@@ -12,6 +12,7 @@ import {
   Modal,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useTranslation } from "react-i18next";
 import {
   logoutUser,
   getCurrentUserData,
@@ -23,12 +24,14 @@ import {
   pickVideos,
   uploadMultipleFiles,
 } from "../../services/mediaService";
+import LanguageToggle from "../../components/LanguageToggle";
 
 export default function BarberAccountScreen({
   userData: propUserData,
   onLogout,
   navigate,
 }) {
+  const { t } = useTranslation();
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -55,7 +58,7 @@ export default function BarberAccountScreen({
   const loadUserData = async () => {
     try {
       const data = await getCurrentUserData();
-      console.log("Loaded user data from service:", data);
+      console.log("Loaded user data from service:", JSON.stringify(data.userData, null, 2));
       if (data && data.role === "barber") {
         setUserData(data.userData);
         setCurrentUser(data.user);
@@ -101,15 +104,19 @@ export default function BarberAccountScreen({
             portfolioImages: updatedImages,
           }));
 
-          Alert.alert("Successo", `${uploadedImages.length} foto caricate!`);
+          Alert.alert(
+            t("BarberAccountScreen.successTitle"),
+            t("BarberAccountScreen.imagesUploaded", { count: uploadedImages.length }),
+          );
         }
       }
     } catch (error) {
       console.error("handleAddImages error:", error);
       Alert.alert(
-        "Errore",
-        "Impossibile caricare le foto: " +
-        (error?.message || "Errore sconosciuto"),
+        t("BarberAccountScreen.errorTitle"),
+        t("BarberAccountScreen.imageUploadError", {
+          message: error?.message || t("BarberAccountScreen.unknownError"),
+        }),
       );
     } finally {
       setUploading(false);
@@ -149,15 +156,19 @@ export default function BarberAccountScreen({
             portfolioVideos: updatedVideos,
           }));
 
-          Alert.alert("Successo", `${uploadedVideos.length} video caricati!`);
+          Alert.alert(
+            t("BarberAccountScreen.successTitle"),
+            t("BarberAccountScreen.videosUploaded", { count: uploadedVideos.length }),
+          );
         }
       }
     } catch (error) {
       console.error("handleAddVideos error:", error);
       Alert.alert(
-        "Errore",
-        "Impossibile caricare i video: " +
-        (error?.message || "Errore sconosciuto"),
+        t("BarberAccountScreen.errorTitle"),
+        t("BarberAccountScreen.videoUploadError", {
+          message: error?.message || t("BarberAccountScreen.unknownError"),
+        }),
       );
     } finally {
       setUploading(false);
@@ -183,24 +194,34 @@ export default function BarberAccountScreen({
         ...updateData,
       }));
 
-      Alert.alert("Successo", `${isImage ? "Foto" : "Video"} rimosso!`);
+      Alert.alert(
+        t("BarberAccountScreen.successTitle"),
+        t("BarberAccountScreen.mediaRemoved", {
+          type: isImage
+            ? t("BarberAccountScreen.photo")
+            : t("BarberAccountScreen.video"),
+        }),
+      );
     } catch (error) {
-      Alert.alert("Errore", "Impossibile rimuovere il file");
+      Alert.alert(
+        t("BarberAccountScreen.errorTitle"),
+        t("BarberAccountScreen.removeFileError"),
+      );
     }
   };
 
   const handleLogout = async () => {
-    Alert.alert("Disconnessione", "Sei sicuro di voler uscire?", [
-      { text: "Annulla", style: "cancel" },
+    Alert.alert(t("BarberAccountScreen.logoutTitle"), t("BarberAccountScreen.logoutMessage"), [
+      { text: t("BarberAccountScreen.cancel"), style: "cancel" },
       {
-        text: "Esci",
+        text: t("BarberAccountScreen.logout"),
         style: "destructive",
         onPress: async () => {
           try {
             await logoutUser();
             onLogout();
           } catch (error) {
-            Alert.alert("Errore", "Impossibile disconnettersi");
+            Alert.alert(t("BarberAccountScreen.errorTitle"), t("BarberAccountScreen.logoutError"));
           }
         },
       },
@@ -209,7 +230,7 @@ export default function BarberAccountScreen({
 
   const addServiceToPrice = async () => {
     if (!newService.name.trim() || !newService.price.trim()) {
-      Alert.alert("Errore", "Inserisci nome del servizio e prezzo");
+      Alert.alert(t("BarberAccountScreen.errorTitle"), t("BarberAccountScreen.serviceNamePriceRequired"));
       return;
     }
 
@@ -241,24 +262,24 @@ export default function BarberAccountScreen({
 
       setNewService({ name: "", price: "" });
       setShowPriceModal(false);
-      Alert.alert("Successo", "Servizio aggiunto al listino!");
+      Alert.alert(t("BarberAccountScreen.successTitle"), t("BarberAccountScreen.serviceAdded"));
     } catch (error) {
       console.error("addServiceToPrice: Error:", error);
       Alert.alert(
-        "Errore",
-        "Impossibile aggiungere il servizio: " + error.message,
+        t("BarberAccountScreen.errorTitle"),
+        t("BarberAccountScreen.serviceAddError", { message: error.message }),
       );
     }
   };
 
   const removeServiceFromPrice = async (serviceId) => {
     Alert.alert(
-      "Rimuovi servizio",
-      "Vuoi rimuovere questo servizio dal listino?",
+      t("BarberAccountScreen.removeServiceTitle"),
+      t("BarberAccountScreen.removeServiceMessage"),
       [
-        { text: "Annulla", style: "cancel" },
+        { text: t("BarberAccountScreen.cancel"), style: "cancel" },
         {
-          text: "Rimuovi",
+          text: t("BarberAccountScreen.remove"),
           style: "destructive",
           onPress: async () => {
             try {
@@ -284,12 +305,12 @@ export default function BarberAccountScreen({
                 listinoPrezzo: updatedPriceList,
               }));
 
-              Alert.alert("Successo", "Servizio rimosso dal listino");
+              Alert.alert(t("BarberAccountScreen.successTitle"), t("BarberAccountScreen.serviceRemoved"));
             } catch (error) {
               console.error("removeServiceFromPrice: Error:", error);
               Alert.alert(
-                "Errore",
-                "Impossibile rimuovere il servizio: " + error.message,
+                t("BarberAccountScreen.errorTitle"),
+                t("BarberAccountScreen.serviceRemoveError", { message: error.message }),
               );
             }
           },
@@ -307,7 +328,7 @@ export default function BarberAccountScreen({
 
   const updateService = async () => {
     if (!newService.name.trim() || !newService.price.trim()) {
-      Alert.alert("Errore", "Inserisci nome del servizio e prezzo");
+      Alert.alert(t("BarberAccountScreen.errorTitle"), t("BarberAccountScreen.serviceNamePriceRequired"));
       return;
     }
 
@@ -340,12 +361,12 @@ export default function BarberAccountScreen({
       setEditingService(null);
       setIsEditing(false);
       setShowPriceModal(false);
-      Alert.alert("Successo", "Servizio aggiornato!");
+      Alert.alert(t("BarberAccountScreen.successTitle"), t("BarberAccountScreen.serviceUpdated"));
     } catch (error) {
       console.error("updateService: Error:", error);
       Alert.alert(
-        "Errore",
-        "Impossibile aggiornare il servizio: " + error.message,
+        t("BarberAccountScreen.errorTitle"),
+        t("BarberAccountScreen.serviceUpdateError", { message: error.message }),
       );
     }
   };
@@ -364,7 +385,7 @@ export default function BarberAccountScreen({
         currentUserData: userData,
       });
     } else {
-      Alert.alert("Navigazione", "Modifica profilo non disponibile.");
+      Alert.alert(t("BarberAccountScreen.navigationTitle"), t("BarberAccountScreen.editProfileUnavailable"));
     }
   };
 
@@ -404,15 +425,16 @@ export default function BarberAccountScreen({
           }));
           setLocalProfileUri(null);
 
-          Alert.alert("Successo", "Immagine profilo aggiornata!");
+          Alert.alert(t("BarberAccountScreen.successTitle"), t("BarberAccountScreen.profileImageUpdated"));
         }
       }
     } catch (error) {
       console.error("handleProfileImageUpload error:", error);
       Alert.alert(
-        "Errore",
-        "Impossibile caricare l'immagine profilo: " +
-        (error?.message || "Errore sconosciuto"),
+        t("BarberAccountScreen.errorTitle"),
+        t("BarberAccountScreen.profileImageUploadError", {
+          message: error?.message || t("BarberAccountScreen.unknownError"),
+        }),
       );
     } finally {
       setUploadingProfileImage(false);
@@ -423,7 +445,7 @@ export default function BarberAccountScreen({
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Caricamento...</Text>
+          <Text style={styles.loadingText}>{t("BarberAccountScreen.loading")}</Text>
         </View>
       </SafeAreaView>
     );
@@ -444,41 +466,6 @@ export default function BarberAccountScreen({
               <View style={styles.menuLine} />
               <View style={styles.menuLine} />
             </TouchableOpacity>
-            {menuOpen && (
-              <>
-                <TouchableOpacity
-                  style={styles.headerOverlay}
-                  onPress={closeMenu}
-                />
-                <View style={styles.menuContainer}>
-                  <TouchableOpacity
-                    style={styles.menuItem}
-                    onPress={() => {
-                      closeMenu();
-                      goToEditProfile();
-                    }}
-                  >
-                    <Text style={styles.menuItemText}>Modifica profilo</Text>
-                  </TouchableOpacity>
-                  <View style={styles.menuDivider} />
-                  <TouchableOpacity
-                    style={styles.menuItem}
-                    onPress={() => {
-                      closeMenu();
-                      handleProfileImageUpload();
-                    }}
-                  >
-                    <Text style={styles.menuItemText}>
-                      Cambia immagine profilo
-                    </Text>
-                  </TouchableOpacity>
-                  {/*<View style={styles.menuDivider} />
-                  <TouchableOpacity style={styles.menuItem} onPress={() => { closeMenu(); handleLogout(); }}>
-                    <Text style={styles.menuItemText}>Disconnetti</Text>
-                  </TouchableOpacity>*/}
-                </View>
-              </>
-            )}
             <View style={styles.headerContent}>
               {/* Profile image on the left with + to upload */}
               <TouchableOpacity
@@ -494,53 +481,91 @@ export default function BarberAccountScreen({
                 ) : (
                   <View style={styles.profileImagePlaceholder}>
                     <Text style={styles.profileImagePlaceholderText}>
-                      {userData?.nomeSalone?.charAt(0) || "S"}
+                      {userData?.salonName?.charAt(0) || "S"}
                     </Text>
                   </View>
                 )}
                 <View style={styles.addImageButton}>
                   <Text style={styles.addImageButtonText}>
-                    {uploadingProfileImage ? "··" : "+"}
+                    {uploadingProfileImage ? "Â·Â·" : "+"}
                   </Text>
                 </View>
               </TouchableOpacity>
 
               {/* Name and role to the right */}
               <View style={styles.salonInfo}>
-                <Text style={styles.salonName}>{userData?.nomeSalone}</Text>
-                <Text style={styles.roleText}>Hair Artist</Text>
+                <Text style={styles.salonName}>{userData?.salonName}</Text>
+                <Text style={styles.roleText}>{t("BarberAccountScreen.hairArtist")}</Text>
               </View>
             </View>
           </View>
+          {menuOpen && (
+            <View style={styles.menuPortal} pointerEvents="box-none">
+              <TouchableOpacity
+                style={styles.menuOverlay}
+                onPress={closeMenu}
+              />
+              <View style={styles.menuContainer}>
+                <View style={styles.menuToggleRow}>
+                  <Text style={styles.menuItemText}>{t("language")}</Text>
+                  <View style={styles.menuToggleControl}>
+                    <LanguageToggle />
+                  </View>
+                </View>
+                <View style={styles.menuDivider} />
+                <TouchableOpacity
+                  style={styles.menuItem}
+                  onPress={() => {
+                    closeMenu();
+                    goToEditProfile();
+                  }}
+                >
+                  <Text style={styles.menuItemText}>{t("BarberAccountScreen.editProfile")}</Text>
+                </TouchableOpacity>
+                <View style={styles.menuDivider} />
+                <TouchableOpacity
+                  style={styles.menuItem}
+                  onPress={() => {
+                    closeMenu();
+                    handleProfileImageUpload();
+                  }}
+                >
+                  <Text style={styles.menuItemText}>
+                    {t("BarberAccountScreen.changeProfileImage")}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
 
           {/* Dati Salone */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Il tuo salone</Text>
+            <Text style={styles.sectionTitle}>{t("BarberAccountScreen.yourSalon")}</Text>
 
             <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Nome:</Text>
-              <Text style={styles.infoValue}>{userData?.nomeSalone}</Text>
+              <Text style={styles.infoLabel}>{t("BarberAccountScreen.nameLabel")}</Text>
+              <Text style={styles.infoValue}>{userData?.salonName}</Text>
             </View>
 
             <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Indirizzo:</Text>
-              <Text style={styles.infoValue}>{userData?.via}</Text>
+              <Text style={styles.infoLabel}>{t("BarberAccountScreen.addressLabel")}</Text>
+              <Text style={styles.infoValue}>{userData?.address}</Text>
             </View>
 
             <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Telefono:</Text>
-              <Text style={styles.infoValue}>{userData?.telefono}</Text>
+              <Text style={styles.infoLabel}>{t("BarberAccountScreen.phoneLabel")}</Text>
+              <Text style={styles.infoValue}>{userData?.telephone}</Text>
             </View>
 
             <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Email contatti:</Text>
-              <Text style={styles.infoValue}>{userData?.emailContatto}</Text>
+              <Text style={styles.infoLabel}>{t("BarberAccountScreen.contactEmailLabel")}</Text>
+              <Text style={styles.infoValue}>{userData?.emailContact}</Text>
             </View>
 
-            {userData?.sitoWeb && (
+            {userData?.website && (
               <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Sito web:</Text>
-                <Text style={styles.infoValue}>{userData.sitoWeb}</Text>
+                <Text style={styles.infoLabel}>{t("BarberAccountScreen.websiteLabel")}</Text>
+                <Text style={styles.infoValue}>{userData.website}</Text>
               </View>
             )}
           </View>
@@ -557,10 +582,10 @@ export default function BarberAccountScreen({
 
           {/* Specializzazioni */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Le tue specializzazioni</Text>
+            <Text style={styles.sectionTitle}>{t("BarberAccountScreen.yourSpecializations")}</Text>
 
             <View style={styles.tagsContainer}>
-              {userData?.tipiTaglio?.map((taglio, index) => (
+              {userData?.typesCut?.map((taglio, index) => (
                 <View key={index} style={styles.tag}>
                   <Text style={styles.tagText}>{taglio}</Text>
                 </View>
@@ -570,14 +595,14 @@ export default function BarberAccountScreen({
 
           {/* Gestione Business
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>⚙️ Modifica profilo salone</Text>
+            <Text style={styles.sectionTitle}>âš™ï¸ Modifica profilo salone</Text>
           </View>
           */}
 
           {/* Promozione */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>
-              Posts {userData?.portfolioImages?.length || 0}{" "}
+              {t("BarberAccountScreen.postsTitle", { count: userData?.portfolioImages?.length || 0 })}
             </Text>
 
             {/* Foto Portfolio */}
@@ -593,7 +618,7 @@ export default function BarberAccountScreen({
                   disabled={uploading}
                 >
                   <Text style={styles.addButtonText}>
-                    {uploading ? "Caricando..." : "+ Aggiungi"}
+                    {uploading ? t("BarberAccountScreen.uploading") : t("BarberAccountScreen.add")}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -619,23 +644,20 @@ export default function BarberAccountScreen({
                         style={styles.removeButton}
                         onPress={() => removeMedia(index, "image")}
                       >
-                        <Text style={styles.removeButtonText}>✕</Text>
+                        <Text style={styles.removeButtonText}>âœ•</Text>
                       </TouchableOpacity>
                     </View>
                   )}
                 />
               ) : (
-                <Text style={styles.emptyPortfolioText}>
-                  Nessuna foto nel portfolio. Aggiungi foto dei tuoi lavori per
-                  attirare più clienti!
-                </Text>
+                <Text style={styles.emptyPortfolioText}>{t("BarberAccountScreen.emptyPortfolioText")}</Text>
               )}
             </View>
 
             {/* Video Portfolio 
             <View style={styles.portfolioSection}>
               <View style={styles.portfolioHeader}>
-                <Text style={styles.portfolioTitle}>🎥 Video dei tuoi lavori ({userData?.portfolioVideos?.length || 0})</Text>
+                <Text style={styles.portfolioTitle}>ðŸŽ¥ Video dei tuoi lavori ({userData?.portfolioVideos?.length || 0})</Text>
                 <TouchableOpacity 
                   style={[styles.addButton, uploading && styles.addButtonDisabled]} 
                   onPress={handleAddVideos}
@@ -656,14 +678,14 @@ export default function BarberAccountScreen({
                   renderItem={({ item, index }) => (
                     <View style={styles.mediaItem}>
                       <View style={styles.videoPreview}>
-                        <Text style={styles.videoIcon}>🎥</Text>
+                        <Text style={styles.videoIcon}>ðŸŽ¥</Text>
                         <Text style={styles.videoText}>Video {index + 1}</Text>
                       </View>
                       <TouchableOpacity 
                         style={styles.removeButton} 
                         onPress={() => removeMedia(index, 'video')}
                       >
-                        <Text style={styles.removeButtonText}>✕</Text>
+                        <Text style={styles.removeButtonText}>âœ•</Text>
                       </TouchableOpacity>
                     </View>
                   )}
@@ -680,7 +702,7 @@ export default function BarberAccountScreen({
           {/* Listino Prezzi 
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>💰 Listino Prezzi ({userData?.listinoPrezzo?.length || 0})</Text>
+              <Text style={styles.sectionTitle}>ðŸ’° Listino Prezzi ({userData?.listinoPrezzo?.length || 0})</Text>
               <TouchableOpacity 
                 style={styles.addButton} 
                 onPress={() => setShowPriceModal(true)}
@@ -695,20 +717,20 @@ export default function BarberAccountScreen({
                   <View key={service.id} style={styles.priceItem}>
                     <View style={styles.priceInfo}>
                       <Text style={styles.serviceName}>{service.name}</Text>
-                      <Text style={styles.servicePrice}>€{service.price}</Text>
+                      <Text style={styles.servicePrice}>â‚¬{service.price}</Text>
                     </View>
                     <View style={styles.serviceButtons}>
                       <TouchableOpacity 
                         style={styles.editServiceButton}
                         onPress={() => editService(service)}
                       >
-                        <Text style={styles.editServiceText}>✏️</Text>
+                        <Text style={styles.editServiceText}>âœï¸</Text>
                       </TouchableOpacity>
                       <TouchableOpacity 
                         style={styles.removeServiceButton}
                         onPress={() => removeServiceFromPrice(service.id)}
                       >
-                        <Text style={styles.removeServiceText}>✕</Text>
+                        <Text style={styles.removeServiceText}>âœ•</Text>
                       </TouchableOpacity>
                     </View>
                   </View>
@@ -726,22 +748,22 @@ export default function BarberAccountScreen({
             <Text style={styles.sectionTitle}>Promuovi il tuo salone</Text>
             
             <TouchableOpacity style={styles.actionButton}>
-              <Text style={styles.actionButtonText}>📸 Carica foto lavori</Text>
+              <Text style={styles.actionButtonText}>ðŸ“¸ Carica foto lavori</Text>
             </TouchableOpacity>
             
             <TouchableOpacity style={styles.actionButton}>
-              <Text style={styles.actionButtonText}>⭐ Gestisci recensioni</Text>
+              <Text style={styles.actionButtonText}>â­ Gestisci recensioni</Text>
             </TouchableOpacity>
             
             <TouchableOpacity style={styles.actionButton}>
-              <Text style={styles.actionButtonText}>🎯 Crea offerte speciali</Text>
+              <Text style={styles.actionButtonText}>ðŸŽ¯ Crea offerte speciali</Text>
             </TouchableOpacity>
           </View>
           */}
 
           {/* Logout */}
           <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-            <Text style={styles.logoutButtonText}> Disconnetti</Text>
+            <Text style={styles.logoutButtonText}> {t("BarberAccountScreen.logout")}</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -756,26 +778,26 @@ export default function BarberAccountScreen({
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>
-              {isEditing ? "Modifica Servizio" : "Aggiungi Servizio"}
+              {isEditing ? t("BarberAccountScreen.editServiceTitle") : t("BarberAccountScreen.addServiceTitle")}
             </Text>{" "}
-            <Text style={styles.inputLabel}>Nome del servizio</Text>
+            <Text style={styles.inputLabel}>{t("BarberAccountScreen.serviceNameLabel")}</Text>
             <TextInput
               style={styles.textInput}
               value={newService.name}
               onChangeText={(text) =>
                 setNewService((prev) => ({ ...prev, name: text }))
               }
-              placeholder="es. Taglio uomo"
+              placeholder={t("BarberAccountScreen.serviceNamePlaceholder")}
               placeholderTextColor="#999"
             />
-            <Text style={styles.inputLabel}>Prezzo (€)</Text>
+            <Text style={styles.inputLabel}>{t("BarberAccountScreen.priceLabel")}</Text>
             <TextInput
               style={styles.textInput}
               value={newService.price}
               onChangeText={(text) =>
                 setNewService((prev) => ({ ...prev, price: text }))
               }
-              placeholder="es. 15.00"
+              placeholder={t("BarberAccountScreen.pricePlaceholder")}
               placeholderTextColor="#999"
               keyboardType="decimal-pad"
             />
@@ -784,7 +806,7 @@ export default function BarberAccountScreen({
                 style={[styles.modalButton, styles.cancelButton]}
                 onPress={cancelEdit}
               >
-                <Text style={styles.cancelButtonText}>Annulla</Text>
+                <Text style={styles.cancelButtonText}>{t("BarberAccountScreen.cancel")}</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -792,7 +814,7 @@ export default function BarberAccountScreen({
                 onPress={isEditing ? updateService : addServiceToPrice}
               >
                 <Text style={styles.confirmButtonText}>
-                  {isEditing ? "Aggiorna" : "Aggiungi"}
+                  {isEditing ? t("BarberAccountScreen.update") : t("BarberAccountScreen.add")}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -813,6 +835,7 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 20,
+    position: "relative",
   },
   loadingContainer: {
     flex: 1,
@@ -824,6 +847,7 @@ const styles = StyleSheet.create({
     color: "#666",
   },
   header: {
+    position: "relative",
     backgroundColor: "white",
     borderRadius: 0,
     padding: 25,
@@ -833,6 +857,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
+    zIndex: 5,
   },
   headerContent: {
     flexDirection: "row",
@@ -905,7 +930,8 @@ const styles = StyleSheet.create({
     height: 28,
     justifyContent: "center",
     alignItems: "center",
-    zIndex: 3,
+    zIndex: 40,
+    elevation: 40,
   },
   menuLine: {
     width: 20,
@@ -914,17 +940,17 @@ const styles = StyleSheet.create({
     borderRadius: 2,
     marginVertical: 2,
   },
-  headerOverlay: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    zIndex: 1,
+  menuPortal: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 100,
+    elevation: 100,
+  },
+  menuOverlay: {
+    ...StyleSheet.absoluteFillObject,
   },
   menuContainer: {
     position: "absolute",
-    top: 44,
+    top: 36,
     right: 10,
     backgroundColor: "rgba(255, 255, 255, 0.9)",
     borderRadius: 18,
@@ -936,8 +962,9 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.15,
     shadowRadius: 12,
-    elevation: 8,
-    zIndex: 2,
+    elevation: 110,
+    zIndex: 110,
+    overflow: "visible",
   },
   menuItem: {
     paddingVertical: 10,
@@ -952,6 +979,19 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: "#EEE",
     marginVertical: 4,
+  },
+  menuToggleRow: {
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    minHeight: 56,
+  },
+  menuToggleControl: {
+    zIndex: 2,
+    elevation: 2,
+    marginLeft: 10,
   },
   welcomeText: {
     fontSize: 20,
@@ -1304,3 +1344,6 @@ const styles = StyleSheet.create({
     color: "#00BCD4",
   },
 });
+
+
+
