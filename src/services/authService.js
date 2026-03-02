@@ -441,26 +441,48 @@ export const registerBarber = async (userData) => {
 
 
 // Login universale
-export const loginUser = async (email, password) => {
+export const loginUser = async (email, password, userRole) => {
   try {
-    const { user } = await signInWithEmailAndPassword(auth, email, password);
+    const normalizedRole = userRole === 'barber' ? 'barber' : 'client';
+    const expectedCollection = normalizedRole === 'barber' ? 'barbers' : 'clients';
+    const normalizedEmail = email.trim();
 
-    // Determina se Ã¨ client o barber
-    const clientDoc = await getDoc(doc(db, 'clients', user.uid));
-    const barberDoc = await getDoc(doc(db, 'barbers', user.uid));
+    // Role check before auth sign-in prevents transient auth-state changes
+    // when email exists only in the opposite collection.
+    const roleQuery = query(
+      collection(db, expectedCollection),
+      where('email', '==', normalizedEmail),
+      limit(1)
+    );
+    const roleSnapshot = await getDocs(roleQuery);
 
-    let userData = null;
-    let role = null;
-
-    if (clientDoc.exists()) {
-      userData = clientDoc.data();
-      role = 'client';
-    } else if (barberDoc.exists()) {
-      userData = barberDoc.data();
-      role = 'barber';
+    if (roleSnapshot.empty) {
+      throw new Error(
+        normalizedRole === 'barber'
+          ? 'barberAccountNotFound'
+          : 'clientAccountNotFound'
+      );
     }
 
-    return { user, userData, role };
+    const { user } = await signInWithEmailAndPassword(auth, normalizedEmail, password);
+    const userDoc = await getDoc(doc(db, expectedCollection, user.uid));
+
+    // Auth can succeed even when selected role is wrong.
+    // In that case, sign out immediately to avoid protected-route access.
+    if (!userDoc.exists()) {
+      await signOut(auth);
+      throw new Error(
+        normalizedRole === 'barber'
+          ? 'barberAccountNotFound'
+          : 'clientAccountNotFound'
+      );
+    }
+
+    return {
+      user,
+      userData: userDoc.data(),
+      role: normalizedRole,
+    };
   } catch (error) {
     // Gestisci errori specifici di Firebase per il login
     let errorMessage = error.message;
@@ -470,11 +492,15 @@ export const loginUser = async (email, password) => {
     } else if (error.code === 'auth/wrong-password') {
       errorMessage = 'Password errata. Riprova.';
     } else if (error.code === 'auth/invalid-email') {
-      errorMessage = 'L\'indirizzo email non Ã¨ valido.';
+      errorMessage = 'L\'indirizzo email non è valido.';
     } else if (error.code === 'auth/user-disabled') {
-      errorMessage = 'Questo account Ã¨ stato disabilitato. Contatta il supporto.';
+      errorMessage = 'Questo account è stato disabilitato. Contatta il supporto.';
     } else if (error.code === 'auth/too-many-requests') {
-      errorMessage = 'Troppi tentativi falliti. Riprova piÃ¹ tardi.';
+      errorMessage = 'Troppi tentativi falliti. Riprova più tardi.';
+    } else if (error.message === 'barberAccountNotFound') {
+      errorMessage = 'Questo account non esiste come parrucchiere.';
+    } else if (error.message === 'clientAccountNotFound') {
+      errorMessage = 'Questo account non esiste come cliente.';
     }
 
     throw new Error(errorMessage);
@@ -1668,3 +1694,5 @@ export const getBarberProfileData = async (barberName) => {
     return null;
   }
 };
+
+

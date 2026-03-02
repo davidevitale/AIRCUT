@@ -27,7 +27,7 @@ export const AuthProvider = ({ children }) => {
 
       console.log('[Auth] Auth state changed:', authData);
 
-      if (authData) {
+      if (authData?.user && authData?.role) {
         setUser(authData.user);
         setRole(authData.role);
         setUserData(authData.userData);

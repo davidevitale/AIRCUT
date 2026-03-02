@@ -1,16 +1,18 @@
 import React, { useState } from 'react';
-import { 
-  View, 
-  Text, 
-  TextInput, 
-  TouchableOpacity, 
-  StyleSheet, 
-  SafeAreaView,
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+
   Alert
 } from 'react-native';
 import { loginUser } from '../services/authService';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function LoginScreen({ userRole, onGoToRegister, navigation }) {
+  console.log("userRole", userRole === 'client' ? 'Cliente' : 'Parrucchiere')
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
@@ -19,9 +21,9 @@ export default function LoginScreen({ userRole, onGoToRegister, navigation }) {
       Alert.alert('Errore', 'Inserisci email e password');
       return;
     }
-    
+
     try {
-      const { user, userData, role } = await loginUser(email, password);
+      const { user, userData, role } = await loginUser(email, password, userRole);
       console.log('Login successo:', { user: user.email, role });
       // Firebase observer gestirà automaticamente lo stato
     } catch (error) {
