@@ -6,7 +6,8 @@ import {
   TouchableOpacity,
   StyleSheet,
   ScrollView,
-  Alert
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { registerClient } from '../../services/authService';
 import { useTranslation } from 'react-i18next';
@@ -23,6 +24,8 @@ import { router } from 'expo-router';
 
 
 export default function RegisterClientScreen({ }) {
+  const { t, i18n } = useTranslation();
+  const [isRegistering, setIsRegistering] = useState(false);
   const validationSchema = Yup.object().shape({
     email: Yup.string()
       .email(t("ClientRegistrationScreen.emailValidation"))
@@ -51,8 +54,6 @@ export default function RegisterClientScreen({ }) {
     termsService: Yup.boolean()
       .oneOf([true], t("ClientRegistrationScreen.termsServiceValidation")),
   });
-  const { t, i18n } = useTranslation();
-
   const [tags, setTags] = useState([])
   const scrollViewRef = useRef(null);
 
@@ -93,6 +94,8 @@ export default function RegisterClientScreen({ }) {
   };
 
   const handleRegister = async (values) => {
+    if (isRegistering) return;
+    setIsRegistering(true);
 
     try {
       await registerClient(values);
@@ -131,7 +134,8 @@ export default function RegisterClientScreen({ }) {
         t('ClientRegistrationScreen.errorTitle'),
         message
       );
-
+    } finally {
+      setIsRegistering(false);
     }
   };
 
@@ -441,10 +445,14 @@ export default function RegisterClientScreen({ }) {
                       : " "}
                   </Text>
 
-                  <TouchableOpacity style={styles.registerButton} onPress={() => {
+                  <TouchableOpacity style={[styles.registerButton, isRegistering && styles.registerButtonDisabled]} onPress={() => {
                     handleSubmit()
-                  }}>
-                    <Text style={styles.registerButtonText}>{t('ClientRegistrationScreen.registerButton')}</Text>
+                  }} disabled={isRegistering}>
+                    {isRegistering ? (
+                      <ActivityIndicator color="#00BCD4" />
+                    ) : (
+                      <Text style={styles.registerButtonText}>{t('ClientRegistrationScreen.registerButton')}</Text>
+                    )}
                   </TouchableOpacity>
                 </>
               )
@@ -646,6 +654,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 12,
     elevation: 4,
+  },
+  registerButtonDisabled: {
+    opacity: 0.7,
   },
   registerButtonText: {
     color: '#00BCD4',

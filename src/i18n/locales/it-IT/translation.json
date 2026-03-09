@@ -47,6 +47,13 @@
     "requiredValidation": "Questo campo Ã¨ obbligatorio.",
     "errorTitle": "Errore di accesso",
     "invalidCredentials": "Email o password non corretti, riprova.",
+    "userNotFound": "Nessun account trovato con questa email.",
+    "wrongPassword": "Password errata. Riprova.",
+    "invalidEmail": "L'indirizzo email non e valido.",
+    "userDisabled": "Questo account e stato disabilitato. Contatta il supporto.",
+    "tooManyRequests": "Troppi tentativi falliti. Riprova piu tardi.",
+    "barberAccountNotFound": "Questo account non esiste come parrucchiere.",
+    "clientAccountNotFound": "Questo account non esiste come cliente.",
     "successTitle": "Accesso riuscito"
   },
   "ClientRegistrationScreen": {

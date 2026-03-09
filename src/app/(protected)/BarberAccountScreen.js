@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { router } from "expo-router";
 import {
   View,
   Text,
@@ -219,7 +220,9 @@ export default function BarberAccountScreen({
         onPress: async () => {
           try {
             await logoutUser();
-            onLogout();
+            if (typeof onLogout === "function") {
+              onLogout();
+            }
           } catch (error) {
             Alert.alert(t("BarberAccountScreen.errorTitle"), t("BarberAccountScreen.logoutError"));
           }
@@ -379,14 +382,7 @@ export default function BarberAccountScreen({
   };
 
   const goToEditProfile = () => {
-    if (navigate) {
-      navigate("EditBarberProfile", {
-        userId: userData?.id || auth.currentUser?.uid,
-        currentUserData: userData,
-      });
-    } else {
-      Alert.alert(t("BarberAccountScreen.navigationTitle"), t("BarberAccountScreen.editProfileUnavailable"));
-    }
+    router.push("/(protected)/EditBarberProfileScreen");
   };
 
   const toggleMenu = () => setMenuOpen((prev) => !prev);
@@ -601,14 +597,13 @@ export default function BarberAccountScreen({
 
           {/* Promozione */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>
-              {t("BarberAccountScreen.postsTitle", { count: userData?.portfolioImages?.length || 0 })}
-            </Text>
+            {/* <Text style={styles.sectionTitle}>
+              {t("BarberAccountScreen.postsTitle", { count: userData?.portfolioImages?.length || 0 })}sss
+            </Text> */}
 
             {/* Foto Portfolio */}
             <View style={styles.portfolioSection}>
-              <View style={styles.portfolioHeader}>
-                {/*<Text style={styles.portfolioTitle}> ({userData?.portfolioImages?.length || 0})</Text>*/}
+              {/* <View style={styles.portfolioHeader}>
                 <TouchableOpacity
                   style={[
                     styles.addButton,
@@ -621,8 +616,8 @@ export default function BarberAccountScreen({
                     {uploading ? t("BarberAccountScreen.uploading") : t("BarberAccountScreen.add")}
                   </Text>
                 </TouchableOpacity>
-              </View>
-
+              </View> */}
+              {/* 
               {userData?.portfolioImages?.length > 0 ? (
                 <FlatList
                   data={userData.portfolioImages}
@@ -651,7 +646,7 @@ export default function BarberAccountScreen({
                 />
               ) : (
                 <Text style={styles.emptyPortfolioText}>{t("BarberAccountScreen.emptyPortfolioText")}</Text>
-              )}
+              )} */}
             </View>
 
             {/* Video Portfolio 

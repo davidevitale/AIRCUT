@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import { router } from 'expo-router';
 import {
   View,
   Text,
   TouchableOpacity,
   StyleSheet,
-  SafeAreaView,
   ScrollView,
   Alert,
 } from 'react-native';
@@ -12,10 +12,12 @@ import { useTranslation } from 'react-i18next';
 import { logoutUser, getCurrentUserData } from '../../services/authService';
 import { auth } from '../../../config/firebase';
 import LanguageToggle from '../../components/LanguageToggle';
+import { SafeAreaView } from 'react-native-safe-area-context'
 
 export default function ClientAccountScreen({ userData: propUserData, onLogout, navigate }) {
   const { t } = useTranslation();
   const [userData, setUserData] = useState(null);
+  console.log(JSON.stringify(userData, null, 2))
   const [loading, setLoading] = useState(true);
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -45,10 +47,7 @@ export default function ClientAccountScreen({ userData: propUserData, onLogout, 
   const closeMenu = () => setMenuOpen(false);
 
   const goToEditProfile = () => {
-    navigate('EditClientProfile', {
-      userId: userData?.id || auth.currentUser?.uid,
-      currentUserData: userData,
-    });
+    router.push('/(protected)/EditClientProfileScreen');
   };
 
   const handleLogout = async () => {
@@ -63,7 +62,9 @@ export default function ClientAccountScreen({ userData: propUserData, onLogout, 
           onPress: async () => {
             try {
               await logoutUser();
-              onLogout();
+              if (typeof onLogout === 'function') {
+                onLogout();
+              }
             } catch (error) {
               Alert.alert(t('ClientAccountScreen.errorTitle'), t('ClientAccountScreen.logoutError'));
             }
@@ -144,11 +145,6 @@ export default function ClientAccountScreen({ userData: propUserData, onLogout, 
             </View>
 
             <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>{t('ClientAccountScreen.age')}</Text>
-              <Text style={styles.infoValue}>{t('ClientAccountScreen.ageValue', { age: userData?.eta })}</Text>
-            </View>
-
-            <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>{t('ClientAccountScreen.gender')}</Text>
               <Text style={styles.infoValue}>
                 {userData?.sesso === 'M' ? t('ClientAccountScreen.male') : t('ClientAccountScreen.female')}
@@ -159,11 +155,11 @@ export default function ClientAccountScreen({ userData: propUserData, onLogout, 
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>{t('ClientAccountScreen.yourPreferences')}</Text>
 
-            {userData?.preferenzaTaglio && userData.preferenzaTaglio.length > 0 && (
+            {userData?.preferenceCut && userData.preferenceCut.length > 0 && (
               <>
                 <Text style={styles.infoLabel}>{t('ClientAccountScreen.favoriteCuts')}</Text>
                 <View style={styles.tagsContainer}>
-                  {userData.preferenzaTaglio.map((taglio, index) => (
+                  {userData.preferenceCut.map((taglio, index) => (
                     <View key={index} style={styles.tag}>
                       <Text style={styles.tagText}>{taglio}</Text>
                     </View>
@@ -433,4 +429,3 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
 });
-

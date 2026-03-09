@@ -47,9 +47,24 @@ export default function LoginScreen({ }) {
     try {
       const { user, userData, role } = await loginUser(values.email, values.password, userRole);
       console.log('Login successo:', { user: user.email, role });
-      // Firebase observer gestirà automaticamente lo stato
+      // Firebase observer gestirï¿½ automaticamente lo stato
     } catch (error) {
-      Alert.alert(t('LoginScreen.errorTitle'), error?.message || t('LoginScreen.invalidCredentials'));
+      const knownErrorKeys = [
+        'userNotFound',
+        'wrongPassword',
+        'invalidEmail',
+        'userDisabled',
+        'tooManyRequests',
+        'barberAccountNotFound',
+        'clientAccountNotFound',
+        'invalidCredentials',
+      ];
+      const errorKey = error?.message;
+      const errorMessage = knownErrorKeys.includes(errorKey)
+        ? t(`LoginScreen.${errorKey}`)
+        : t('LoginScreen.invalidCredentials');
+
+      Alert.alert(t('LoginScreen.errorTitle'), errorMessage);
     } finally {
       setIsLoggingIn(false);
     }

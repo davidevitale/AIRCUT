@@ -66,7 +66,6 @@ export default function ProtectedLayout() {
           title: t("Navigation.account"),
         }}
       />
-
       <Tabs.Screen
         name="HomeScreen"
         options={{
@@ -81,15 +80,14 @@ export default function ProtectedLayout() {
           tabBarIcon: ({ color }) => <TabIcon source={logoLike} color={color} />,
         }}
       />
-      {!isClient && (
-        <Tabs.Screen
-          name="PostScreen"
-          options={{
-            title: t("Navigation.add"),
-            tabBarIcon: ({ color }) => <TabIcon source={logoAdd} color={color} />,
-          }}
-        />
-      )}
+      <Tabs.Screen
+        name="PostScreen"
+        options={{
+          title: t("Navigation.add"),
+          tabBarIcon: ({ color }) => <TabIcon source={logoAdd} color={color} />,
+          href: isClient ? null : "/(protected)/PostScreen",
+        }}
+      />
       <Tabs.Screen
         name="ShopScreen"
         options={{
@@ -102,6 +100,18 @@ export default function ProtectedLayout() {
         options={{
           title: t("Navigation.account"),
           tabBarIcon: ({ color }) => <TabIcon source={logoAccount} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="EditClientProfileScreen"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="EditBarberProfileScreen"
+        options={{
+          href: null,
         }}
       />
     </Tabs>

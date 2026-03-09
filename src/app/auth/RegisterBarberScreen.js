@@ -6,6 +6,7 @@ import {
   StyleSheet,
   ScrollView,
   Alert,
+  ActivityIndicator,
 } from "react-native";
 import { registerBarber } from "../../services/authService";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -20,6 +21,7 @@ import { db } from "../../../config/firebase";
 export default function RegisterBarberScreen({ onGoToLogin }) {
   const { t, i18n } = useTranslation();
   const [tags, setTags] = useState([]);
+  const [isRegistering, setIsRegistering] = useState(false);
 
   const validationSchema = Yup.object().shape({
     email: Yup.string()
@@ -86,6 +88,8 @@ export default function RegisterBarberScreen({ onGoToLogin }) {
     tags.filter((tag) => tag.active && tag.visibility === "barber");
 
   const handleRegister = async (values) => {
+    if (isRegistering) return;
+    setIsRegistering(true);
     try {
       await registerBarber(values);
       Alert.alert(
@@ -118,6 +122,8 @@ export default function RegisterBarberScreen({ onGoToLogin }) {
       }
 
       Alert.alert(t("BarberRegistrationScreen.errorTitle"), message);
+    } finally {
+      setIsRegistering(false);
     }
   };
 
@@ -413,10 +419,18 @@ export default function RegisterBarberScreen({ onGoToLogin }) {
                   {touched.termsService && typeof errors.termsService === "string" ? errors.termsService : " "}
                 </Text>
 
-                <TouchableOpacity style={styles.registerButton} onPress={handleSubmit}>
-                  <Text style={styles.registerButtonText}>
-                    {t("BarberRegistrationScreen.registerButton")}
-                  </Text>
+                <TouchableOpacity
+                  style={[styles.registerButton, isRegistering && styles.registerButtonDisabled]}
+                  onPress={handleSubmit}
+                  disabled={isRegistering}
+                >
+                  {isRegistering ? (
+                    <ActivityIndicator color="#00BCD4" />
+                  ) : (
+                    <Text style={styles.registerButtonText}>
+                      {t("BarberRegistrationScreen.registerButton")}
+                    </Text>
+                  )}
                 </TouchableOpacity>
               </>
             );
@@ -562,6 +576,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 12,
     elevation: 4,
+  },
+  registerButtonDisabled: {
+    opacity: 0.7,
   },
   registerButtonText: {
     color: "#00BCD4",

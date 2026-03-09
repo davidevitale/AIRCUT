@@ -484,26 +484,26 @@ export const loginUser = async (email, password, userRole) => {
       role: normalizedRole,
     };
   } catch (error) {
-    // Gestisci errori specifici di Firebase per il login
-    let errorMessage = error.message;
+    // Always throw stable translation keys. UI handles localization.
+    let errorKey = error.message || 'invalidCredentials';
 
     if (error.code === 'auth/user-not-found') {
-      errorMessage = 'Nessun account trovato con questa email. Verifica o registrati.';
+      errorKey = 'userNotFound';
     } else if (error.code === 'auth/wrong-password') {
-      errorMessage = 'Password errata. Riprova.';
+      errorKey = 'wrongPassword';
     } else if (error.code === 'auth/invalid-email') {
-      errorMessage = 'L\'indirizzo email non è valido.';
+      errorKey = 'invalidEmail';
     } else if (error.code === 'auth/user-disabled') {
-      errorMessage = 'Questo account è stato disabilitato. Contatta il supporto.';
+      errorKey = 'userDisabled';
     } else if (error.code === 'auth/too-many-requests') {
-      errorMessage = 'Troppi tentativi falliti. Riprova più tardi.';
+      errorKey = 'tooManyRequests';
     } else if (error.message === 'barberAccountNotFound') {
-      errorMessage = 'Questo account non esiste come parrucchiere.';
+      errorKey = 'barberAccountNotFound';
     } else if (error.message === 'clientAccountNotFound') {
-      errorMessage = 'Questo account non esiste come cliente.';
+      errorKey = 'clientAccountNotFound';
     }
 
-    throw new Error(errorMessage);
+    throw new Error(errorKey);
   }
 };
 

@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { onAuthStateChange } from '../services/authService';
+import { getCurrentUserData, onAuthStateChange } from '../services/authService';
 
 // 1. Create context
 const AuthContext = createContext(null);
@@ -15,6 +15,26 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     console.log('[Auth] Subscribing to auth state');
+    let isMounted = true;
+
+    const resolveUserDataWithRetry = async (maxAttempts = 6, delayMs = 400) => {
+      for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        try {
+          const current = await getCurrentUserData();
+          if (current?.user && current?.role) {
+            return current;
+          }
+        } catch (error) {
+          console.warn(`[Auth] Retry ${attempt}/${maxAttempts} failed:`, error?.message);
+        }
+
+        if (attempt < maxAttempts) {
+          await new Promise((resolve) => setTimeout(resolve, delayMs));
+        }
+      }
+
+      return null;
+    };
 
     // Safety timeout (same idea as your old App.js)
     const timeout = setTimeout(() => {
@@ -22,16 +42,35 @@ export const AuthProvider = ({ children }) => {
       setAuthStatus('unauthenticated');
     }, 10000);
 
-    const unsubscribe = onAuthStateChange((authData) => {
+    const unsubscribe = onAuthStateChange(async (authData) => {
       clearTimeout(timeout);
 
       console.log('[Auth] Auth state changed:', authData);
+      if (!isMounted) return;
 
       if (authData?.user && authData?.role) {
         setUser(authData.user);
         setRole(authData.role);
         setUserData(authData.userData);
         setAuthStatus('authenticated');
+      } else if (authData?.user && !authData?.role) {
+        // Newly registered users can hit this state briefly before profile doc is readable.
+        setAuthStatus('loading');
+        const resolved = await resolveUserDataWithRetry();
+
+        if (!isMounted) return;
+
+        if (resolved?.user && resolved?.role) {
+          setUser(resolved.user);
+          setRole(resolved.role);
+          setUserData(resolved.userData);
+          setAuthStatus('authenticated');
+        } else {
+          setUser(null);
+          setRole(null);
+          setUserData(null);
+          setAuthStatus('unauthenticated');
+        }
       } else {
         setUser(null);
         setRole(null);
@@ -41,6 +80,7 @@ export const AuthProvider = ({ children }) => {
     });
 
     return () => {
+      isMounted = false;
       clearTimeout(timeout);
       unsubscribe();
     };

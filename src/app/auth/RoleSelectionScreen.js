@@ -9,7 +9,6 @@ import {
   StyleSheet,
   Animated,
   Dimensions,
-  Pressable,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { db } from "../../../config/firebase";
@@ -21,6 +20,10 @@ export default function RoleSelectionScreen({ }) {
   const [selectedRole, setSelectedRole] = useState(null);
   const scaleAnim = new Animated.Value(1);
   const { t, i18n } = useTranslation();
+  const languageOptions = [
+    { code: "en-UK", label: "EN" },
+    { code: "it-IT", label: "IT" },
+  ];
 
 
   const handlePress = (role) => {
@@ -116,14 +119,7 @@ export default function RoleSelectionScreen({ }) {
       <View style={styles.content}>
         {/* Logo/Brand */}
         <View style={styles.brandContainer}>
-          <Pressable onPress={() => {
-            // migrateTagLabelsToMultilang()
-            changeLanguage(i18n.language === "en-UK" ? "it-IT" : "en-UK")
-          }}>
-
-            <Text style={styles.brandText}>aircut</Text>
-          </Pressable>
-          <Text style={styles.subtitle}></Text>
+          <Text style={styles.brandText}>aircut</Text>
         </View>
 
         {/* Role Cards */}
@@ -169,6 +165,35 @@ export default function RoleSelectionScreen({ }) {
               </View>
             </TouchableOpacity>
           </Animated.View>
+
+        </View>
+        <View style={styles.languageSwitcher}>
+          <Text style={styles.languageLabel}>{t("language")}</Text>
+          <View style={styles.languageButtons}>
+            {languageOptions.map((option) => {
+              const isActive = i18n.language === option.code;
+              return (
+                <TouchableOpacity
+                  key={option.code}
+                  style={[
+                    styles.languageButton,
+                    isActive && styles.languageButtonActive,
+                  ]}
+                  onPress={() => changeLanguage(option.code)}
+                  activeOpacity={0.8}
+                >
+                  <Text
+                    style={[
+                      styles.languageButtonText,
+                      isActive && styles.languageButtonTextActive,
+                    ]}
+                  >
+                    {option.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
         </View>
       </View>
     </SafeAreaView>
@@ -201,6 +226,52 @@ const styles = StyleSheet.create({
     color: "#334155",
     textAlign: "center",
     fontWeight: "500",
+  },
+  languageSwitcher: {
+    alignItems: "center",
+  },
+  languageLabel: {
+    fontSize: 13,
+    color: "#334155",
+    fontWeight: "600",
+    marginBottom: 8,
+  },
+  languageButtons: {
+    flexDirection: "row",
+    padding: 4,
+    borderRadius: 999,
+    backgroundColor: "rgba(255,255,255,0.78)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.6)",
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 6,
+    },
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    elevation: 3,
+  },
+  languageButton: {
+    minWidth: 56,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 999,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  languageButtonActive: {
+    backgroundColor: "rgba(0, 188, 212, 0.15)",
+    borderWidth: 1,
+    borderColor: "rgba(0, 188, 212, 0.45)",
+  },
+  languageButtonText: {
+    fontSize: 13,
+    color: "#334155",
+    fontWeight: "700",
+  },
+  languageButtonTextActive: {
+    color: "#00BCD4",
   },
   cardsContainer: {
     flex: 1,

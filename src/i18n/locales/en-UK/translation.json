@@ -29,6 +29,13 @@
     "requiredValidation": "This field is required.",
     "errorTitle": "Login Error",
     "invalidCredentials": "Email or password is incorrect, please try again.",
+    "userNotFound": "No account found for this email.",
+    "wrongPassword": "Incorrect password. Please try again.",
+    "invalidEmail": "Please enter a valid email address.",
+    "userDisabled": "This account has been disabled. Contact support.",
+    "tooManyRequests": "Too many failed attempts. Please try again later.",
+    "barberAccountNotFound": "This email is not registered as a Hair Artist account.",
+    "clientAccountNotFound": "This email is not registered as a Client account.",
     "successTitle": "Login success"
   },
   "ClientRegistrationScreen": {
