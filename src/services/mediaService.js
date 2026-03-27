@@ -1,9 +1,9 @@
 import { ref, uploadString, getDownloadURL } from "firebase/storage";
-import * as FileSystem from "expo-file-system";
+import * as FileSystem from "expo-file-system/legacy";
 import * as ImagePicker from "expo-image-picker";
-import { storage } from '../../config/firebase';
+import { storage } from "../../config/firebase";
 
-console.log("✅ mediaService.js caricato (NO BLOB + MediaType)", new Date().toISOString());
+console.log("âœ… mediaService.js caricato // loaded (NO BLOB + MediaType)", new Date().toISOString());
 
 /* -------------------------------------------------------
    PERMESSI
@@ -25,8 +25,12 @@ export const pickImages = async (allowsMultipleSelection = true) => {
   if (!hasPermission) return null;
 
   try {
-    // Compatibilità tra nuove e vecchie API (MediaType vs MediaTypeOptions)
-    const useNew = !!(ImagePicker && ImagePicker.MediaType && (ImagePicker.MediaType.Image || ImagePicker.MediaType.Video));
+    // CompatibilitÃ  tra nuove e vecchie API (MediaType vs MediaTypeOptions)
+    const useNew = !!(
+      ImagePicker &&
+      ImagePicker.MediaType &&
+      (ImagePicker.MediaType.Image || ImagePicker.MediaType.Video)
+    );
     const options = {
       allowsMultipleSelection,
       allowsEditing: false,
@@ -61,7 +65,11 @@ export const pickVideos = async (allowsMultipleSelection = true) => {
   if (!hasPermission) return null;
 
   try {
-    const useNew = !!(ImagePicker && ImagePicker.MediaType && (ImagePicker.MediaType.Image || ImagePicker.MediaType.Video));
+    const useNew = !!(
+      ImagePicker &&
+      ImagePicker.MediaType &&
+      (ImagePicker.MediaType.Image || ImagePicker.MediaType.Video)
+    );
     const options = {
       allowsMultipleSelection,
       allowsEditing: false,
@@ -112,31 +120,6 @@ const normalizeContentType = (mimeType, uri, folder) => {
   return "image/jpeg";
 };
 
-// Base64 -> Uint8Array (senza dipendenze)
-const base64ToUint8Array = (base64) => {
-  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-  const str = base64.replace(/=+$/, "");
-  const output = [];
-
-  let buffer = 0;
-  let bits = 0;
-
-  for (let i = 0; i < str.length; i++) {
-    const val = chars.indexOf(str[i]);
-    if (val === -1) continue;
-
-    buffer = (buffer << 6) | val;
-    bits += 6;
-
-    if (bits >= 8) {
-      bits -= 8;
-      output.push((buffer >> bits) & 0xff);
-    }
-  }
-
-  return new Uint8Array(output);
-};
-
 /* -------------------------------------------------------
    UPLOAD SINGOLO FILE (NO BLOB)
 ------------------------------------------------------- */
@@ -144,22 +127,24 @@ export const uploadFile = async (uri, fileName, userId, folder = "portfolio", co
   try {
     const storageRef = ref(storage, `${folder}/${userId}/${fileName}`);
     const ct = normalizeContentType(contentType, uri, folder);
+    const metadata = {
+      contentType: ct,
+      cacheControl: "public, max-age=31536000",
+    };
 
     const base64 = await FileSystem.readAsStringAsync(uri, {
-      encoding: FileSystem.EncodingType.Base64,
+      encoding: "base64",
     });
 
     console.log("uploadFile -> start", { folder, fileName, ct, len: base64?.length });
 
-    // 1) Prova con data_url (spesso evita codepath con Blob su RN)
     try {
       const dataUrl = `data:${ct};base64,${base64}`;
-      await uploadString(storageRef, dataUrl, 'data_url', { contentType: ct });
+      await uploadString(storageRef, dataUrl, "data_url", metadata);
       console.log("uploadFile -> uploaded via data_url");
     } catch (e1) {
       console.warn("uploadFile data_url failed, retry base64", e1?.message || e1);
-      // 2) Fallback a base64 semplice || Simple fallback to base64
-      await uploadString(storageRef, base64, 'base64', { contentType: ct });
+      await uploadString(storageRef, base64, "base64", metadata);
       console.log("uploadFile -> uploaded via base64 fallback");
     }
 
@@ -170,10 +155,47 @@ export const uploadFile = async (uri, fileName, userId, folder = "portfolio", co
   }
 };
 
+export const uploadFileToPath = async (uri, storagePath, contentType) => {
+  try {
+    const storageRef = ref(storage, storagePath);
+    const ct = normalizeContentType(contentType, uri, storagePath);
+    const metadata = {
+      contentType: ct,
+      cacheControl: "public, max-age=31536000",
+    };
+
+    const base64 = await FileSystem.readAsStringAsync(uri, {
+      encoding: "base64",
+    });
+
+    console.log("uploadFileToPath -> start", { storagePath, ct, len: base64?.length });
+
+    try {
+      const dataUrl = `data:${ct};base64,${base64}`;
+      await uploadString(storageRef, dataUrl, "data_url", metadata);
+      console.log("uploadFileToPath -> uploaded via data_url");
+    } catch (e1) {
+      console.warn("uploadFileToPath data_url failed, retry base64", e1?.message || e1);
+      await uploadString(storageRef, base64, "base64", metadata);
+      console.log("uploadFileToPath -> uploaded via base64 fallback");
+    }
+
+    return await getDownloadURL(storageRef);
+  } catch (error) {
+    console.error("Errore upload file to path:", error);
+    throw error;
+  }
+};
+
 /* -------------------------------------------------------
    UPLOAD MULTIPLI (sequenziale)
 ------------------------------------------------------- */
-export const uploadMultipleFiles = async (files, userId, folder = "portfolio", onProgress = () => { }) => {
+export const uploadMultipleFiles = async (
+  files,
+  userId,
+  folder = "portfolio",
+  onProgress = () => {}
+) => {
   try {
     if (!Array.isArray(files) || files.length === 0) return [];
 

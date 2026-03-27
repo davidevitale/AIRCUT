@@ -1,10 +1,24 @@
 import * as ImageManipulator from "expo-image-manipulator";
-import { pickImages } from "./mediaService";
+import { collection, doc, setDoc } from "firebase/firestore";
+import { db } from "../../config/firebase";
+import { getCurrentUserData } from "./authService";
+import { pickImages, uploadFileToPath } from "./mediaService";
 
-const IMAGE_PIPELINE_CONFIG = {
-  maxSize: 1080,
-  quality: 0.8,
-  format: ImageManipulator.SaveFormat.JPEG,
+const WEBP_FORMAT = ImageManipulator.SaveFormat.WEBP;
+
+const IMAGE_VARIANTS = {
+  thumbnail: {
+    size: 400,
+    quality: 0.7,
+    fileName: "thumbnail.webp",
+    mimeType: "image/webp",
+  },
+  standard: {
+    size: 1080,
+    quality: 0.8,
+    fileName: "standard.webp",
+    mimeType: "image/webp",
+  },
 };
 
 const normalizePreferences = (registrationPreferences = []) => {
@@ -22,8 +36,8 @@ export const processImageToSquare = async (imageAsset) => {
     throw new Error("Invalid image asset. Missing uri.");
   }
 
-  const sourceWidth = imageAsset.width ?? IMAGE_PIPELINE_CONFIG.maxSize;
-  const sourceHeight = imageAsset.height ?? IMAGE_PIPELINE_CONFIG.maxSize;
+  const sourceWidth = imageAsset.width ?? IMAGE_VARIANTS.standard.size;
+  const sourceHeight = imageAsset.height ?? IMAGE_VARIANTS.standard.size;
   const squareSize = Math.min(sourceWidth, sourceHeight);
 
   const originX = Math.max(0, Math.floor((sourceWidth - squareSize) / 2));
@@ -40,26 +54,79 @@ export const processImageToSquare = async (imageAsset) => {
     },
   ];
 
-  if (squareSize > IMAGE_PIPELINE_CONFIG.maxSize) {
+  if (squareSize > IMAGE_VARIANTS.standard.size) {
     actions.push({
       resize: {
-        width: IMAGE_PIPELINE_CONFIG.maxSize,
-        height: IMAGE_PIPELINE_CONFIG.maxSize,
+        width: IMAGE_VARIANTS.standard.size,
+        height: IMAGE_VARIANTS.standard.size,
       },
     });
   }
 
   const processed = await ImageManipulator.manipulateAsync(imageAsset.uri, actions, {
-    compress: IMAGE_PIPELINE_CONFIG.quality,
-    format: IMAGE_PIPELINE_CONFIG.format,
+    compress: IMAGE_VARIANTS.standard.quality,
+    format: WEBP_FORMAT,
   });
 
   return {
     uri: processed.uri,
     width: processed.width,
     height: processed.height,
-    mimeType: "image/jpeg",
+    mimeType: IMAGE_VARIANTS.standard.mimeType,
+    originalAsset: imageAsset,
   };
+};
+
+const createSquareImageVariant = async (imageAsset, variant) => {
+  if (!imageAsset?.uri) {
+    throw new Error("Invalid image asset. Missing uri.");
+  }
+
+  const sourceWidth = imageAsset.width ?? variant.size;
+  const sourceHeight = imageAsset.height ?? variant.size;
+  const squareSize = Math.min(sourceWidth, sourceHeight);
+  const originX = Math.max(0, Math.floor((sourceWidth - squareSize) / 2));
+  const originY = Math.max(0, Math.floor((sourceHeight - squareSize) / 2));
+
+  const actions = [
+    {
+      crop: {
+        originX,
+        originY,
+        width: squareSize,
+        height: squareSize,
+      },
+    },
+    {
+      resize: {
+        width: variant.size,
+        height: variant.size,
+      },
+    },
+  ];
+
+  const processed = await ImageManipulator.manipulateAsync(imageAsset.uri, actions, {
+    compress: variant.quality,
+    format: WEBP_FORMAT,
+  });
+
+  return {
+    uri: processed.uri,
+    width: processed.width,
+    height: processed.height,
+    mimeType: variant.mimeType,
+  };
+};
+
+const createPostImageVariants = async (image) => {
+  const sourceAsset = image?.originalAsset?.uri ? image.originalAsset : image;
+
+  const [thumbnail, standard] = await Promise.all([
+    createSquareImageVariant(sourceAsset, IMAGE_VARIANTS.thumbnail),
+    createSquareImageVariant(sourceAsset, IMAGE_VARIANTS.standard),
+  ]);
+
+  return { thumbnail, standard };
 };
 
 export const pickAndProcessImageFromGallery = async () => {
@@ -108,16 +175,53 @@ export const publishPost = async ({
     throw new Error("Selected tags are invalid for the registration preferences.");
   }
 
-  console.log("postService.publishPost called", {
+  if (!barberId || !image?.uri) {
+    throw new Error("Missing required post data.");
+  }
+
+  const postRef = doc(collection(db, "posts"));
+  const postId = postRef.id;
+  const { thumbnail, standard } = await createPostImageVariants(image);
+
+  const [thumbnailUrl, imageUrl, currentUser] = await Promise.all([
+    uploadFileToPath(
+      thumbnail.uri,
+      `posts/${postId}/${IMAGE_VARIANTS.thumbnail.fileName}`,
+      thumbnail.mimeType
+    ),
+    uploadFileToPath(
+      standard.uri,
+      `posts/${postId}/${IMAGE_VARIANTS.standard.fileName}`,
+      standard.mimeType
+    ),
+    getCurrentUserData(),
+  ]);
+
+  const barberProfile = currentUser?.userData || {};
+  const createdAt = new Date().toISOString();
+  const postDoc = {
+    postId,
     barberId,
-    image,
-    caption,
+    caption: caption?.trim() || "",
     selectedTags,
-    registrationPreferences,
-  });
+    imageUrl,
+    thumbnailUrl,
+    likes: [],
+    createdAt,
+    barberName:
+      barberProfile.salonName ||
+      barberProfile.nomeSalone ||
+      barberProfile.firstName ||
+      "",
+    barberProfileImage: barberProfile.profileImage || null,
+  }
+
+  await setDoc(postRef, postDoc);
 
   return {
     success: true,
-    postId: `draft_${Date.now()}`,
+    postId,
+    imageUrl,
+    thumbnailUrl,
   };
 };

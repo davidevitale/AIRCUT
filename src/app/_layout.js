@@ -1,12 +1,15 @@
 import { Stack } from "expo-router";
 import { AuthProvider } from "../context/AuthContext";
+import { ToastProvider } from "@kritikhedau/react-native-toastify";
 
 
 const _layout = () => {
   return (
-    <AuthProvider>
-      <Stack screenOptions={{ headerShown: false }} />
-    </AuthProvider>
+    <ToastProvider>
+      <AuthProvider>
+        <Stack screenOptions={{ headerShown: false }} />
+      </AuthProvider>
+    </ToastProvider>
   )
 }
 

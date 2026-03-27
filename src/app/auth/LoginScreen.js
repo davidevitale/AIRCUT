@@ -16,12 +16,14 @@ import { TextInput } from 'react-native-paper';
 import { Formik } from 'formik';
 import * as Yup from 'yup';
 import { useAuth } from '../../context/AuthContext';
+import { useToast } from '@kritikhedau/react-native-toastify';
 
 export default function LoginScreen({ }) {
   const params = useLocalSearchParams();
+  const { show } = useToast()
   const selectedRole = Array.isArray(params.role) ? params.role[0] : params.role;
   const userRole = selectedRole === 'barber' ? 'barber' : 'client';
-  console.log(userRole)
+
   const { t } = useTranslation();
   const { authStatus } = useAuth();
   const [isLoggingIn, setIsLoggingIn] = useState(false);
@@ -91,12 +93,20 @@ export default function LoginScreen({ }) {
       borderColor: 'rgba(0, 188, 212, 0.2)',
     },
   };
+  const customToast = (
+    <View style={{ backgroundColor: 'red' }}>
+      <Text>Bye</Text>
+    </View>
+  )
 
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView style={styles.scrollView}>
         <View style={styles.content}>
-          <Text style={styles.title}>
+          <Text
+            onPress={() => {
+              show(customToast)
+            }} style={styles.title}>
             {t('LoginScreen.title')} {userRole === 'client' ? t('LoginScreen.client') : t('LoginScreen.hairArtist')}
           </Text>
 
