@@ -50,6 +50,7 @@ export default function BarberAccountScreen({
   const [uploadingProfileImage, setUploadingProfileImage] = useState(false);
   const [localProfileUri, setLocalProfileUri] = useState(null);
   const [barberPosts, setBarberPosts] = useState([]);
+  const [deleting, setDeleting] = useState(false);
   useEffect(() => {
     console.log("BarberAccountScreen received userData:", propUserData);
     if (propUserData) {
@@ -181,41 +182,8 @@ export default function BarberAccountScreen({
     }
   };
 
-  const removeMedia = async (index, type) => {
-    try {
-      const isImage = type === "image";
-      const mediaArray = isImage
-        ? userData.portfolioImages
-        : userData.portfolioVideos;
-      const updatedArray = mediaArray.filter((_, i) => i !== index);
-
-      const updateData = isImage
-        ? { portfolioImages: updatedArray }
-        : { portfolioVideos: updatedArray };
-
-      await updateBarberPortfolio(currentUser.uid, updateData);
-
-      setUserData((prev) => ({
-        ...prev,
-        ...updateData,
-      }));
-
-      Alert.alert(
-        t("BarberAccountScreen.successTitle"),
-        t("BarberAccountScreen.mediaRemoved", {
-          type: isImage
-            ? t("BarberAccountScreen.photo")
-            : t("BarberAccountScreen.video"),
-        }),
-      );
-    } catch (error) {
-      Alert.alert(
-        t("BarberAccountScreen.errorTitle"),
-        t("BarberAccountScreen.removeFileError"),
-      );
-    }
-  };
-  const deletePost = async (postId) => {                 // Renamed to deletePost for clarity
+  const deletePost = async (postId) => {
+    setDeleting(true)               // Renamed to deletePost for clarity
     try {
       const storage = getStorage();
 
@@ -240,6 +208,7 @@ export default function BarberAccountScreen({
 
       console.log(`✅ Firestore document deleted: posts/${postId}`);
 
+      setDeleting(false)
       Alert.alert('Success', 'Post and images deleted successfully');
       fetchData()
 
@@ -247,6 +216,7 @@ export default function BarberAccountScreen({
       // navigation.goBack(); or setPosts(prev => prev.filter(p => p.id !== postId));
 
     } catch (error) {
+      setDeleting(false)
       console.error('Delete failed:', error);
 
       if (error.code === 'storage/object-not-found') {
@@ -498,7 +468,10 @@ export default function BarberAccountScreen({
   useFocusEffect(
     useCallback(() => {
       fetchData()
-    }, [])
+      return () => {
+        // cleanup logic
+      }
+    }, [currentUser])
   )
 
 
@@ -717,6 +690,7 @@ export default function BarberAccountScreen({
                         onPress={() => {
                           deletePost(item.postId)
                         }}
+                        disabled={deleting}
                       // onPress={() => removeMedia(index, "image")}
                       >
                         <Text style={styles.removeButtonText}>âœ•</Text>
