@@ -87,7 +87,26 @@ export default function RegisterBarberScreen({ onGoToLogin }) {
   const filterBarberTags = () =>
     tags.filter((tag) => tag.active && tag.visibility === "barber");
 
+  const buildLocalizedTypesCut = (selectedIds = []) => {
+    return selectedIds
+      .map((tagId) => {
+        const tag = tags.find((item) => item.id === tagId);
+
+        if (!tag) {
+          return null;
+        }
+
+        return {
+          id: tag.id,
+          en: tag.label?.en ?? tag.id,
+          it: tag.label?.it ?? tag.label?.en ?? tag.id,
+        };
+      })
+      .filter(Boolean);
+  };
+
   const handleRegister = async (values) => {
+    // return console.log(JSON.stringify(values, null, 2))
     if (isRegistering) return;
     setIsRegistering(true);
     try {
@@ -179,6 +198,7 @@ export default function RegisterBarberScreen({ onGoToLogin }) {
           onSubmit={(values) => {
             const payload = {
               ...values,
+              typesCut: buildLocalizedTypesCut(values.typesCut),
               liabilityAccepted: values.termsService,
             };
             handleRegister(payload);

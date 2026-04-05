@@ -763,7 +763,7 @@ export const getAllBarberPosts = async () => {
             isFollowing: false,
             caption: `Guarda il nostro lavoro! 💇‍♂️ #${barberData.nomeSalone?.replace(/\s+/g, '').toLowerCase()} #haircut`,
             location: barberData.via || '',
-            specialties: barberData.tipiTaglio || [],
+            specialties: barberData.typesCut || barberData.tipiTaglio || [],
             phone: barberData.telefono || '',
             website: barberData.sitoWeb || '',
             email: barberData.emailContatto || '',
@@ -806,7 +806,7 @@ export const getAllBarberPosts = async () => {
             isFollowing: false,
             caption: `Video del nostro lavoro! 🎬 #${barberData.nomeSalone?.replace(/\s+/g, '').toLowerCase()} #barbershop`,
             location: barberData.via || '',
-            specialties: barberData.tipiTaglio || [],
+            specialties: barberData.typesCut || barberData.tipiTaglio || [],
             phone: barberData.telefono || '',
             website: barberData.sitoWeb || '',
             email: barberData.emailContatto || '',
@@ -934,7 +934,7 @@ export const searchBarbersByName = async (searchText) => {
           telefono: data.telefono,
           emailContatto: data.emailContatto,
           sitoWeb: data.sitoWeb,
-          tipiTaglio: data.tipiTaglio,
+          typesCut: data.typesCut || data.tipiTaglio || [],
           profileImage: data.portfolioImages?.[0] || null,
           followerCount: Math.floor(Math.random() * 1000), // Placeholder
           isFollowing: false, // Da implementare

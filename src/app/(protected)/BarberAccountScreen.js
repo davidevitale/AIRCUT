@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { router } from "expo-router";
 import {
   View,
@@ -19,20 +19,25 @@ import {
   getCurrentUserData,
   updateBarberPortfolio,
 } from "../../services/authService";
-import { auth } from '../../../config/firebase';
 import {
   pickImages,
   pickVideos,
   uploadMultipleFiles,
 } from "../../services/mediaService";
 import LanguageToggle from "../../components/LanguageToggle";
+import { collection, deleteDoc, doc, getDocs, setDoc } from "firebase/firestore";
+import { auth, db } from "../../../config/firebase";
+import { deleteObject, getStorage, listAll, ref } from "firebase/storage";
+import { useFocusEffect } from "@react-navigation/native";
+
 
 export default function BarberAccountScreen({
   userData: propUserData,
   onLogout,
   navigate,
 }) {
-  const { t } = useTranslation();
+
+  const { t, i18n } = useTranslation();
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -44,7 +49,7 @@ export default function BarberAccountScreen({
   const [menuOpen, setMenuOpen] = useState(false);
   const [uploadingProfileImage, setUploadingProfileImage] = useState(false);
   const [localProfileUri, setLocalProfileUri] = useState(null);
-
+  const [barberPosts, setBarberPosts] = useState([]);
   useEffect(() => {
     console.log("BarberAccountScreen received userData:", propUserData);
     if (propUserData) {
@@ -208,6 +213,49 @@ export default function BarberAccountScreen({
         t("BarberAccountScreen.errorTitle"),
         t("BarberAccountScreen.removeFileError"),
       );
+    }
+  };
+  const deletePost = async (postId) => {                 // Renamed to deletePost for clarity
+    try {
+      const storage = getStorage();
+
+      // 1. Delete all images from Storage folder: posts/{postId}
+      const folderRef = ref(storage, `posts/${postId}`);
+
+      const result = await listAll(folderRef);
+
+      // Delete every file inside the folder
+      const deletePromises = result.items.map((itemRef) => deleteObject(itemRef));
+
+      if (deletePromises.length > 0) {
+        await Promise.all(deletePromises);
+        console.log(`✅ Storage folder deleted: posts/${postId}`);
+      } else {
+        console.log('No files found in storage folder');
+      }
+
+      // 2. Delete the Firestore document (this removes the URLs)
+      const postRef = doc(db, 'posts', postId);
+      await deleteDoc(postRef);
+
+      console.log(`✅ Firestore document deleted: posts/${postId}`);
+
+      Alert.alert('Success', 'Post and images deleted successfully');
+      fetchData()
+
+      // Optional: Refresh your UI here (e.g. remove from state, refetch posts, go back, etc.)
+      // navigation.goBack(); or setPosts(prev => prev.filter(p => p.id !== postId));
+
+    } catch (error) {
+      console.error('Delete failed:', error);
+
+      if (error.code === 'storage/object-not-found') {
+        Alert.alert('Not Found', 'Some images were already deleted.');
+      } else if (error.code === 'permission-denied') {
+        Alert.alert('Permission Denied', 'You can only delete your own posts.');
+      } else {
+        Alert.alert('Error', 'Failed to delete post. Please try again.');
+      }
     }
   };
 
@@ -437,6 +485,25 @@ export default function BarberAccountScreen({
     }
   };
 
+  const fetchData = async () => {
+    const post = collection(db, "posts");
+    const querySnapshot = await getDocs(post);
+
+    const filteredPosts = querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })).filter(post => post.barberId == currentUser?.uid);
+    // console.log("Fetched posts:", JSON.stringify(currentUser.uid, null, 2));
+    // console.log("Fetched posts:", JSON.stringify(filteredPosts.filter(post => post.barberId == currentUser?.uid), null, 2));
+    console.log('filterd Post', filteredPosts)
+    setBarberPosts(filteredPosts);
+  }
+  useFocusEffect(
+    useCallback(() => {
+      fetchData()
+    }, [])
+  )
+
+
+
+
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
@@ -446,7 +513,6 @@ export default function BarberAccountScreen({
       </SafeAreaView>
     );
   }
-
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView style={styles.scrollView}>
@@ -581,11 +647,19 @@ export default function BarberAccountScreen({
             <Text style={styles.sectionTitle}>{t("BarberAccountScreen.yourSpecializations")}</Text>
 
             <View style={styles.tagsContainer}>
-              {userData?.typesCut?.map((taglio, index) => (
-                <View key={index} style={styles.tag}>
-                  <Text style={styles.tagText}>{taglio}</Text>
-                </View>
-              ))}
+              {userData?.typesCut?.map((taglio, index) => {
+                console.log(taglio)
+                return (
+                  <View key={index} style={styles.tag}>
+                    <Text style={styles.tagText}>
+                      {i18n.language === "en-UK"
+                        ? taglio?.en ?? ""
+                        : taglio?.it ?? taglio?.en ?? ""}
+
+                      {/* {taglio} */}
+                    </Text>
+                  </View>)
+              })}
             </View>
           </View>
 
@@ -597,30 +671,33 @@ export default function BarberAccountScreen({
 
           {/* Promozione */}
           <View style={styles.section}>
-            {/* <Text style={styles.sectionTitle}>
-              {t("BarberAccountScreen.postsTitle", { count: userData?.portfolioImages?.length || 0 })}sss
-            </Text> */}
+            <Text style={styles.sectionTitle}>
+              {t("BarberAccountScreen.postsTitle", { count: barberPosts?.length || 0 })}
+            </Text>
 
             {/* Foto Portfolio */}
             <View style={styles.portfolioSection}>
-              {/* <View style={styles.portfolioHeader}>
+              <View style={styles.portfolioHeader}>
                 <TouchableOpacity
                   style={[
                     styles.addButton,
                     uploading && styles.addButtonDisabled,
                   ]}
-                  onPress={handleAddImages}
+                  onPress={() => {
+                    router.replace('/(protected)/PostScreen');
+
+                  }}
                   disabled={uploading}
                 >
                   <Text style={styles.addButtonText}>
-                    {uploading ? t("BarberAccountScreen.uploading") : t("BarberAccountScreen.add")}
+                    {t("BarberAccountScreen.add")}
                   </Text>
                 </TouchableOpacity>
-              </View> */}
-              {/* 
-              {userData?.portfolioImages?.length > 0 ? (
+              </View>
+
+              {barberPosts?.length > 0 ? (
                 <FlatList
-                  data={userData.portfolioImages}
+                  data={barberPosts}
                   horizontal
                   showsHorizontalScrollIndicator={false}
                   keyExtractor={(item, index) => index.toString()}
@@ -631,13 +708,16 @@ export default function BarberAccountScreen({
                           uri:
                             typeof item === "string"
                               ? item
-                              : (item?.url ?? item?.uri),
+                              : (item?.thumbnailUrl ?? item?.thumbnailUrl ?? item?.url ?? ""),
                         }}
                         style={styles.mediaPreview}
                       />
                       <TouchableOpacity
                         style={styles.removeButton}
-                        onPress={() => removeMedia(index, "image")}
+                        onPress={() => {
+                          deletePost(item.postId)
+                        }}
+                      // onPress={() => removeMedia(index, "image")}
                       >
                         <Text style={styles.removeButtonText}>âœ•</Text>
                       </TouchableOpacity>
@@ -646,7 +726,7 @@ export default function BarberAccountScreen({
                 />
               ) : (
                 <Text style={styles.emptyPortfolioText}>{t("BarberAccountScreen.emptyPortfolioText")}</Text>
-              )} */}
+              )}
             </View>
 
             {/* Video Portfolio 
@@ -1339,6 +1419,8 @@ const styles = StyleSheet.create({
     color: "#00BCD4",
   },
 });
+
+
 
 
 

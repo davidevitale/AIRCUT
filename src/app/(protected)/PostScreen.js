@@ -10,35 +10,97 @@ import {
   TextInput,
   ActivityIndicator,
 } from "react-native";
+import * as ImagePicker from "expo-image-picker";
+import * as ImageManipulator from "expo-image-manipulator";
 import { useTranslation } from "react-i18next";
-import { collection, getDocs } from "firebase/firestore";
+import { collection, doc, getDocs, setDoc } from "firebase/firestore";
 import { auth, db } from "../../../config/firebase";
 import { getCurrentUserData } from "../../services/authService";
-import {
-  pickAndProcessImageFromGallery,
-  publishPost,
-  validateSelectedTagsAgainstPreferences,
-} from "../../services/postService";
+import { uploadFileToPath } from "../../services/mediaService";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { getStorage, ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
+import { serverTimestamp } from "firebase/firestore";
+
+const IMAGE_VARIANTS = {
+  thumbnail: {
+    size: 400,
+    quality: 0.7,
+    fileName: "thumbnail.webp",
+    mimeType: "image/webp",
+  },
+  standard: {
+    size: 1080,
+    quality: 0.8,
+    fileName: "standard.webp",
+    mimeType: "image/webp",
+  },
+};
+
+const PREVIEW_VARIANT = {
+  size: 1080,
+  quality: 0.8,
+  mimeType: "image/webp",
+};
+
+const normalizePreferences = (registrationPreferences = []) => {
+  if (!Array.isArray(registrationPreferences)) {
+    return [];
+  }
+
+  return registrationPreferences
+    .map((tag) => {
+      if (typeof tag === "string") {
+        return tag.trim();
+      }
+
+      if (tag && typeof tag === "object" && typeof tag.id === "string") {
+        return tag.id.trim();
+      }
+
+      return "";
+    })
+    .filter((tagId) => tagId.length > 0);
+};
+
+const buildLocalizedSelectedTags = (selectedIds = [], availableTags = []) => {
+  if (!Array.isArray(selectedIds) || !Array.isArray(availableTags)) {
+    return [];
+  }
+
+  return selectedIds
+    .map((tagId) => {
+      const tag = availableTags.find((item) => item.id === tagId);
+
+      if (!tag) {
+        return null;
+      }
+
+      return {
+        id: tag.id,
+        en: tag.label?.en ?? tag.id,
+        it: tag.label?.it ?? tag.label?.en ?? tag.id,
+      };
+    })
+    .filter(Boolean);
+};
+
+
 
 export default function PostScreen() {
   const { t, i18n } = useTranslation();
   const [allowedTags, setAllowedTags] = useState([]);
   const [selectedTags, setSelectedTags] = useState([]);
   const [caption, setCaption] = useState("");
-  const [processedImage, setProcessedImage] = useState(null);
+  const [selectedImage, setSelectedImage] = useState(null);
+  const [previewImage, setPreviewImage] = useState(null);
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [processingImage, setProcessingImage] = useState(false);
   const [publishing, setPublishing] = useState(false);
 
   const selectedTagsSet = useMemo(() => new Set(selectedTags), [selectedTags]);
-
   const registrationPreferences = useMemo(() => {
-    const rawPreferences = userData?.typesCut || userData?.tipiTaglio || [];
-    return Array.isArray(rawPreferences)
-      ? rawPreferences.filter((tagId) => typeof tagId === "string" && tagId.trim().length > 0)
-      : [];
+    return normalizePreferences(userData?.typesCut || userData?.tipiTaglio || []);
   }, [userData]);
 
   const getLocalizedText = (value, fallback = "") => {
@@ -47,6 +109,84 @@ export default function PostScreen() {
     return i18n.language === "en-UK"
       ? value.en ?? value.it ?? fallback
       : value.it ?? value.en ?? fallback;
+  };
+
+  const createSquareImageVariant = async (imageAsset, variant) => {
+    if (!imageAsset?.uri) {
+      throw new Error("Invalid image asset. Missing uri.");
+    }
+
+    const sourceWidth = imageAsset.width ?? variant.size;
+    const sourceHeight = imageAsset.height ?? variant.size;
+    const squareSize = Math.min(sourceWidth, sourceHeight);
+    const originX = Math.max(0, Math.floor((sourceWidth - squareSize) / 2));
+    const originY = Math.max(0, Math.floor((sourceHeight - squareSize) / 2));
+
+    const processed = await ImageManipulator.manipulateAsync(
+      imageAsset.uri,
+      [
+        {
+          crop: {
+            originX,
+            originY,
+            width: squareSize,
+            height: squareSize,
+          },
+        },
+        {
+          resize: {
+            width: variant.size,
+            height: variant.size,
+          },
+        },
+      ],
+      {
+        compress: variant.quality,
+        format: ImageManipulator.SaveFormat.WEBP,
+      }
+    );
+
+    return {
+      uri: processed.uri,
+      width: processed.width,
+      height: processed.height,
+      mimeType: variant.mimeType,
+    };
+  };
+
+  const createPreviewImage = async (imageAsset) => {
+    const preview = await createSquareImageVariant(imageAsset, PREVIEW_VARIANT);
+
+    return {
+      ...preview,
+      originalAsset: imageAsset,
+    };
+  };
+
+  const createPostImageVariants = async (imageAsset) => {
+    const [thumbnail, standard] = await Promise.all([
+      createSquareImageVariant(imageAsset, IMAGE_VARIANTS.thumbnail),
+      createSquareImageVariant(imageAsset, IMAGE_VARIANTS.standard),
+    ]);
+
+    return { thumbnail, standard };
+  };
+
+  const validateSelectedTags = () => {
+    if (!Array.isArray(selectedTags) || selectedTags.length === 0) {
+      return false;
+    }
+
+    const normalizedPreferences = normalizePreferences(registrationPreferences);
+    if (normalizedPreferences.length === 0) {
+      return false;
+    }
+
+    const preferenceSet = new Set(normalizedPreferences);
+
+    return selectedTags.every(
+      (tagId) => typeof tagId === "string" && preferenceSet.has(tagId)
+    );
   };
 
   const fetchContextData = async () => {
@@ -62,8 +202,9 @@ export default function PostScreen() {
         ...docSnap.data(),
       }));
 
-      const specializations =
-        userContext?.userData?.typesCut || userContext?.userData?.tipiTaglio || [];
+      const specializations = normalizePreferences(
+        userContext?.userData?.typesCut || userContext?.userData?.tipiTaglio || []
+      );
 
       const visibleBarberTags = tags.filter(
         (tag) => tag.active && tag.visibility === "barber"
@@ -87,15 +228,32 @@ export default function PostScreen() {
   const handlePickImage = async () => {
     try {
       setProcessingImage(true);
-      const processed = await pickAndProcessImageFromGallery();
 
-      if (!processed) {
+      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+      if (!permissionResult.granted) {
+        Alert.alert("Permission required", "Permission to access the media library is required.");
         return;
       }
 
-      setProcessedImage(processed);
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 1,
+      });
+
+      if (result.canceled) {
+        return;
+      }
+
+      const pickedImage = result.assets[0];
+      const preview = await createPreviewImage(pickedImage);
+
+      setSelectedImage(pickedImage);
+      setPreviewImage(preview);
     } catch (error) {
-      console.error("Error processing selected image:", error);
+      console.error("Error preparing selected image:", error);
       Alert.alert(t("PostScreen.errorTitle"), t("PostScreen.processImageError"));
     } finally {
       setProcessingImage(false);
@@ -108,19 +266,13 @@ export default function PostScreen() {
     );
   };
 
-  const validateSelectedTags = () =>
-    validateSelectedTagsAgainstPreferences({
-      selectedTags,
-      registrationPreferences,
-    });
-
   const handlePublishPost = async () => {
     if (!auth.currentUser?.uid) {
       Alert.alert(t("PostScreen.errorTitle"), t("PostScreen.mustBeLoggedIn"));
       return;
     }
 
-    if (!processedImage?.uri) {
+    if (!selectedImage?.uri) {
       Alert.alert(t("PostScreen.validationTitle"), t("PostScreen.selectImageValidation"));
       return;
     }
@@ -136,15 +288,53 @@ export default function PostScreen() {
     try {
       setPublishing(true);
 
-      await publishPost({
-        barberId: auth.currentUser.uid,
-        image: processedImage,
-        caption: caption.trim(),
+      const postRef = doc(collection(db, "posts"));
+      const postId = postRef.id;
+      const localizedSelectedTags = buildLocalizedSelectedTags(
         selectedTags,
-        registrationPreferences,
-      });
+        allowedTags
+      );
+      const { thumbnail, standard } = await createPostImageVariants(selectedImage);
 
-      setProcessedImage(null);
+      const [thumbnailUrl, imageUrl, currentUser] = await Promise.all([
+        uploadToStorage(
+          thumbnail.uri,
+          `posts/${postId}/${IMAGE_VARIANTS.thumbnail.fileName}`,
+          IMAGE_VARIANTS.thumbnail.mimeType
+        ),
+        uploadToStorage(
+          standard.uri,
+          `posts/${postId}/${IMAGE_VARIANTS.standard.fileName}`,
+          IMAGE_VARIANTS.standard.mimeType
+        ),
+        getCurrentUserData(),
+      ]);
+
+      const barberProfile = currentUser?.userData || {};
+      const createdAt = serverTimestamp();
+      const postDoc = {
+        postId,
+        barberId: auth.currentUser.uid,
+        caption: caption.trim(),
+        selectedTags: localizedSelectedTags,
+        imageUrl,
+        thumbnailUrl,
+        likeCount: 0,
+        likes: [],
+        createdAt,
+        barberName:
+          barberProfile.salonName ||
+          barberProfile.nomeSalone ||
+          barberProfile.firstName ||
+          "",
+        barberProfileImage: barberProfile.profileImage || null,
+      };
+
+      // return console.log(JSON.stringify(postDoc, null, 2))
+      await setDoc(postRef, postDoc);
+
+      setSelectedImage(null);
+      setPreviewImage(null);
       setSelectedTags([]);
       setCaption("");
       Alert.alert(t("PostScreen.successTitle"), t("PostScreen.postPreparedSuccess"));
@@ -153,6 +343,44 @@ export default function PostScreen() {
       Alert.alert(t("PostScreen.errorTitle"), t("PostScreen.preparePostError"));
     } finally {
       setPublishing(false);
+    }
+  };
+
+
+  const uploadToStorage = async (uri, storagePath, contentType) => {
+    try {
+      const response = await fetch(uri);
+      const blob = await response.blob();
+
+      const storage = getStorage();
+      const storageRef = ref(storage, storagePath);
+      const uploadTask = uploadBytesResumable(storageRef, blob, {
+        cacheControl: 'public, max-age=31536000',
+        contentType,
+      });
+
+      return await new Promise((resolve, reject) => {
+        uploadTask.on(
+          'state_changed',
+          (snapshot) => {
+            const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+            console.log(`Upload: ${progress}%`);
+          },
+          (error) => {
+            console.error('Upload failed:', error);
+            Alert.alert('Oops', 'Upload failed, check connection.');
+            reject(error);
+          },
+          async () => {
+            const url = await getDownloadURL(uploadTask.snapshot.ref);
+            console.log('Done! URL:', url);
+            resolve(url);
+          }
+        );
+      });
+    } catch (error) {
+      console.error(error);
+      throw error;
     }
   };
 
@@ -180,8 +408,8 @@ export default function PostScreen() {
         >
           {processingImage ? (
             <ActivityIndicator size="small" color="#00BCD4" />
-          ) : processedImage?.uri ? (
-            <Image source={{ uri: processedImage.uri }} style={styles.previewImage} />
+          ) : previewImage?.uri ? (
+            <Image source={{ uri: previewImage.uri }} style={styles.previewImage} />
           ) : (
             <Text style={styles.imagePickerText}>{t("PostScreen.selectImageFromGallery")}</Text>
           )}

@@ -9,7 +9,7 @@ const index = () => {
     userData, } = useAuth();
   console.log("role", role)
   if (role === 'barber') {
-    return <BarberAccountScreen />;
+    return <BarberAccountScreen userData={userData} />;
   }
   return <ClientAccountScreen />;
 }

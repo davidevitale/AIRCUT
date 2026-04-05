@@ -560,11 +560,11 @@ export default function BarberAccountScreen({
             <Text style={styles.sectionTitle}>Le tue specializzazioni</Text>
 
             <View style={styles.tagsContainer}>
-              {userData?.tipiTaglio?.map((taglio, index) => (
+              {/* {userData?.tipiTaglio?.map((taglio, index) => (
                 <View key={index} style={styles.tag}>
                   <Text style={styles.tagText}>{taglio}</Text>
                 </View>
-              ))}
+              ))} */}
             </View>
           </View>
 
