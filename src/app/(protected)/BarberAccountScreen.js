@@ -11,6 +11,7 @@ import {
   FlatList,
   TextInput,
   Modal,
+  ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
@@ -693,7 +694,9 @@ export default function BarberAccountScreen({
                         disabled={deleting}
                       // onPress={() => removeMedia(index, "image")}
                       >
-                        <Text style={styles.removeButtonText}>âœ•</Text>
+                        {deleting ? <ActivityIndicator color={'#ffff'} /> :
+                          <Text style={styles.removeButtonText}>x</Text>
+                        }
                       </TouchableOpacity>
                     </View>
                   )}
