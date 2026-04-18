@@ -592,6 +592,10 @@ export default function BarberAccountScreen({
               <Text style={styles.infoLabel}>{t("BarberAccountScreen.phoneLabel")}</Text>
               <Text style={styles.infoValue}>{userData?.telephone}</Text>
             </View>
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>{t("BarberAccountScreen.workGenderLabel")}</Text>
+              <Text style={styles.infoValue}>{userData?.workGender}</Text>
+            </View>
 
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>{t("BarberAccountScreen.contactEmailLabel")}</Text>
@@ -622,7 +626,7 @@ export default function BarberAccountScreen({
 
             <View style={styles.tagsContainer}>
               {userData?.typesCut?.map((taglio, index) => {
-                console.log(taglio)
+                // console.log(taglio)
                 return (
                   <View key={index} style={styles.tag}>
                     <Text style={styles.tagText}>

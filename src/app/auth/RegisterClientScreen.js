@@ -26,6 +26,7 @@ import { router } from 'expo-router';
 export default function RegisterClientScreen({ }) {
   const { t, i18n } = useTranslation();
   const [isRegistering, setIsRegistering] = useState(false);
+  const [isLoadingTags, setIsLoadingTags] = useState(true);
   const validationSchema = Yup.object().shape({
     email: Yup.string()
       .email(t("ClientRegistrationScreen.emailValidation"))
@@ -58,6 +59,7 @@ export default function RegisterClientScreen({ }) {
   const scrollViewRef = useRef(null);
 
   const fetchAllTags = async () => {
+    setIsLoadingTags(true);
     try {
       const tagsRef = collection(db, "tags");
       const querySnapshot = await getDocs(tagsRef);
@@ -72,6 +74,8 @@ export default function RegisterClientScreen({ }) {
 
     } catch (error) {
       console.error("Error fetching tags:", error);
+    } finally {
+      setIsLoadingTags(false);
     }
   };
 
@@ -80,12 +84,12 @@ export default function RegisterClientScreen({ }) {
       if (!tag.active) return false;
 
       if (sex === "M") {
-        return tag.visibility === "male_unisex";
+        return tag.visibility === "male";
       }
 
       if (sex === "F" || sex === "ALTRO") {
         return (
-          tag.visibility === "male_unisex" ||
+          tag.visibility === "male" ||
           tag.visibility === "female"
         );
       }
@@ -206,10 +210,7 @@ export default function RegisterClientScreen({ }) {
               values,
               errors,
               touched }) => {
-              const filteredTags = useMemo(
-                () => filterTags(values.sex),
-                [values.sex]
-              );
+              const filteredTags = filterTags(values.sex);
               return (
                 <>
                   <View style={styles.sectionBox}>
@@ -389,33 +390,39 @@ export default function RegisterClientScreen({ }) {
                         {t('ClientRegistrationScreen.MultipleSelectionPlaceholder')}
                       </Text>
 
-                      <View style={styles.taglioGrid}>
-                        {filteredTags.map((taglio) => {
-                          const isSelected = values.preferenceCut.includes(taglio.id)
-                          return (
-                            <TouchableOpacity
-                              key={taglio.id}
-                              style={[
-                                styles.taglioCard,
-                                isSelected && styles.taglioCardActive
-                              ]}
-                              onPress={() => {
-                                const updated = isSelected
-                                  ? values.preferenceCut.filter(id => id !== taglio.id)
-                                  : [...values.preferenceCut, taglio.id]
+                      {isLoadingTags ? (
+                        <View style={styles.tagsLoader}>
+                          <ActivityIndicator size="large" color="#00BCD4" />
+                        </View>
+                      ) : (
+                        <View style={styles.taglioGrid}>
+                          {filteredTags.map((taglio) => {
+                            const isSelected = values.preferenceCut.includes(taglio.id)
+                            return (
+                              <TouchableOpacity
+                                key={taglio.id}
+                                style={[
+                                  styles.taglioCard,
+                                  isSelected && styles.taglioCardActive
+                                ]}
+                                onPress={() => {
+                                  const updated = isSelected
+                                    ? values.preferenceCut.filter(id => id !== taglio.id)
+                                    : [...values.preferenceCut, taglio.id]
 
-                                setFieldValue('preferenceCut', updated)
-                              }}
-                            >
-                              <Text style={styles.taglioName}>
-                                {i18n.language === 'en-UK'
-                                  ? taglio.label.en
-                                  : taglio.label.it}
-                              </Text>
-                            </TouchableOpacity>
-                          )
-                        })}
-                      </View>
+                                  setFieldValue('preferenceCut', updated)
+                                }}
+                              >
+                                <Text style={styles.taglioName}>
+                                  {i18n.language === 'en-UK'
+                                    ? taglio.label.en
+                                    : taglio.label.it}
+                                </Text>
+                              </TouchableOpacity>
+                            )
+                          })}
+                        </View>
+                      )}
 
                       <Text style={{ color: "red", fontSize: 12 }}>
                         {touched.preferenceCut && typeof errors.preferenceCut === "string"
@@ -544,6 +551,12 @@ const styles = StyleSheet.create({
   },
   inputContainer: {
     marginBottom: 15,
+  },
+  tagsLoader: {
+    minHeight: 120,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
   },
   input: {
     height: 50,

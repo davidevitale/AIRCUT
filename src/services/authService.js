@@ -398,6 +398,7 @@ export const registerBarber = async (userData) => {
       lastName: userData.lastName,
       salonName: userData.salonName,
       address: userData.salonAddress,
+      workGender: userData.workGender,
       typesCut: userData.typesCut,
       telephone: userData.phoneNumber,
       website: userData.website,

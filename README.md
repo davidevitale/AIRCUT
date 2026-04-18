@@ -155,8 +155,8 @@ This document describes the work completed for **Milestone 1 (M1)** of the AIRCU
 
 - Centralized **Tag Taxonomy** defined in Firestore(in both Language)
 - Each tag includes category attributes:
-  - `male_unisex`
-  - `female_unisex`
+  - `male`
+  - `female`
 
 ### Male / Unisex Tags Implemented
 

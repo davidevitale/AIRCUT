@@ -69,7 +69,7 @@ export default function RoleSelectionScreen({ }) {
     taglio_lungo: { en: "Long Cut", it: "Taglio Lungo" },
     vivid_colors: { en: "Vivid Colors", it: "Colori Vividi" },
 
-    // male_unisex
+    // male
     afro: { en: "Afro", it: "Afro" },
     burst_fade: { en: "Burst Fade", it: "Burst Fade" },
     edgar_cut: { en: "Edgar Cut", it: "Taglio Edgar" },

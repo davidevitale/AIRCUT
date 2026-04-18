@@ -20,6 +20,7 @@ import { uploadFileToPath } from "../../services/mediaService";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { getStorage, ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { serverTimestamp } from "firebase/firestore";
+import { useToast } from "@kritikhedau/react-native-toastify";
 
 const IMAGE_VARIANTS = {
   thumbnail: {
@@ -40,26 +41,6 @@ const PREVIEW_VARIANT = {
   size: 1080,
   quality: 0.8,
   mimeType: "image/webp",
-};
-
-const normalizePreferences = (registrationPreferences = []) => {
-  if (!Array.isArray(registrationPreferences)) {
-    return [];
-  }
-
-  return registrationPreferences
-    .map((tag) => {
-      if (typeof tag === "string") {
-        return tag.trim();
-      }
-
-      if (tag && typeof tag === "object" && typeof tag.id === "string") {
-        return tag.id.trim();
-      }
-
-      return "";
-    })
-    .filter((tagId) => tagId.length > 0);
 };
 
 const buildLocalizedSelectedTags = (selectedIds = [], availableTags = []) => {
@@ -84,10 +65,41 @@ const buildLocalizedSelectedTags = (selectedIds = [], availableTags = []) => {
     .filter(Boolean);
 };
 
+const getVisibleTagsByWorkGender = (allTags = [], workGender) => {
+  if (!Array.isArray(allTags) || !workGender) {
+    return [];
+  }
+
+  return allTags.filter((tag) => {
+    if (!tag.active) {
+      return false;
+    }
+
+    if (workGender === "male") {
+      return tag.visibility === "male" || tag.visibility === "male_unisex";
+    }
+
+    if (workGender === "female") {
+      return tag.visibility === "female";
+    }
+
+    if (workGender === "unisex") {
+      return (
+        tag.visibility === "male" ||
+        tag.visibility === "male_unisex" ||
+        tag.visibility === "female"
+      );
+    }
+
+    return false;
+  });
+};
+
 
 
 export default function PostScreen() {
   const { t, i18n } = useTranslation();
+  const { show } = useToast();
   const [allowedTags, setAllowedTags] = useState([]);
   const [selectedTags, setSelectedTags] = useState([]);
   const [caption, setCaption] = useState("");
@@ -99,9 +111,6 @@ export default function PostScreen() {
   const [publishing, setPublishing] = useState(false);
 
   const selectedTagsSet = useMemo(() => new Set(selectedTags), [selectedTags]);
-  const registrationPreferences = useMemo(() => {
-    return normalizePreferences(userData?.typesCut || userData?.tipiTaglio || []);
-  }, [userData]);
 
   const getLocalizedText = (value, fallback = "") => {
     if (!value) return fallback;
@@ -173,20 +182,7 @@ export default function PostScreen() {
   };
 
   const validateSelectedTags = () => {
-    if (!Array.isArray(selectedTags) || selectedTags.length === 0) {
-      return false;
-    }
-
-    const normalizedPreferences = normalizePreferences(registrationPreferences);
-    if (normalizedPreferences.length === 0) {
-      return false;
-    }
-
-    const preferenceSet = new Set(normalizedPreferences);
-
-    return selectedTags.every(
-      (tagId) => typeof tagId === "string" && preferenceSet.has(tagId)
-    );
+    return Array.isArray(selectedTags) && selectedTags.length > 0;
   };
 
   const fetchContextData = async () => {
@@ -202,21 +198,11 @@ export default function PostScreen() {
         ...docSnap.data(),
       }));
 
-      const specializations = normalizePreferences(
-        userContext?.userData?.typesCut || userContext?.userData?.tipiTaglio || []
-      );
-
-      const visibleBarberTags = tags.filter(
-        (tag) => tag.active && tag.visibility === "barber"
-      );
-
-      const filteredAllowedTags =
-        specializations.length > 0
-          ? visibleBarberTags.filter((tag) => specializations.includes(tag.id))
-          : visibleBarberTags;
+      const workGender = userContext?.userData?.workGender || "";
+      const visibleBarberTags = getVisibleTagsByWorkGender(tags, workGender);
 
       setUserData(userContext?.userData || null);
-      setAllowedTags(filteredAllowedTags);
+      setAllowedTags(visibleBarberTags);
     } catch (error) {
       console.error("Error loading add post context:", error);
       Alert.alert(t("PostScreen.errorTitle"), t("PostScreen.loadContextError"));
@@ -315,6 +301,7 @@ export default function PostScreen() {
       const postDoc = {
         postId,
         barberId: auth.currentUser.uid,
+        photoGender: userData.workGender,
         caption: caption.trim(),
         selectedTags: localizedSelectedTags,
         imageUrl,
@@ -337,7 +324,9 @@ export default function PostScreen() {
       setPreviewImage(null);
       setSelectedTags([]);
       setCaption("");
-      Alert.alert(t("PostScreen.successTitle"), t("PostScreen.postPreparedSuccess"));
+
+      show(t("PostScreen.postPreparedSuccess"))
+      // Alert.alert(t("PostScreen.successTitle"), t("PostScreen.postPreparedSuccess"));
     } catch (error) {
       console.error("Error publishing post:", error);
       Alert.alert(t("PostScreen.errorTitle"), t("PostScreen.preparePostError"));
@@ -399,7 +388,9 @@ export default function PostScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.title}>{t("Navigation.add")}</Text>
+        <Text onPress={() => {
+
+        }} style={styles.title}>{t("Navigation.add")}</Text>
 
         <TouchableOpacity
           onPress={handlePickImage}

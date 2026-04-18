@@ -21,6 +21,7 @@ import { db } from "../../../config/firebase";
 export default function RegisterBarberScreen({ onGoToLogin }) {
   const { t, i18n } = useTranslation();
   const [tags, setTags] = useState([]);
+  const [isLoadingTags, setIsLoadingTags] = useState(true);
   const [isRegistering, setIsRegistering] = useState(false);
 
   const validationSchema = Yup.object().shape({
@@ -42,6 +43,10 @@ export default function RegisterBarberScreen({ onGoToLogin }) {
 
     lastName: Yup.string()
       .min(2, t("BarberRegistrationScreen.lastNameValidation"))
+      .required(t("BarberRegistrationScreen.required")),
+
+    workGender: Yup.string()
+      .oneOf(["male", "female", "unisex"], t("BarberRegistrationScreen.required"))
       .required(t("BarberRegistrationScreen.required")),
 
     salonName: Yup.string()
@@ -71,6 +76,7 @@ export default function RegisterBarberScreen({ onGoToLogin }) {
   });
 
   const fetchAllTags = async () => {
+    setIsLoadingTags(true);
     try {
       const tagsRef = collection(db, "tags");
       const querySnapshot = await getDocs(tagsRef);
@@ -81,11 +87,37 @@ export default function RegisterBarberScreen({ onGoToLogin }) {
       setTags(allTags);
     } catch (error) {
       console.error("Error fetching tags:", error);
+    } finally {
+      setIsLoadingTags(false);
     }
   };
 
-  const filterBarberTags = () =>
-    tags.filter((tag) => tag.active && tag.visibility === "barber");
+  const getFilteredTagsByWorkGender = (allTags = [], workGender) => {
+    return allTags.filter((tag) => {
+      if (!tag.active || !workGender) {
+        return false;
+      }
+
+      if (workGender === "male") {
+        return tag.visibility === "male" || tag.visibility === "male_unisex";
+      }
+
+      if (workGender === "female") {
+        return tag.visibility === "female";
+      }
+
+      if (workGender === "unisex") {
+        return (
+          tag.visibility === "male" ||
+          tag.visibility === "male_unisex" ||
+          tag.visibility === "female"
+        );
+      }
+
+      return false;
+    });
+  };
+
 
   const buildLocalizedTypesCut = (selectedIds = []) => {
     return selectedIds
@@ -182,6 +214,7 @@ export default function RegisterBarberScreen({ onGoToLogin }) {
             confirmPassword: "",
             firstName: "",
             lastName: "",
+            workGender: "",
             salonName: "",
             salonAddress: "",
             typesCut: [],
@@ -205,7 +238,7 @@ export default function RegisterBarberScreen({ onGoToLogin }) {
           }}
         >
           {({ handleChange, handleBlur, handleSubmit, setFieldValue, values, errors, touched }) => {
-            const filteredTags = filterBarberTags();
+            const filteredTags = getFilteredTagsByWorkGender(tags, values.workGender);
             return (
               <>
                 <View style={styles.headerRow}>
@@ -310,6 +343,8 @@ export default function RegisterBarberScreen({ onGoToLogin }) {
                     </Text>
                   </View>
 
+
+
                   <View style={styles.inputContainer}>
                     <TextInput
                       label={t("BarberRegistrationScreen.studioNamePlaceholder")}
@@ -337,38 +372,117 @@ export default function RegisterBarberScreen({ onGoToLogin }) {
                       {touched.salonAddress && typeof errors.salonAddress === "string" ? errors.salonAddress : " "}
                     </Text>
                   </View>
+                  <View style={styles.inputContainer}>
+                    <Text style={styles.fieldLabel}>
+                      {t("BarberRegistrationScreen.workGenderLabel")}
+                    </Text>
+                    <View style={styles.genderContainer}>
+                      <TouchableOpacity
+                        style={[
+                          styles.genderButton,
+                          values.workGender === "male" && styles.genderButtonActive,
+                        ]}
+                        onPress={() => {
+                          setFieldValue("workGender", "male");
+                          setFieldValue("typesCut", []);
+                        }}
+                      >
+                        <Text
+                          style={[
+                            styles.genderText,
+                            values.workGender === "male" && styles.genderTextActive,
+                          ]}
+                        >
+                          {t("BarberRegistrationScreen.workGenderMale")}
+                        </Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        style={[
+                          styles.genderButton,
+                          values.workGender === "female" && styles.genderButtonActive,
+                        ]}
+                        onPress={() => {
+                          setFieldValue("workGender", "female");
+                          setFieldValue("typesCut", []);
+                        }}
+                      >
+                        <Text
+                          style={[
+                            styles.genderText,
+                            values.workGender === "female" && styles.genderTextActive,
+                          ]}
+                        >
+                          {t("BarberRegistrationScreen.workGenderFemale")}
+                        </Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        style={[
+                          styles.genderButton,
+                          values.workGender === "unisex" && styles.genderButtonActive,
+                        ]}
+                        onPress={() => {
+                          setFieldValue("workGender", "unisex");
+                          setFieldValue("typesCut", []);
+                        }}
+                      >
+                        <Text
+                          style={[
+                            styles.genderText,
+                            values.workGender === "unisex" && styles.genderTextActive,
+                          ]}
+                        >
+                          {t("BarberRegistrationScreen.workGenderUnisex")}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                    <Text style={{ color: "red", fontSize: 12, display: touched.workGender && errors.workGender ? "flex" : "none" }}>
+                      {touched.workGender && typeof errors.workGender === "string" ? errors.workGender : " "}
+                    </Text>
+                  </View>
 
                   <Text style={styles.subtitle}>
                     {t("BarberRegistrationScreen.specializations")}
                   </Text>
-                  <View style={styles.taglioGrid}>
-                    {filteredTags.map((taglio) => {
-                      const isSelected = values.typesCut.includes(taglio.id);
-                      return (
-                        <TouchableOpacity
-                          key={taglio.id}
-                          style={[styles.taglioCard, isSelected && styles.taglioCardActive]}
-                          onPress={() => {
-                            const updated = isSelected
-                              ? values.typesCut.filter((id) => id !== taglio.id)
-                              : [...values.typesCut, taglio.id];
-                            setFieldValue("typesCut", updated);
-                          }}
-                        >
-                          <Text style={styles.taglioName}>
-                            {i18n.language === "en-UK"
-                              ? taglio?.label?.en ?? taglio.id
-                              : taglio?.label?.it ?? taglio?.label?.en ?? taglio.id}
-                          </Text>
-                          <Text style={styles.taglioDescription}>
-                            {i18n.language === "en-UK"
-                              ? taglio?.description?.en ?? ""
-                              : taglio?.description?.it ?? taglio?.description?.en ?? ""}
-                          </Text>
-                        </TouchableOpacity>
-                      );
-                    })}
-                  </View>
+                  {!values.workGender ? (
+                    <Text style={styles.helperText}>
+                      {t("BarberRegistrationScreen.selectWorkGenderHelper")}
+                    </Text>
+                  ) : isLoadingTags ? (
+                    <View style={styles.tagsLoader}>
+                      <ActivityIndicator size="large" color="#00BCD4" />
+                    </View>
+                  ) : (
+                    <View style={styles.taglioGrid}>
+                      {filteredTags.map((taglio) => {
+                        const isSelected = values.typesCut.includes(taglio.id);
+                        return (
+                          <TouchableOpacity
+                            key={taglio.id}
+                            style={[styles.taglioCard, isSelected && styles.taglioCardActive]}
+                            onPress={() => {
+                              const updated = isSelected
+                                ? values.typesCut.filter((id) => id !== taglio.id)
+                                : [...values.typesCut, taglio.id];
+                              setFieldValue("typesCut", updated);
+                            }}
+                          >
+                            <Text style={styles.taglioName}>
+                              {i18n.language === "en-UK"
+                                ? taglio?.label?.en ?? taglio.id
+                                : taglio?.label?.it ?? taglio?.label?.en ?? taglio.id}
+                            </Text>
+                            <Text style={styles.taglioDescription}>
+                              {i18n.language === "en-UK"
+                                ? taglio?.description?.en ?? ""
+                                : taglio?.description?.it ?? taglio?.description?.en ?? ""}
+                            </Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                  )}
                   <Text style={{ color: "red", fontSize: 12, display: touched.typesCut && errors.typesCut ? "flex" : "none" }}>
                     {touched.typesCut && typeof errors.typesCut === "string" ? errors.typesCut : " "}
                   </Text>
@@ -528,8 +642,59 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     textAlign: "center",
   },
+  fieldLabel: {
+    fontSize: 14,
+    fontWeight: "bold",
+    color: "#0f172a",
+    marginBottom: 10,
+  },
+  helperText: {
+    fontSize: 14,
+    color: "#475569",
+    textAlign: "center",
+    marginBottom: 20,
+  },
   inputContainer: {
     marginBottom: 15,
+  },
+  genderContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: 10,
+  },
+  genderButton: {
+    flex: 1,
+    height: 50,
+    borderWidth: 1.5,
+    borderColor: "rgba(0, 188, 212, 0.2)",
+    borderRadius: 14,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(248, 248, 248, 0.6)",
+    shadowColor: "#00BCD4",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  genderButtonActive: {
+    backgroundColor: "rgba(0, 188, 212, 0.15)",
+    borderColor: "rgba(0, 188, 212, 0.5)",
+  },
+  genderText: {
+    fontSize: 16,
+    color: "#334155",
+    fontWeight: "500",
+  },
+  genderTextActive: {
+    color: "#00BCD4",
+    fontWeight: "bold",
+  },
+  tagsLoader: {
+    minHeight: 120,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 20,
   },
   taglioGrid: {
     flexDirection: "row",
