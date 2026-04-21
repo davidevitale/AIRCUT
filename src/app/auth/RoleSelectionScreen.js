@@ -12,7 +12,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { db } from "../../../config/firebase";
-import { collection, doc, getDocs, updateDoc } from "firebase/firestore";
+import { doc, setDoc } from "firebase/firestore";
 
 const { width, height } = Dimensions.get("window");
 
@@ -55,62 +55,219 @@ export default function RoleSelectionScreen({ }) {
   };
 
 
+  const tags = [
+    {
+      "id": "afro",
+      "active": true,
+      "label": {
+        "it": "Afro",
+        "en": "Afro"
+      },
+      "visibility": "male"
+    },
+    {
+      "id": "balayage",
+      "active": true,
+      "visibility": "female",
+      "label": {
+        "it": "Balayage",
+        "en": "Balayage"
+      }
+    },
+    {
+      "id": "blonde",
+      "label": {
+        "it": "Biondo",
+        "en": "Blonde"
+      },
+      "visibility": "female",
+      "active": true
+    },
+    {
+      "id": "bob",
+      "active": true,
+      "label": {
+        "it": "Caschetto",
+        "en": "Bob"
+      },
+      "visibility": "female"
+    },
+    {
+      "id": "burst_fade",
+      "active": true,
+      "label": {
+        "it": "Burst Fade",
+        "en": "Burst Fade"
+      },
+      "visibility": "male"
+    },
+    {
+      "id": "edgar_cut",
+      "active": true,
+      "label": {
+        "it": "Taglio Edgar",
+        "en": "Edgar Cut"
+      },
+      "visibility": "male"
+    },
+    {
+      "id": "frangia",
+      "label": {
+        "it": "Frangia",
+        "en": "Fringe"
+      },
+      "visibility": "female",
+      "active": true
+    },
+    {
+      "id": "high_fade",
+      "active": true,
+      "label": {
+        "it": "Sfumatura Alta",
+        "en": "High Fade"
+      },
+      "visibility": "male"
+    },
+    {
+      "id": "liscio",
+      "label": {
+        "it": "Liscio",
+        "en": "Straight"
+      },
+      "visibility": "female",
+      "active": true
+    },
+    {
+      "id": "low_fade",
+      "active": true,
+      "label": {
+        "it": "Sfumatura Bassa",
+        "en": "Low Fade"
+      },
+      "visibility": "male"
+    },
+    {
+      "id": "mid_fade",
+      "active": true,
+      "label": {
+        "it": "Sfumatura Media",
+        "en": "Mid Fade"
+      },
+      "visibility": "male"
+    },
+    {
+      "id": "middle_part",
+      "visibility": "male",
+      "label": {
+        "it": "Riga Centrale",
+        "en": "Middle Part"
+      },
+      "active": true
+    },
+    {
+      "id": "mosso",
+      "active": true,
+      "label": {
+        "it": "Mosso",
+        "en": "Wavy"
+      },
+      "visibility": "female"
+    },
+    {
+      "id": "riccio",
+      "active": true,
+      "visibility": "female",
+      "label": {
+        "it": "Riccio",
+        "en": "Curly"
+      }
+    },
+    {
+      "id": "side_part",
+      "active": true,
+      "label": {
+        "it": "Riga Laterale",
+        "en": "Side Part"
+      },
+      "visibility": "male"
+    },
+    {
+      "id": "slick_back",
+      "active": true,
+      "label": {
+        "it": "Pettinato Indietro",
+        "en": "Slick Back"
+      },
+      "visibility": "male"
+    },
+    {
+      "id": "sposa",
+      "label": {
+        "it": "Sposa",
+        "en": "Bride"
+      },
+      "visibility": "female",
+      "active": true
+    },
+    {
+      "id": "taglio_lungo",
+      "label": {
+        "it": "Taglio Lungo",
+        "en": "Long Cut"
+      },
+      "visibility": "female",
+      "active": true
+    },
+    {
+      "id": "taper_fade",
+      "active": true,
+      "visibility": "male",
+      "label": {
+        "it": "Taper Fade",
+        "en": "Taper Fade"
+      }
+    },
+    {
+      "id": "treccine",
+      "active": true,
+      "label": {
+        "it": "Treccine",
+        "en": "Braids"
+      },
+      "visibility": "male"
+    },
+    {
+      "id": "vivid_colors",
+      "label": {
+        "it": "Colori Vividi",
+        "en": "Vivid Colors"
+      },
+      "visibility": "female",
+      "active": true
+    }
+  ]
 
-  const TAG_LABELS = {
-    bob: { en: "Bob", it: "Caschetto" },
-    balayage: { en: "Balayage", it: "Balayage" },
-    barba: { en: "Beard", it: "Barba" },
-    blonde: { en: "Blonde", it: "Biondo" },
-    frangia: { en: "Fringe", it: "Frangia" },
-    riccio: { en: "Curly", it: "Riccio" },
-    liscio: { en: "Straight", it: "Liscio" },
-    mosso: { en: "Wavy", it: "Mosso" },
-    sposa: { en: "Bride", it: "Sposa" },
-    taglio_lungo: { en: "Long Cut", it: "Taglio Lungo" },
-    vivid_colors: { en: "Vivid Colors", it: "Colori Vividi" },
-
-    // male
-    afro: { en: "Afro", it: "Afro" },
-    burst_fade: { en: "Burst Fade", it: "Burst Fade" },
-    edgar_cut: { en: "Edgar Cut", it: "Taglio Edgar" },
-    high_fade: { en: "High Fade", it: "Sfumatura Alta" },
-    low_fade: { en: "Low Fade", it: "Sfumatura Bassa" },
-    mid_fade: { en: "Mid Fade", it: "Sfumatura Media" },
-    middle_part: { en: "Middle Part", it: "Riga Centrale" },
-    side_part: { en: "Side Part", it: "Riga Laterale" },
-    slick_back: { en: "Slick Back", it: "Pettinato Indietro" },
-    taper_fade: { en: "Taper Fade", it: "Taper Fade" },
-    treccine: { en: "Braids", it: "Treccine" },
-  };
 
 
   const migrateTagLabelsToMultilang = async () => {
     try {
-      const tagsRef = collection(db, "tags");
-      const snapshot = await getDocs(tagsRef);
-
-      for (const docSnap of snapshot.docs) {
-        const tagId = docSnap.id;
-        const translations = TAG_LABELS[tagId];
-
-        if (!translations) {
-          console.warn(`⚠️ No translations found for tag: ${tagId}`);
-          continue;
-        }
-
-        await updateDoc(doc(db, "tags", tagId), {
+      for (const tag of tags) {
+        await setDoc(doc(db, "tags", tag.id), {
+          id: tag.id,
+          active: Boolean(tag.active),
+          visibility: tag.visibility || "male",
           label: {
-            en: translations.en,
-            it: translations.it,
+            en: tag.label?.en || tag.id,
+            it: tag.label?.it || tag.label?.en || tag.id,
           },
         });
 
-        console.log(`✅ Updated tag: ${tagId}`);
+        console.log(`Uploaded tag: ${tag.id}`);
       }
 
-      console.log("🎉 All tags migrated successfully!");
+      console.log("All tags uploaded successfully!");
     } catch (error) {
-      console.error("❌ Migration failed:", error);
+      console.error("Tag upload failed:", error);
     }
   };
 
@@ -119,7 +276,9 @@ export default function RoleSelectionScreen({ }) {
       <View style={styles.content}>
         {/* Logo/Brand */}
         <View style={styles.brandContainer}>
-          <Text style={styles.brandText}>aircut</Text>
+          <Text onPress={() => {
+            // migrateTagLabelsToMultilang()
+          }} style={styles.brandText}>aircut</Text>
         </View>
 
         {/* Role Cards */}

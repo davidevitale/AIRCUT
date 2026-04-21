@@ -97,6 +97,26 @@ export const checkUsernameUniqueness = async (username) => {
   }
 };
 
+export const checkBarberNicknameUniqueness = async (nickname) => {
+  try {
+    const normalizedNickname = (nickname || '').trim().toLowerCase();
+    if (!normalizedNickname) {
+      return false;
+    }
+
+    return await withRetry(async () => {
+      const barbersSnapshot = await getDocs(collection(db, 'barbers'));
+      return barbersSnapshot.docs.every((docSnap) => {
+        const existingNickname = String(docSnap.data()?.nickName || '').trim().toLowerCase();
+        return existingNickname !== normalizedNickname;
+      });
+    });
+  } catch (error) {
+    console.error('Error checking barber nickname uniqueness:', error);
+    throw error;
+  }
+};
+
 // Gestione Like per Portfolio Images || Like Management for Portfolio Images
 export const addPortfolioImageLike = async (userId, imageId, imageData) => {
   try {
@@ -379,10 +399,12 @@ export const registerBarber = async (userData) => {
   let createdUser = null; // ✅ declared safely
 
   try {
-    const isUnique = await checkUsernameUniqueness(userData.salonName);
-    if (!isUnique) {
-      throw new Error('salonNameExists');
+    const isNicknameUnique = await checkBarberNicknameUniqueness(userData.nickName);
+    if (!isNicknameUnique) {
+      throw new Error('nicknameExists');
     }
+
+
 
     const { user } = await createUserWithEmailAndPassword(
       auth,
@@ -396,6 +418,7 @@ export const registerBarber = async (userData) => {
       email: userData.email,
       firstName: userData.firstName,
       lastName: userData.lastName,
+      nickName: userData.nickName,
       salonName: userData.salonName,
       address: userData.salonAddress,
       workGender: userData.workGender,

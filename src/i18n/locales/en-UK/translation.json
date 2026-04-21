@@ -104,6 +104,7 @@
     "errorMessage": "Please complete all required fields.",
     "okButton": "OK",
     "passwordMismatchMessage": "Password and Confirm Password do not match.",
+    "nicknameExists": "This nickname is already in use. Please choose another nickname.",
     "salonNameExists": "The salon name already exists. Please choose a different name.",
     "emailAlreadyExist": "This email address is already registered. Try logging in or using a different \n email address.",
     "passwordWeak": "The password is too weak. It must be at least 6 characters long.",
@@ -289,6 +290,8 @@
     "selectImageFromGallery": "Select image from gallery",
     "captionPlaceholder": "Caption (optional)",
     "selectTagsTitle": "Select tags",
+    "selectWorkCategorySubtitle": "Category of work is required for unisex posts.",
+    "selectWorkCategoryValidation": "Select Male or Female category first.",
     "selectTagsSubtitle": "Pick at least one tag from your registered specializations.",
     "publishButton": "PUBLISH",
     "legalText": "By publishing you confirm you have the subject's consent..."

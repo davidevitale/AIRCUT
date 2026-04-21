@@ -14,6 +14,8 @@
     "selectImageFromGallery": "Seleziona immagine dalla galleria",
     "captionPlaceholder": "Didascalia (opzionale)",
     "selectTagsTitle": "Seleziona tag",
+    "selectWorkCategorySubtitle": "Per i post unisex è obbligatorio scegliere la categoria di lavoro.",
+    "selectWorkCategoryValidation": "Seleziona prima la categoria Uomo o Donna.",
     "selectTagsSubtitle": "Scegli almeno un tag dalle tue specializzazioni registrate.",
     "publishButton": "PUBBLICA",
     "legalText": "Pubblicando confermi di avere il consenso del soggetto..."
@@ -122,6 +124,7 @@
     "errorMessage": "Si Ã¨ verificato un errore. Riprova piÃ¹ tardi.",
     "okButton": "OK",
     "passwordMismatchMessage": "Le password non coincidono",
+    "nicknameExists": "Questo nickname è già in uso. Scegli un nickname diverso.",
     "salonNameExists": "Nome salone giÃ  esistente. Scegli un nome diverso.",
     "emailAlreadyExist": "Questa email Ã¨ giÃ  registrata. Prova a fare il login o usa un \n altra email.",
     "passwordWeak": "La password Ã¨ troppo debole. Deve essere di almeno 6 caratteri.",

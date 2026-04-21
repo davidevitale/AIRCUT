@@ -5,7 +5,6 @@ import {
   TouchableOpacity,
   StyleSheet,
   ScrollView,
-  Alert,
   ActivityIndicator,
 } from "react-native";
 import { registerBarber } from "../../services/authService";
@@ -17,12 +16,17 @@ import { Formik } from "formik";
 import * as Yup from "yup";
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "../../../config/firebase";
+import { useAuth } from "../../context/AuthContext";
+import { useToast } from "@kritikhedau/react-native-toastify";
 
 export default function RegisterBarberScreen({ onGoToLogin }) {
   const { t, i18n } = useTranslation();
+  const { authStatus } = useAuth();
+  const { show } = useToast();
   const [tags, setTags] = useState([]);
   const [isLoadingTags, setIsLoadingTags] = useState(true);
   const [isRegistering, setIsRegistering] = useState(false);
+  const [registrationStarted, setRegistrationStarted] = useState(false);
 
   const validationSchema = Yup.object().shape({
     email: Yup.string()
@@ -43,6 +47,10 @@ export default function RegisterBarberScreen({ onGoToLogin }) {
 
     lastName: Yup.string()
       .min(2, t("BarberRegistrationScreen.lastNameValidation"))
+      .required(t("BarberRegistrationScreen.required")),
+
+    nickName: Yup.string()
+      .min(2, t("BarberRegistrationScreen.nicknameValidation"))
       .required(t("BarberRegistrationScreen.required")),
 
     workGender: Yup.string()
@@ -143,18 +151,8 @@ export default function RegisterBarberScreen({ onGoToLogin }) {
     setIsRegistering(true);
     try {
       await registerBarber(values);
-      Alert.alert(
-        t("BarberRegistrationScreen.successTitle"),
-        t("BarberRegistrationScreen.successMessage"),
-        [
-          {
-            text: "OK",
-            onPress: () => {
-              router.replace("/(protected)");
-            },
-          },
-        ]
-      );
+      setRegistrationStarted(true);
+      show(t("BarberRegistrationScreen.successMessage"));
     } catch (error) {
       const knownErrorKeys = [
         "emailAlreadyExist",
@@ -162,6 +160,7 @@ export default function RegisterBarberScreen({ onGoToLogin }) {
         "invalidEmail",
         "notAllowed",
         "salonNameExists",
+        "nicknameExists",
       ];
 
       let message;
@@ -172,7 +171,7 @@ export default function RegisterBarberScreen({ onGoToLogin }) {
         message = error.message || t("common.genericError");
       }
 
-      Alert.alert(t("BarberRegistrationScreen.errorTitle"), message);
+      show(message);
     } finally {
       setIsRegistering(false);
     }
@@ -204,6 +203,12 @@ export default function RegisterBarberScreen({ onGoToLogin }) {
     fetchAllTags();
   }, []);
 
+  useEffect(() => {
+    if (registrationStarted && authStatus === "authenticated") {
+      router.replace("/(protected)");
+    }
+  }, [registrationStarted, authStatus]);
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView style={styles.content}>
@@ -214,6 +219,7 @@ export default function RegisterBarberScreen({ onGoToLogin }) {
             confirmPassword: "",
             firstName: "",
             lastName: "",
+            nickName: "",
             workGender: "",
             salonName: "",
             salonAddress: "",
@@ -344,6 +350,21 @@ export default function RegisterBarberScreen({ onGoToLogin }) {
                   </View>
 
 
+
+                  <View style={styles.inputContainer}>
+                    <TextInput
+                      label={t("BarberRegistrationScreen.nicknamePlaceholder")}
+                      placeholder={t("BarberRegistrationScreen.nicknamePlaceholder")}
+                      {...commonProps}
+                      value={values.nickName}
+                      onChangeText={handleChange("nickName")}
+                      onBlur={handleBlur("nickName")}
+                      autoCapitalize="none"
+                    />
+                    <Text style={{ color: "red", fontSize: 12, display: touched.nickName && errors.nickName ? "flex" : "none" }}>
+                      {touched.nickName && typeof errors.nickName === "string" ? errors.nickName : " "}
+                    </Text>
+                  </View>
 
                   <View style={styles.inputContainer}>
                     <TextInput

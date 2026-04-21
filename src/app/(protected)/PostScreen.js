@@ -102,6 +102,7 @@ export default function PostScreen() {
   const { show } = useToast();
   const [allowedTags, setAllowedTags] = useState([]);
   const [selectedTags, setSelectedTags] = useState([]);
+  const [workCategory, setWorkCategory] = useState("");
   const [caption, setCaption] = useState("");
   const [selectedImage, setSelectedImage] = useState(null);
   const [previewImage, setPreviewImage] = useState(null);
@@ -110,7 +111,19 @@ export default function PostScreen() {
   const [processingImage, setProcessingImage] = useState(false);
   const [publishing, setPublishing] = useState(false);
 
+  const isUnisexUser = userData?.workGender === "unisex";
   const selectedTagsSet = useMemo(() => new Set(selectedTags), [selectedTags]);
+  const visibleTags = useMemo(() => {
+    if (!isUnisexUser) {
+      return allowedTags;
+    }
+
+    if (!workCategory) {
+      return [];
+    }
+
+    return getVisibleTagsByWorkGender(allowedTags, workCategory);
+  }, [allowedTags, isUnisexUser, workCategory]);
 
   const getLocalizedText = (value, fallback = "") => {
     if (!value) return fallback;
@@ -252,6 +265,11 @@ export default function PostScreen() {
     );
   };
 
+  const handleWorkCategoryChange = (category) => {
+    setWorkCategory(category);
+    setSelectedTags([]);
+  };
+
   const handlePublishPost = async () => {
     if (!auth.currentUser?.uid) {
       Alert.alert(t("PostScreen.errorTitle"), t("PostScreen.mustBeLoggedIn"));
@@ -260,6 +278,14 @@ export default function PostScreen() {
 
     if (!selectedImage?.uri) {
       Alert.alert(t("PostScreen.validationTitle"), t("PostScreen.selectImageValidation"));
+      return;
+    }
+
+    if (isUnisexUser && !workCategory) {
+      Alert.alert(
+        t("PostScreen.validationTitle"),
+        t("PostScreen.selectWorkCategoryValidation")
+      );
       return;
     }
 
@@ -278,7 +304,7 @@ export default function PostScreen() {
       const postId = postRef.id;
       const localizedSelectedTags = buildLocalizedSelectedTags(
         selectedTags,
-        allowedTags
+        visibleTags
       );
       const { thumbnail, standard } = await createPostImageVariants(selectedImage);
 
@@ -301,7 +327,7 @@ export default function PostScreen() {
       const postDoc = {
         postId,
         barberId: auth.currentUser.uid,
-        photoGender: userData.workGender,
+        photoGender: isUnisexUser ? workCategory : userData.workGender,
         caption: caption.trim(),
         selectedTags: localizedSelectedTags,
         imageUrl,
@@ -323,6 +349,7 @@ export default function PostScreen() {
       setSelectedImage(null);
       setPreviewImage(null);
       setSelectedTags([]);
+      setWorkCategory("");
       setCaption("");
 
       show(t("PostScreen.postPreparedSuccess"))
@@ -416,11 +443,57 @@ export default function PostScreen() {
         />
 
         <Text style={styles.sectionTitle}>{t("PostScreen.selectTagsTitle")}</Text>
+        {isUnisexUser && (
+          <>
+            <Text style={styles.sectionSubtitle}>
+              {t("PostScreen.selectWorkCategorySubtitle")}
+            </Text>
+            <View style={styles.workCategoryContainer}>
+              <TouchableOpacity
+                style={[
+                  styles.workCategoryButton,
+                  workCategory === "male" && styles.workCategoryButtonActive,
+                ]}
+                onPress={() => handleWorkCategoryChange("male")}
+                disabled={publishing}
+              >
+                <Text
+                  style={[
+                    styles.workCategoryButtonText,
+                    workCategory === "male" && styles.workCategoryButtonTextActive,
+                  ]}
+                >
+                  {t("BarberRegistrationScreen.workGenderMale")}
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.workCategoryButton,
+                  workCategory === "female" && styles.workCategoryButtonActive,
+                ]}
+                onPress={() => handleWorkCategoryChange("female")}
+                disabled={publishing}
+              >
+                <Text
+                  style={[
+                    styles.workCategoryButtonText,
+                    workCategory === "female" && styles.workCategoryButtonTextActive,
+                  ]}
+                >
+                  {t("BarberRegistrationScreen.workGenderFemale")}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </>
+        )}
         <Text style={styles.sectionSubtitle}>
-          {t("PostScreen.selectTagsSubtitle")}
+          {isUnisexUser && !workCategory
+            ? t("PostScreen.selectWorkCategoryValidation")
+            : t("PostScreen.selectTagsSubtitle")}
         </Text>
         <View style={styles.tagsContainer}>
-          {allowedTags.map((tag) => {
+          {visibleTags.map((tag) => {
             const isSelected = selectedTagsSet.has(tag.id);
             return (
               <TouchableOpacity
@@ -528,6 +601,34 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "space-between",
+  },
+  workCategoryContainer: {
+    marginTop: 8,
+    marginBottom: 8,
+    flexDirection: "row",
+    gap: 10,
+  },
+  workCategoryButton: {
+    flex: 1,
+    height: 42,
+    borderWidth: 1,
+    borderColor: "#cbd5e1",
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#fff",
+  },
+  workCategoryButtonActive: {
+    borderColor: "#00BCD4",
+    backgroundColor: "rgba(0, 188, 212, 0.12)",
+  },
+  workCategoryButtonText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#334155",
+  },
+  workCategoryButtonTextActive: {
+    color: "#0891b2",
   },
   tagCard: {
     width: "48%",
