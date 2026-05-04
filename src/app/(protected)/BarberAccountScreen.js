@@ -28,7 +28,7 @@ import {
 import LanguageToggle from "../../components/LanguageToggle";
 import { collection, deleteDoc, doc, getDocs, setDoc } from "firebase/firestore";
 import { auth, db } from "../../../config/firebase";
-import { deleteObject, getStorage, listAll, ref } from "firebase/storage";
+import { deleteObject, getDownloadURL, getStorage, listAll, ref, uploadBytesResumable } from "firebase/storage";
 import { useFocusEffect } from "@react-navigation/native";
 
 
@@ -407,6 +407,33 @@ export default function BarberAccountScreen({
   const toggleMenu = () => setMenuOpen((prev) => !prev);
   const closeMenu = () => setMenuOpen(false);
 
+  const uploadProfileImageToStorage = async (uri, userId, contentType = "image/jpeg") => {
+    const response = await fetch(uri);
+    const blob = await response.blob();
+    const storage = getStorage();
+    const extension = contentType.split("/")[1] || "jpg";
+    const storageRef = ref(storage, `profile/${userId}/profile_${Date.now()}.${extension}`);
+    const uploadTask = uploadBytesResumable(storageRef, blob, {
+      cacheControl: "public, max-age=31536000",
+      contentType,
+    });
+
+    return await new Promise((resolve, reject) => {
+      uploadTask.on(
+        "state_changed",
+        (snapshot) => {
+          const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+          console.log(`Profile image upload: ${progress}%`);
+        },
+        reject,
+        async () => {
+          const url = await getDownloadURL(uploadTask.snapshot.ref);
+          resolve(url);
+        },
+      );
+    });
+  };
+
   const handleProfileImageUpload = async () => {
     try {
       const images = await pickImages(false); // Single image
@@ -418,17 +445,13 @@ export default function BarberAccountScreen({
           setLocalProfileUri(picked.uri);
         }
 
-        const uploadedImages = await uploadMultipleFiles(
-          [picked],
+        const imageUrl = await uploadProfileImageToStorage(
+          picked.uri,
           currentUser.uid,
-          "profile",
-          (current, total) => {
-            console.log(`Upload immagine profilo ${current}/${total}`);
-          },
+          picked.mimeType || "image/jpeg",
         );
 
-        if (uploadedImages.length > 0) {
-          const imageUrl = uploadedImages[0].url;
+        if (imageUrl) {
 
           await updateBarberPortfolio(currentUser.uid, {
             profileImage: imageUrl,

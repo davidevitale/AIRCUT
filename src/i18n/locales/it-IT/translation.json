@@ -185,10 +185,25 @@
     "tryDifferentKeywords": "Prova con parole chiave diverse",
     "loadingFeed": "Caricamento feed...",
     "searchPlaceholder": "Cerca hashtag o saloni...",
+    "clearSearchIcon": "x",
     "slowConnection": "Connessione lenta",
     "noPostsAvailable": "Nessun post disponibile",
     "checkConnectionAndPullToRefresh": "Verifica la tua connessione internet e tira per aggiornare",
     "noPhotosYet": "I parrucchieri non hanno ancora caricato foto. Torna piu tardi per vedere i loro lavori!"
+  },
+  "BarberPost": {
+    "errorTitle": "Errore",
+    "mustBeLoggedIn": "Devi essere autenticato per mettere mi piace.",
+    "slowConnectionTitle": "Connessione lenta",
+    "likeSyncLater": "Il like verra sincronizzato quando la connessione migliora.",
+    "likeUpdateError": "Impossibile aggiornare il like. Riprova.",
+    "likeGenericError": "Errore nell'aggiornamento del like.",
+    "shareMessage": "Guarda questo fantastico lavoro di {{name}}!",
+    "likesCount": "{{count}} Mi piace"
+  },
+  "PostGrid": {
+    "emptyTitle": "Nessun post trovato",
+    "emptyDescription": "Prova a cercare un hashtag diverso"
   },
   "LikeScreen": {
     "defaultBarberName": "Parrucchiere",

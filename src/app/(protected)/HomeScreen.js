@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   StyleSheet,
   ScrollView,
@@ -8,60 +8,63 @@ import {
   RefreshControl,
   TextInput,
   TouchableOpacity,
-  FlatList
+  FlatList,
 } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { useTranslation } from 'react-i18next';
-// import BarberPost from '../components/BarberPost';
-// import PostGrid from '../components/PostGrid';
-// import UserListItem from '../components/UserListItem';
+import BarberPost from '../../components/BarberPost';
+import PostGrid from '../../components/PostGrid';
+import UserListItem from '../../components/UserListItem';
 import { getAllPostsWithLikeStatus, getCurrentUserData, smartSearch } from '../../services/authService';
 
-/* CODICE COMMENTATO - DA RIUTILIZZARE NEL SEARCH COMPONENT
-  // Debounced search
-  useEffect(() => {
-    const delayedSearch = setTimeout(() => {
-      if (searchText.trim()) {
-        performSearch(searchText.trim());
-      } else {
-        setSearchResults(null);
-      }
-    }, 300);
+const SEARCH_DEBOUNCE_MS = 300;
 
-    return () => clearTimeout(delayedSearch);
-  }, [searchText]);
+const isFirebaseConnectionError = (error) => (
+  error.message?.includes('client is offline') ||
+  error.message?.includes('Failed to get document') ||
+  error.code === 'unavailable'
+);
 
-  const performSearch = async (query) => {
-    setLoading(true);
-    try {
-      console.log('SearchScreen: Starting search for:', query);
-      const results = await smartSearch(query);
-      console.log('SearchScreen: Search results:', results);
-      setSearchResults(results);
-    } catch (error) {
-      console.error('SearchScreen: Errore durante la ricerca:', error);
-      setSearchResults({ posts: [], users: [] });
-    } finally {
-      setLoading(false);
-    }
-  };
+const ScreenShell = ({ children }) => (
+  <View style={styles.screen}>
+    <BlurView intensity={28} tint="light" style={styles.backgroundBlur} pointerEvents="none" />
+    {children}
+  </View>
+);
 
-  const handleClear = () => {
-    setSearchText('');
-    setSearchResults(null);
-  };
-
-  const handleRecentSearchPress = (search) => {
-    setSearchText(search);
-  };
-
-  const handleHashtagPress = (hashtag) => {
-    setSearchText(hashtag);
-    if (onHashtagPress) {
-      onHashtagPress(hashtag);
-    }
-  };
-*/
+const SearchBar = ({
+  placeholder,
+  clearIcon,
+  searchText,
+  onChangeText,
+  onClear,
+  onFocus,
+  autoFocus = false,
+}) => (
+  <View style={styles.searchHeader}>
+    <BlurView intensity={24} tint="light" style={styles.searchBlur}>
+      <View style={styles.searchInputContainer}>
+        <TextInput
+          style={styles.searchInput}
+          placeholder={placeholder}
+          placeholderTextColor="#8e8e8e"
+          value={searchText}
+          onChangeText={onChangeText}
+          onFocus={onFocus}
+          autoCapitalize="none"
+          autoCorrect={false}
+          returnKeyType="search"
+          autoFocus={autoFocus}
+        />
+        {searchText.length > 0 && (
+          <TouchableOpacity style={styles.clearButton} onPress={onClear}>
+            <Text style={styles.clearIcon}>{clearIcon}</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+    </BlurView>
+  </View>
+);
 
 const HomeScreen = ({ onViewProfile, onHashtagPress }) => {
   const { t } = useTranslation();
@@ -70,87 +73,56 @@ const HomeScreen = ({ onViewProfile, onHashtagPress }) => {
   const [refreshing, setRefreshing] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
   const [hasConnectionError, setHasConnectionError] = useState(false);
-  // State per la ricerca
   const [searchText, setSearchText] = useState('');
   const [searchResults, setSearchResults] = useState(null);
   const [searchLoading, setSearchLoading] = useState(false);
   const [isSearchActive, setIsSearchActive] = useState(false);
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       setLoading(true);
-      setHasConnectionError(false); // Reset error state
-      console.log('HomeScreen: Starting to load data...');
+      setHasConnectionError(false);
 
-      // Carica l'utente corrente
       const userData = await getCurrentUserData();
+      const userId = userData?.user?.uid;
+      const postsWithLikeStatus = await getAllPostsWithLikeStatus(userId);
+
       setCurrentUser(userData);
-
-      // Usa la nuova funzione che gestisce automaticamente lo stato like
-      const postsWithLikeStatus = await getAllPostsWithLikeStatus(userData?.user?.uid);
-      console.log('HomeScreen: Loaded posts with like status:', postsWithLikeStatus.length);
-
-      // Debug: mostra i primi post
-      if (postsWithLikeStatus.length > 0) {
-        console.log('HomeScreen: First post:', {
-          id: postsWithLikeStatus[0].id,
-          postId: postsWithLikeStatus[0].postId,
-          isLiked: postsWithLikeStatus[0].isLiked,
-          likesCount: postsWithLikeStatus[0].likesCount
-        });
-      }
-
       setPosts(postsWithLikeStatus);
-      console.log('HomeScreen: Posts loaded successfully');
     } catch (error) {
       console.error('HomeScreen: Error loading data:', error);
+      setPosts([]);
 
-      // Controlla se è un errore di connessione Firebase
-      if (error.message?.includes('client is offline') ||
-        error.message?.includes('Failed to get document') ||
-        error.code === 'unavailable') {
-
-        console.log('HomeScreen: Firebase offline, showing connection error state');
+      if (isFirebaseConnectionError(error)) {
         setHasConnectionError(true);
-        setPosts([]);
-      } else {
-        setPosts([]);
       }
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const onRefresh = async () => {
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  const onRefresh = useCallback(async () => {
     setRefreshing(true);
     await loadData();
     setRefreshing(false);
-  };
+  }, [loadData]);
 
-  const handleClear = () => {
+  const clearSearch = useCallback(() => {
     setSearchText('');
     setSearchResults(null);
     setIsSearchActive(false);
-  };
+  }, []);
 
-  // Funzione per gestire quando la ricerca diventa attiva
-  const handleSearchFocus = () => {
-    setIsSearchActive(true);
-  };
-
-  // Funzione di ricerca che esclude l'utente corrente dai risultati
-  const performSearch = async (query) => {
+  const performSearch = useCallback(async (query) => {
     setSearchLoading(true);
+
     try {
-      console.log('HomeScreen: Starting search for:', query);
-      // Passa l'ID dell'utente corrente per escluderlo dai risultati
       const currentUserId = currentUser?.user?.uid || null;
       const results = await smartSearch(query, currentUserId);
-      console.log('HomeScreen: Search results:', results);
       setSearchResults(results);
     } catch (error) {
       console.error('HomeScreen: Errore durante la ricerca:', error);
@@ -158,22 +130,29 @@ const HomeScreen = ({ onViewProfile, onHashtagPress }) => {
     } finally {
       setSearchLoading(false);
     }
-  };
+  }, [currentUser]);
 
-  // Debounced search
   useEffect(() => {
-    const delayedSearch = setTimeout(() => {
-      if (searchText.trim()) {
-        performSearch(searchText.trim());
-      } else {
-        setSearchResults(null);
-      }
-    }, 300);
+    const query = searchText.trim();
 
-    return () => clearTimeout(delayedSearch);
-  }, [searchText, currentUser]);
+    if (!query) {
+      setSearchResults(null);
+      return undefined;
+    }
 
-  // Renderizza i risultati della ricerca
+    const timeoutId = setTimeout(() => {
+      performSearch(query);
+    }, SEARCH_DEBOUNCE_MS);
+
+    return () => clearTimeout(timeoutId);
+  }, [performSearch, searchText]);
+
+  const openUserProfile = useCallback((user) => {
+    if (onViewProfile && user.nomeSalone) {
+      onViewProfile(user.nomeSalone);
+    }
+  }, [onViewProfile]);
+
   const renderSearchResults = () => {
     if (searchLoading) {
       return (
@@ -197,11 +176,11 @@ const HomeScreen = ({ onViewProfile, onHashtagPress }) => {
       );
     }
 
-    const { posts = [], users = [] } = searchResults;
+    const { posts: searchPosts = [], users = [] } = searchResults;
     const isHashtagSearch = searchText.startsWith('#');
-    const totalResults = posts.length + users.length;
+    const hasResults = searchPosts.length > 0 || users.length > 0;
 
-    if (totalResults === 0) {
+    if (!hasResults) {
       return (
         <View style={styles.searchEmptyContainer}>
           <View style={styles.emptyContent}>
@@ -218,29 +197,25 @@ const HomeScreen = ({ onViewProfile, onHashtagPress }) => {
 
     return (
       <ScrollView style={styles.searchResultsContainer} showsVerticalScrollIndicator={false}>
-        {/* Post (per hashtag) */}
-        {posts.length > 0 && (
+        {searchPosts.length > 0 && (
           <View style={styles.section}>
-            {/* <PostGrid
-              posts={posts}
-              onPostPress={(post) => {
-                console.log('Post selezionato:', post);
-              }}
-            /> */}
+            <PostGrid
+              posts={searchPosts}
+              onPostPress={(post) => console.log('Post selezionato:', post)}
+            />
           </View>
         )}
 
-        {/* Utenti (per ricerca saloni) */}
         {users.length > 0 && (
           <View style={styles.section}>
             <FlatList
               data={users}
-              renderItem={({ item }) => {
-                return (<View>
-                  <Text>{item.nomeSalone}</Text>
-                </View>)
-
-              }}
+              renderItem={({ item }) => (
+                <UserListItem
+                  user={item}
+                  onUserPress={() => openUserProfile(item)}
+                />
+              )}
               keyExtractor={(item) => item.id}
               scrollEnabled={false}
               style={styles.userListContent}
@@ -251,65 +226,81 @@ const HomeScreen = ({ onViewProfile, onHashtagPress }) => {
     );
   };
 
+  const renderFeed = () => (
+    <ScrollView
+      automaticallyAdjustKeyboardInsets={true}
+      style={styles.mainContent}
+      showsVerticalScrollIndicator={false}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+    >
+      <SearchBar
+        placeholder={t('HomeScreen.searchPlaceholder')}
+        clearIcon={t('HomeScreen.clearSearchIcon')}
+        searchText={searchText}
+        onChangeText={setSearchText}
+        onClear={clearSearch}
+        onFocus={() => setIsSearchActive(true)}
+      />
+
+      <View style={styles.feedContainer}>
+        {posts.map((post) => {
+          return (
+            <BlurView
+              key={post.id}
+              intensity={26}
+              tint="light"
+              style={styles.glassCard}
+            >
+              <BarberPost
+                barber={post}
+                onViewProfile={onViewProfile}
+                onHashtagPress={onHashtagPress}
+              />
+            </BlurView>
+          )
+
+        }
+        )}
+      </View>
+    </ScrollView>
+  );
+
   if (loading) {
     return (
-      <View style={styles.screen}>
-        <BlurView intensity={28} tint="light" style={styles.backgroundBlur} pointerEvents="none" />
+      <ScreenShell>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#00BCD4" />
           <Text style={styles.loadingText}>{t('HomeScreen.loadingFeed')}</Text>
         </View>
-      </View>
+      </ScreenShell>
     );
   }
 
-  // Se la ricerca è attiva e c'è testo di ricerca, mostra i risultati
   if (isSearchActive && searchText.trim()) {
     return (
-      <View style={styles.screen}>
-        <BlurView intensity={28} tint="light" style={styles.backgroundBlur} pointerEvents="none" />
+      <ScreenShell>
         <View style={styles.mainContent}>
-          {/* Search Bar */}
-          <View style={styles.searchHeader}>
-            <BlurView intensity={24} tint="light" style={styles.searchBlur}>
-              <View style={styles.searchInputContainer}>
-                <TextInput
-                  style={styles.searchInput}
-                  placeholder={t('HomeScreen.searchPlaceholder')}
-                  placeholderTextColor="#8e8e8e"
-                  value={searchText}
-                  onChangeText={setSearchText}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  returnKeyType="search"
-                  autoFocus={true}
-                />
-                {searchText.length > 0 && (
-                  <TouchableOpacity style={styles.clearButton} onPress={handleClear}>
-                    <Text style={styles.clearIcon}>✕</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-            </BlurView>
-          </View>
-
-          {/* Risultati della ricerca */}
+          <SearchBar
+            placeholder={t('HomeScreen.searchPlaceholder')}
+            clearIcon={t('HomeScreen.clearSearchIcon')}
+            searchText={searchText}
+            onChangeText={setSearchText}
+            onClear={clearSearch}
+            autoFocus
+          />
           {renderSearchResults()}
         </View>
-      </View>
+      </ScreenShell>
     );
   }
 
   if (posts.length === 0) {
     return (
-      <View style={styles.screen}>
-        <BlurView intensity={28} tint="light" style={styles.backgroundBlur} pointerEvents="none" />
+      <ScreenShell>
         <ScrollView
           style={styles.mainContent}
           contentContainerStyle={styles.emptyContainer}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-          }
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         >
           <View style={styles.emptyState}>
             <Text style={styles.emptyTitle}>
@@ -318,67 +309,18 @@ const HomeScreen = ({ onViewProfile, onHashtagPress }) => {
             <Text style={styles.emptyDescription}>
               {hasConnectionError
                 ? t('HomeScreen.checkConnectionAndPullToRefresh')
-                : t('HomeScreen.noPhotosYet')
-              }
+                : t('HomeScreen.noPhotosYet')}
             </Text>
           </View>
         </ScrollView>
-      </View>
+      </ScreenShell>
     );
   }
 
   return (
-    <View style={styles.screen}>
-      <BlurView intensity={28} tint="light" style={styles.backgroundBlur} pointerEvents="none" />
-      <ScrollView
-        style={styles.mainContent}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-      >
-        {/* Search Bar */}
-        <View style={styles.searchHeader}>
-          <BlurView intensity={24} tint="light" style={styles.searchBlur}>
-            <View style={styles.searchInputContainer}>
-              <TextInput
-                style={styles.searchInput}
-                placeholder={t('HomeScreen.searchPlaceholder')}
-                placeholderTextColor="#8e8e8e"
-                value={searchText}
-                onChangeText={setSearchText}
-                onFocus={handleSearchFocus}
-                autoCapitalize="none"
-                autoCorrect={false}
-                returnKeyType="search"
-              />
-              {searchText.length > 0 && (
-                <TouchableOpacity style={styles.clearButton} onPress={handleClear}>
-                  <Text style={styles.clearIcon}>✕</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-          </BlurView>
-        </View>
-
-        <View style={styles.feedContainer}>
-          {posts.map((barber) => (
-            <BlurView
-              key={barber.id}
-              intensity={26}
-              tint="light"
-              style={styles.glassCard}
-            >
-              {/* <BarberPost
-                barber={barber}
-                onViewProfile={onViewProfile}
-                onHashtagPress={onHashtagPress}
-              /> */}
-            </BlurView>
-          ))}
-        </View>
-      </ScrollView>
-    </View>
+    <ScreenShell>
+      {renderFeed()}
+    </ScreenShell>
   );
 };
 
@@ -386,6 +328,7 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: '#b8b7b74a',
+    paddingTop: 80,
   },
   backgroundBlur: {
     ...StyleSheet.absoluteFillObject,
@@ -427,7 +370,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 24,
   },
-  // Search Bar Styles
   searchHeader: {
     backgroundColor: 'transparent',
     paddingHorizontal: 16,
@@ -468,7 +410,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#8e8e8e',
   },
-  // Search Results Styles
   searchResultsContainer: {
     flex: 1,
     backgroundColor: '#fff',
@@ -515,5 +456,3 @@ const styles = StyleSheet.create({
 });
 
 export default HomeScreen;
-
-

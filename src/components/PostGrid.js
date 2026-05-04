@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 
 import {
   StyleSheet,
@@ -14,12 +15,14 @@ const { width } = Dimensions.get('window');
 const itemSize = (width - 6) / 3; // 3 colonne con spazi di 2px
 
 const PostGrid = ({ posts, onPostPress }) => {
+  const { t } = useTranslation();
+
   if (!posts || posts.length === 0) {
     return (
       <View style={styles.emptyContainer}>
-        <Text style={styles.emptyTitle}>Nessun post trovato</Text>
+        <Text style={styles.emptyTitle}>{t('PostGrid.emptyTitle')}</Text>
         <Text style={styles.emptyDescription}>
-          Prova a cercare un hashtag diverso
+          {t('PostGrid.emptyDescription')}
         </Text>
       </View>
     );
@@ -39,7 +42,7 @@ const PostGrid = ({ posts, onPostPress }) => {
           onPress={() => onPostPress && onPostPress(item)}
         >
           <Image
-            source={{ uri: item.postImage || item.image || item.mainImage }}
+            source={{ uri: item.thumbnailUrl || item.postImage || item.imageUrl || item.image || item.mainImage }}
             style={styles.postImage}
             resizeMode="cover"
           />
@@ -48,7 +51,7 @@ const PostGrid = ({ posts, onPostPress }) => {
             <View style={styles.overlayContent}>
               <View style={styles.likeInfo}>
                 <Text style={styles.heartIcon}>❤️</Text>
-                <Text style={styles.likeCount}>{item.likes || 0}</Text>
+                <Text style={styles.likeCount}>{item.likesCount || item.likes || 0}</Text>
               </View>
             </View>
           </View>

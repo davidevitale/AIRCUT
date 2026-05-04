@@ -337,8 +337,6 @@ export default function PostScreen() {
         createdAt,
         barberName:
           barberProfile.salonName ||
-          barberProfile.nomeSalone ||
-          barberProfile.firstName ||
           "",
         barberProfileImage: barberProfile.profileImage || null,
       };

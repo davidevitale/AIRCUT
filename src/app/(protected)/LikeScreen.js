@@ -11,6 +11,7 @@ import {
   Alert,
   AppState
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context'
 import { useTranslation } from 'react-i18next';
 import { getCurrentUserData } from '../../services/authService';
 import { collection, query, where, getDocs, doc, updateDoc, arrayRemove } from 'firebase/firestore';
@@ -169,7 +170,7 @@ const LikeScreen = () => {
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>{t('LikeScreen.yourFavoritesTitle')}</Text>
         <Text style={styles.headerCount}>
@@ -185,7 +186,7 @@ const LikeScreen = () => {
         contentContainerStyle={styles.gridContainer}
         showsVerticalScrollIndicator={false}
       />
-    </View>
+    </SafeAreaView>
   );
 };
 

@@ -62,6 +62,126 @@ const withRetry = async (operation, maxRetries = 3, delay = 1000) => {
   throw lastError;
 };
 
+const toCreatedAtMillis = (createdAt) => {
+  if (!createdAt) {
+    return 0;
+  }
+
+  if (typeof createdAt.toMillis === 'function') {
+    return createdAt.toMillis();
+  }
+
+  if (createdAt.seconds) {
+    return createdAt.seconds * 1000;
+  }
+
+  const parsed = new Date(createdAt).getTime();
+  return Number.isNaN(parsed) ? 0 : parsed;
+};
+
+const getLocalizedTagText = (tag) => {
+  if (!tag) {
+    return '';
+  }
+
+  if (typeof tag === 'string') {
+    return tag;
+  }
+
+  return tag.it || tag.en || tag.id || '';
+};
+
+const toSearchableText = (value) => {
+  if (!value) {
+    return '';
+  }
+
+  if (Array.isArray(value)) {
+    return value.map(toSearchableText).join(' ');
+  }
+
+  if (typeof value === 'object') {
+    return [
+      value.id,
+      value.en,
+      value.it,
+      value.label?.en,
+      value.label?.it,
+    ].filter(Boolean).join(' ');
+  }
+
+  return String(value);
+};
+
+const includesSearchQuery = (values, searchQuery) => (
+  values
+    .map(toSearchableText)
+    .join(' ')
+    .toLowerCase()
+    .includes(searchQuery)
+);
+
+const normalizeUploadedPost = (postId, postData, barberData = {}) => {
+  const imageUrl = postData.imageUrl || postData.thumbnailUrl || postData.mediaUrl || '';
+
+  if (!imageUrl) {
+    return null;
+  }
+
+  const selectedTags = Array.isArray(postData.selectedTags) ? postData.selectedTags : [];
+  const generatedTags = selectedTags
+    .map(getLocalizedTagText)
+    .filter(Boolean)
+    .map(tag => `#${tag.replace(/^#/, '').replace(/\s+/g, '')}`);
+  const captionParts = [postData.caption, ...generatedTags].filter(Boolean);
+  const likes = Array.isArray(postData.likes) ? postData.likes : [];
+  const likesCount = likes.length || postData.likeCount || postData.likesCount || 0;
+  const salonName =
+    postData.barberName ||
+    barberData.salonName ||
+    barberData.nomeSalone ||
+    barberData.firstName ||
+    'Salone';
+  const avatarUrl =
+    postData.barberProfileImage ||
+    barberData.profileImage ||
+    null;
+
+  return {
+    id: postId,
+    postId,
+    barberId: postData.barberId,
+    salonName,
+    nomeSalone: salonName,
+    barberName: barberData.nomiDipendenti?.[0] || postData.barberName || salonName,
+    nickName: barberData.nickName || postData.nickName || '',
+    firstName: barberData.firstName || postData.firstName || '',
+    lastName: barberData.lastName || postData.lastName || '',
+    avatar: avatarUrl,
+    barberProfileImage: avatarUrl,
+    postImage: imageUrl,
+    image: postData.thumbnailUrl || imageUrl,
+    mainImage: imageUrl,
+    thumbnailUrl: postData.thumbnailUrl || imageUrl,
+    imageUrl,
+    name: salonName,
+    likes: likesCount,
+    likesCount,
+    likedBy: likes,
+    isLiked: false,
+    isFollowing: false,
+    caption: captionParts.join(' '),
+    selectedTags,
+    photoGender: postData.photoGender || barberData.workGender || '',
+    location: barberData.via || '',
+    specialties: barberData.typesCut || barberData.tipiTaglio || [],
+    phone: barberData.telefono || '',
+    website: barberData.sitoWeb || '',
+    email: barberData.emailContatto || '',
+    createdAt: postData.createdAt || null,
+  };
+};
+
 // Verifica unicità del nome utente || Check username uniqueness
 export const checkUsernameUniqueness = async (username) => {
   try {
@@ -718,152 +838,51 @@ export const getAllBarbersRawData = async () => {
   }
 };
 
-// Ottieni tutti i parrucchieri con le loro foto per la home (con like reali)
+// Ottieni tutti i post caricati dai parrucchieri per la home.
 export const getAllBarberPosts = async () => {
   try {
-    console.log('getAllBarberPosts: Starting to fetch barber posts...');
+    console.log('getAllBarberPosts: Starting to fetch uploaded posts...');
 
-    // Usa withRetry per gestire errori di connessione
-    const snapshot = await withRetry(async () => {
-      const barbersRef = collection(db, 'barbers');
-      return await getDocs(barbersRef);
-    }, 3, 1000); // 3 tentativi con 1 secondo di intervallo
+    const barbersSnapshot = await withRetry(async () => {
+      return await getDocs(collection(db, 'barbers'));
+    }, 3, 1000);
+    console.log("barbersSnapshot", barbersSnapshot)
 
-    console.log('getAllBarberPosts: Found barbers:', snapshot.size);
+    const barberProfiles = {};
+    barbersSnapshot.docs.forEach((barberDoc) => {
+      barberProfiles[barberDoc.id] = barberDoc.data();
+    });
 
-    const posts = [];
+    const postsSnapshot = await withRetry(async () => {
+      return await getDocs(collection(db, 'posts'));
+    }, 3, 1000);
 
-    // Processiamo ogni barbiere
-    for (const doc of snapshot.docs) {
-      const barberData = doc.data();
-      const barberId = doc.id;
+    const posts = postsSnapshot.docs
+      .map((postDoc) => {
+        const postData = postDoc.data();
+        return normalizeUploadedPost(
+          postDoc.id,
+          postData,
+          barberProfiles[postData.barberId] || {}
+        );
+      })
+      .filter(Boolean)
+      .sort((a, b) => toCreatedAtMillis(b.createdAt) - toCreatedAtMillis(a.createdAt));
 
-      console.log(`getAllBarberPosts: Processing barber ${barberId}:`, {
-        nomeSalone: barberData.nomeSalone,
-        portfolioImages: barberData.portfolioImages?.length || 0,
-        portfolioVideos: barberData.portfolioVideos?.length || 0
-      });
-
-      // Crea post per ogni immagine del portfolio
-      if (barberData.portfolioImages && barberData.portfolioImages.length > 0) {
-        console.log(`getAllBarberPosts: Processing ${barberData.portfolioImages.length} images for ${barberId}`);
-
-        // Ottieni i like reali per tutte le immagini di questo barbiere
-        let portfolioLikes = {};
-        try {
-          portfolioLikes = await getPortfolioImageLikes(barberId, barberData.portfolioImages);
-        } catch (likeError) {
-          console.warn(`getAllBarberPosts: Error loading likes for barber ${barberId}:`, likeError.message);
-          // Continua con likes vuoti se c'è un errore
-        }
-
-        // Determina avatar: preferisci immagine profilo, altrimenti prima foto del portfolio
-        const firstPortfolio = barberData.portfolioImages?.[0];
-        const firstPortfolioUrl = typeof firstPortfolio === 'string' ? firstPortfolio : (firstPortfolio?.url || null);
-        const avatarUrl = barberData.profileImage || firstPortfolioUrl || null;
-
-        barberData.portfolioImages.forEach((imageUrl, index) => {
-          console.log(`getAllBarberPosts: Adding image post ${index} for ${barberId}:`, imageUrl);
-
-          // Verifica che imageUrl sia una stringa (URL) e non un oggetto
-          const finalImageUrl = typeof imageUrl === 'string' ? imageUrl : imageUrl.url || imageUrl;
-
-          // Ottieni i like reali per questa specifica immagine
-          const imageLikes = portfolioLikes[finalImageUrl] || { likesCount: 0, likedBy: [] };
-
-          posts.push({
-            id: `${barberId}_img_${index}`,
-            barberId: barberId,
-            salonName: barberData.nomeSalone || 'Salone',
-            barberName: barberData.nomiDipendenti?.[0] || 'Parrucchiere',
-            avatar: avatarUrl,
-            postImage: finalImageUrl,
-            image: finalImageUrl, // Per compatibilità con BarberPost
-            mainImage: finalImageUrl,
-            name: barberData.nomeSalone || 'Salone',
-            likes: imageLikes.likesCount, // Like reali dal database
-            likedBy: imageLikes.likedBy || [], // Utenti che hanno messo like
-            isLiked: false, // Verrà aggiornato in base all'utente corrente
-            isFollowing: false,
-            caption: `Guarda il nostro lavoro! 💇‍♂️ #${barberData.nomeSalone?.replace(/\s+/g, '').toLowerCase()} #haircut`,
-            location: barberData.via || '',
-            specialties: barberData.typesCut || barberData.tipiTaglio || [],
-            phone: barberData.telefono || '',
-            website: barberData.sitoWeb || '',
-            email: barberData.emailContatto || '',
-            createdAt: barberData.createdAt || new Date().toISOString(),
-            imageUrl: finalImageUrl // Per identificare la foto nei like
-          });
-        });
-      }
-
-      // Crea post per ogni video del portfolio
-      if (barberData.portfolioVideos && barberData.portfolioVideos.length > 0) {
-        console.log(`getAllBarberPosts: Processing ${barberData.portfolioVideos.length} videos for ${barberId}`);
-
-        // Per ora i video non hanno sistema di like, quindi usiamo 0
-        // Determina avatar: preferisci immagine profilo, altrimenti prima foto del portfolio
-        const firstPortfolio = barberData.portfolioImages?.[0];
-        const firstPortfolioUrl = typeof firstPortfolio === 'string' ? firstPortfolio : (firstPortfolio?.url || null);
-        const avatarUrl = barberData.profileImage || firstPortfolioUrl || null;
-
-        barberData.portfolioVideos.forEach((videoUrl, index) => {
-          console.log(`getAllBarberPosts: Adding video post ${index} for ${barberId}:`, videoUrl);
-
-          // Verifica che videoUrl sia una stringa (URL) e non un oggetto
-          const finalVideoUrl = typeof videoUrl === 'string' ? videoUrl : videoUrl.url || videoUrl;
-
-          posts.push({
-            id: `${barberId}_vid_${index}`,
-            barberId: barberId,
-            salonName: barberData.nomeSalone || 'Salone',
-            barberName: barberData.nomiDipendenti?.[0] || 'Parrucchiere',
-            avatar: avatarUrl,
-            postImage: finalVideoUrl, // Per i video usiamo l'URL come immagine temporanea
-            image: finalVideoUrl,
-            mainImage: finalVideoUrl,
-            name: barberData.nomeSalone || 'Salone',
-            isVideo: true,
-            likes: 0, // I video per ora non hanno like
-            likedBy: [],
-            isLiked: false,
-            isFollowing: false,
-            caption: `Video del nostro lavoro! 🎬 #${barberData.nomeSalone?.replace(/\s+/g, '').toLowerCase()} #barbershop`,
-            location: barberData.via || '',
-            specialties: barberData.typesCut || barberData.tipiTaglio || [],
-            phone: barberData.telefono || '',
-            website: barberData.sitoWeb || '',
-            email: barberData.emailContatto || '',
-            createdAt: barberData.createdAt || new Date().toISOString(),
-            imageUrl: finalVideoUrl
-          });
-        });
-      }
-    }
-
-    console.log('getAllBarberPosts: Total posts created:', posts.length);
-
-    // Ordina per data di creazione (più recenti prima)
-    const sortedPosts = posts.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-    console.log('getAllBarberPosts: Returning sorted posts with real likes:', sortedPosts.length);
-
-    return sortedPosts;
+    console.log('getAllBarberPosts: Returning uploaded posts:', posts.length);
+    return posts;
   } catch (error) {
     console.error('Errore nel recupero dei post dei parrucchieri:', error);
 
-    // Gestione speciale per errori di connessione Firebase
     const errorInfo = handleFirebaseConnectionError(error);
     if (errorInfo.isConnectionError) {
       console.warn('getAllBarberPosts: Firebase offline, returning empty posts array');
-      // Restituisce array vuoto invece di lanciare l'errore
       return [];
     }
 
-    // Per altri tipi di errore, lancia l'errore
     throw new Error(`Errore caricamento posts: ${error.message}`);
   }
 };
-
 // ===============================
 // FUNZIONI DI RICERCA SMART
 // ===============================
@@ -903,6 +922,40 @@ export const searchPostsByHashtag = async (hashtag) => {
   }
 };
 
+export const searchPostsByBarberText = async (searchText) => {
+  try {
+    console.log('searchPostsByBarberText: Searching for:', searchText);
+
+    if (!searchText || searchText.trim().length < 2) {
+      return [];
+    }
+
+    const searchQuery = searchText.toLowerCase().trim();
+    const allPosts = await getAllBarberPosts();
+
+    const filteredPosts = allPosts.filter((post) => (
+      includesSearchQuery(
+        [
+          post.name,
+          post.barberName,
+          post.salonName,
+          post.nomeSalone,
+          post.nickName,
+          post.firstName,
+          post.lastName,
+        ],
+        searchQuery
+      )
+    ));
+
+    console.log('searchPostsByBarberText: Found posts:', filteredPosts.length);
+    return filteredPosts;
+  } catch (error) {
+    console.error('Errore ricerca post per nome barbiere:', error);
+    return [];
+  }
+};
+
 // Ricerca barbieri per nome
 export const searchBarbersByName = async (searchText) => {
   try {
@@ -914,69 +967,56 @@ export const searchBarbersByName = async (searchText) => {
 
     const searchQuery = searchText.toLowerCase().trim();
     const barbersRef = collection(db, 'barbers');
-
-    // Carica tutti i barbieri e filtra lato client per maggiore flessibilità
-    console.log('searchBarbersByName: Loading all barbers for client-side filtering...');
     const barbersSnapshot = await getDocs(barbersRef);
-
-    console.log('searchBarbersByName: Total barbers in database:', barbersSnapshot.size);
-
     const results = [];
 
-    barbersSnapshot.forEach((doc) => {
-      const data = doc.data();
-      console.log('searchBarbersByName: Checking barber:', {
-        id: doc.id,
-        nomeSalone: data.nomeSalone,
-        nomiDipendenti: data.nomiDipendenti,
-        via: data.via
-      });
+    barbersSnapshot.forEach((docSnap) => {
+      const data = docSnap.data();
+      const salonName = data.salonName || data.nomeSalone || '';
+      const barberName = data.barberName || data.firstName || '';
+      const location = data.address || data.via || '';
+      const matchesBarber = includesSearchQuery(
+        [
+          salonName,
+          barberName,
+          data.name,
+          data.nickName,
+          data.firstName,
+          data.lastName,
+          data.nomiDipendenti,
+          location,
+        ],
+        searchQuery
+      );
 
-      const nomeSalone = (data.nomeSalone || '').toLowerCase();
-      const nomiDipendenti = (data.nomiDipendenti || '').toLowerCase();
-      const via = (data.via || '').toLowerCase();
-
-      // Controlla se il testo di ricerca è contenuto in qualsiasi campo
-      const matchesNomeSalone = nomeSalone.includes(searchQuery);
-      const matchesDipendenti = nomiDipendenti.includes(searchQuery);
-      const matchesVia = via.includes(searchQuery);
-
-      console.log(`searchBarbersByName: Checking ${data.nomeSalone}:`, {
-        nomeSalone: data.nomeSalone,
-        searchQuery,
-        matchesNomeSalone,
-        matchesDipendenti,
-        matchesVia
-      });
-
-      if (matchesNomeSalone || matchesDipendenti || matchesVia) {
+      if (matchesBarber) {
         results.push({
-          id: doc.id,
-          nomeSalone: data.nomeSalone,
+          id: docSnap.id,
+          nomeSalone: salonName,
+          salonName,
+          barberName,
+          nickName: data.nickName || '',
           nomiDipendenti: data.nomiDipendenti,
-          via: data.via,
-          telefono: data.telefono,
-          emailContatto: data.emailContatto,
-          sitoWeb: data.sitoWeb,
+          via: location,
+          telefono: data.telephone || data.telefono,
+          emailContatto: data.emailContact || data.emailContatto,
+          sitoWeb: data.website || data.sitoWeb,
           typesCut: data.typesCut || data.tipiTaglio || [],
-          profileImage: data.portfolioImages?.[0] || null,
-          followerCount: Math.floor(Math.random() * 1000), // Placeholder
-          isFollowing: false, // Da implementare
+          profileImage: data.profileImage || null,
+          followerCount: Math.floor(Math.random() * 1000),
+          isFollowing: false,
           type: 'barber'
         });
-        console.log('searchBarbersByName: Added to results:', data.nomeSalone);
       }
     });
 
     console.log('searchBarbersByName: Found results:', results.length);
-    console.log('searchBarbersByName: Results:', results.map(r => r.nomeSalone));
     return results;
   } catch (error) {
     console.error('Errore ricerca barbieri:', error);
     return [];
   }
 };
-
 // Ricerca intelligente combinata
 export const smartSearch = async (searchText, excludeUserId = null) => {
   try {
@@ -993,8 +1033,12 @@ export const smartSearch = async (searchText, excludeUserId = null) => {
       const posts = await searchPostsByHashtag(trimmedText);
       return { type: 'hashtag', hashtag: trimmedText, posts: posts, users: [] };
     } else {
-      // Ricerca per nome barbiere/salone
-      const barbers = await searchBarbersByName(trimmedText);
+      const [posts, barbers] = await Promise.all([
+        searchPostsByBarberText(trimmedText),
+        searchBarbersByName(trimmedText),
+      ]);
+
+      console.log('smartSearch: Posts found:', posts.length);
       console.log('smartSearch: Barbers found:', barbers.length);
 
       // Filtra per escludere l'utente corrente (non mostrare se stesso)
@@ -1004,7 +1048,7 @@ export const smartSearch = async (searchText, excludeUserId = null) => {
         console.log('smartSearch: Filtered barbers (excluding self):', filteredBarbers.length);
       }
 
-      return { type: 'barbers', searchText: trimmedText, posts: [], users: filteredBarbers };
+      return { type: 'barbers', searchText: trimmedText, posts, users: filteredBarbers };
     }
   } catch (error) {
     console.error('Errore ricerca intelligente:', error);
@@ -1145,74 +1189,60 @@ export const getAllPostsWithLikeStatus = async (currentUserId = null) => {
   try {
     console.log('getAllPostsWithLikeStatus: Starting for user:', currentUserId);
 
-    // Prima ottieni tutti i post dei barbieri (come attualmente)
     const barberPosts = await withRetry(async () => {
       return await getAllBarberPosts();
-    }, 2, 500); // Retry più veloce per questa operazione
+    }, 2, 500);
 
-    console.log('getAllPostsWithLikeStatus: Got barber posts:', barberPosts.length);
+    // console.log('getAllPostsWithLikeStatus: Got barber posts:', JSON.stringify(barberPosts, null, 2));
 
     if (!currentUserId) {
       return barberPosts.map(post => ({
         ...post,
         isLiked: false,
-        likesCount: 0
+        likesCount: post.likesCount || post.likes || 0
       }));
     }
 
-    // Per ogni post, controlla se esiste in Firestore e ottieni lo stato like
     const postsWithLikeStatus = await Promise.all(
       barberPosts.map(async (post) => {
+        const fallbackCount = post.likesCount || post.likes || 0;
+        const postId = post.postId || `${post.barberId}_img_${post.id.split('_').pop()}`;
+
         try {
-          // Usa lo stesso sistema di ID del BarberPost
-          const postId = `${post.barberId}_img_${post.id.split('_').pop()}`;
+          return await withRetry(async () => {
+            const postRef = doc(db, 'posts', postId);
+            const postDoc = await getDoc(postRef);
 
-          try {
-            return await withRetry(async () => {
-              const postRef = doc(db, 'posts', postId);
-              const postDoc = await getDoc(postRef);
+            if (postDoc.exists()) {
+              const postData = postDoc.data();
+              const likes = Array.isArray(postData.likes) ? postData.likes : [];
+              const likesCount = likes.length || postData.likeCount || postData.likesCount || fallbackCount;
 
-              if (postDoc.exists()) {
-                const postData = postDoc.data();
-                const likes = postData.likes || [];
-                return {
-                  ...post,
-                  postId: postId, // ID del documento Firestore
-                  isLiked: likes.includes(currentUserId),
-                  likesCount: likes.length,
-                  likes: likes.length // Per compatibilità
-                };
-              } else {
-                // Il post non esiste in Firestore, non crearlo automaticamente
-                // Lo creeremo solo quando l'utente fa like
-                return {
-                  ...post,
-                  postId: postId,
-                  isLiked: false,
-                  likesCount: 0,
-                  likes: 0
-                };
-              }
-            }, 1, 500); // Retry più veloce e meno tentativi per i singoli post
-          } catch (firestoreError) {
-            console.warn('getAllPostsWithLikeStatus: Errore Firestore per post:', postId, firestoreError.message);
-            // Se c'è un errore di connessione, usa valori di default
+              return {
+                ...post,
+                postId,
+                isLiked: likes.includes(currentUserId),
+                likesCount,
+                likes: likesCount
+              };
+            }
+
             return {
               ...post,
-              postId: postId,
+              postId,
               isLiked: false,
-              likesCount: 0,
-              likes: 0
+              likesCount: fallbackCount,
+              likes: fallbackCount
             };
-          }
+          }, 1, 500);
         } catch (error) {
           console.error('getAllPostsWithLikeStatus: Errore nel controllo like status per post:', post.id, error);
           return {
             ...post,
-            postId: `${post.barberId}_img_${post.id.split('_').pop()}`,
+            postId,
             isLiked: false,
-            likesCount: 0,
-            likes: 0
+            likesCount: fallbackCount,
+            likes: fallbackCount
           };
         }
       })
@@ -1225,18 +1255,17 @@ export const getAllPostsWithLikeStatus = async (currentUserId = null) => {
 
     const errorInfo = handleFirebaseConnectionError(error);
     if (errorInfo.isConnectionError) {
-      console.warn('getAllPostsWithLikeStatus: Modalità offline attivata, restituendo post base');
+      console.warn('getAllPostsWithLikeStatus: Modalita offline attivata, restituendo post base');
     }
 
-    // In caso di errore, restituisci comunque i post base
     try {
       const barberPosts = await getAllBarberPosts();
       return barberPosts.map(post => ({
         ...post,
-        postId: `${post.barberId}_img_${post.id.split('_').pop()}`,
+        postId: post.postId || `${post.barberId}_img_${post.id.split('_').pop()}`,
         isLiked: false,
-        likesCount: 0,
-        likes: 0
+        likesCount: post.likesCount || post.likes || 0,
+        likes: post.likesCount || post.likes || 0
       }));
     } catch (fallbackError) {
       console.error('getAllPostsWithLikeStatus: Errore anche nel fallback:', fallbackError);
@@ -1244,7 +1273,6 @@ export const getAllPostsWithLikeStatus = async (currentUserId = null) => {
     }
   }
 };
-
 // ============================================================================
 // SISTEMA XP E SLOT MACHINE
 // ============================================================================

@@ -10,16 +10,17 @@ import {
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { logoutUser, getCurrentUserData } from '../../services/authService';
-import { auth } from '../../../config/firebase';
+import { collection, getDocs } from 'firebase/firestore';
+import { db } from '../../../config/firebase';
 import LanguageToggle from '../../components/LanguageToggle';
 import { SafeAreaView } from 'react-native-safe-area-context'
 
 export default function ClientAccountScreen({ userData: propUserData, onLogout, navigate }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [userData, setUserData] = useState(null);
-  console.log(JSON.stringify(userData, null, 2))
   const [loading, setLoading] = useState(true);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [tagsById, setTagsById] = useState({});
 
   useEffect(() => {
     if (propUserData) {
@@ -29,6 +30,10 @@ export default function ClientAccountScreen({ userData: propUserData, onLogout, 
       loadUserData();
     }
   }, [propUserData]);
+
+  useEffect(() => {
+    loadTags();
+  }, []);
 
   const loadUserData = async () => {
     try {
@@ -42,6 +47,50 @@ export default function ClientAccountScreen({ userData: propUserData, onLogout, 
       setLoading(false);
     }
   };
+
+  const loadTags = async () => {
+    try {
+      const tagsSnapshot = await getDocs(collection(db, 'tags'));
+      const mappedTags = tagsSnapshot.docs.reduce((acc, tagDoc) => {
+        acc[tagDoc.id] = {
+          id: tagDoc.id,
+          ...tagDoc.data(),
+        };
+        return acc;
+      }, {});
+
+      setTagsById(mappedTags);
+    } catch (error) {
+      console.error('Errore nel caricamento tag:', error);
+    }
+  };
+
+  const getLocalizedTagLabel = (tag) => {
+    if (!tag) {
+      return '';
+    }
+
+    if (typeof tag === 'string') {
+      const tagFromCollection = tagsById[tag];
+      if (tagFromCollection) {
+        return getLocalizedTagLabel(tagFromCollection);
+      }
+      return tag;
+    }
+
+    const label = tag.label || tag;
+    if (typeof label === 'string') {
+      return label;
+    }
+
+    return i18n.language === 'en-UK'
+      ? label.en ?? label.it ?? tag.id ?? ''
+      : label.it ?? label.en ?? tag.id ?? '';
+  };
+
+  const preferenceTags = Array.isArray(userData?.preferenceCut)
+    ? userData.preferenceCut.map(getLocalizedTagLabel).filter(Boolean)
+    : [];
 
   const toggleMenu = () => setMenuOpen((prev) => !prev);
   const closeMenu = () => setMenuOpen(false);
@@ -155,13 +204,13 @@ export default function ClientAccountScreen({ userData: propUserData, onLogout, 
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>{t('ClientAccountScreen.yourPreferences')}</Text>
 
-            {userData?.preferenceCut && userData.preferenceCut.length > 0 && (
+            {preferenceTags.length > 0 && (
               <>
                 <Text style={styles.infoLabel}>{t('ClientAccountScreen.favoriteCuts')}</Text>
                 <View style={styles.tagsContainer}>
-                  {userData.preferenceCut.map((taglio, index) => (
+                  {preferenceTags.map((tagLabel, index) => (
                     <View key={index} style={styles.tag}>
-                      <Text style={styles.tagText}>{taglio}</Text>
+                      <Text style={styles.tagText}>{tagLabel}</Text>
                     </View>
                   ))}
                 </View>

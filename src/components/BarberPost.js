@@ -17,6 +17,7 @@ import Svg, {
   LinearGradient as SvgLinearGradient,
   Stop,
 } from "react-native-svg";
+import { useTranslation } from "react-i18next";
 import {
   togglePostLike,
   getCurrentUserData,
@@ -56,12 +57,8 @@ const ClickableCaption = ({ caption, onHashtagPress }) => {
     }
     if (hashtags[i]) {
       result.push(
-        <TouchableOpacity
-          key={`hashtag-${i}`}
-          onPress={() => onHashtagPress && onHashtagPress(hashtags[i])}
-        >
-          <Text style={styles.hashtagText}>{hashtags[i]}</Text>
-        </TouchableOpacity>,
+        <Text key={`hashtag-${i}`}
+          onPress={() => onHashtagPress && onHashtagPress(hashtags[i])} style={styles.hashtagText}>{hashtags[i]}</Text>
       );
     }
   }
@@ -71,6 +68,8 @@ const ClickableCaption = ({ caption, onHashtagPress }) => {
 
 // Componente Post del Parrucchiere
 const BarberPost = ({ barber, onViewProfile, onHashtagPress }) => {
+  // console.log(JSON.stringify(barber, null, 2))
+  const { t } = useTranslation();
   const [isLiked, setIsLiked] = useState(barber.isLiked || false);
   const [likesCount, setLikesCount] = useState(barber.likes || 0);
   const [currentUser, setCurrentUser] = useState(null);
@@ -169,7 +168,7 @@ const BarberPost = ({ barber, onViewProfile, onHashtagPress }) => {
     try {
       const currentUserData = await getCurrentUserData();
       if (!currentUserData) {
-        Alert.alert("Errore", "Devi essere loggato per mettere like");
+        Alert.alert(t("BarberPost.errorTitle"), t("BarberPost.mustBeLoggedIn"));
         return;
       }
 
@@ -288,7 +287,7 @@ const BarberPost = ({ barber, onViewProfile, onHashtagPress }) => {
     try {
       const currentUserData = await getCurrentUserData();
       if (!currentUserData) {
-        Alert.alert("Errore", "Devi essere loggato per mettere like");
+        Alert.alert(t("BarberPost.errorTitle"), t("BarberPost.mustBeLoggedIn"));
         return;
       }
 
@@ -367,24 +366,26 @@ const BarberPost = ({ barber, onViewProfile, onHashtagPress }) => {
           serverError.message.includes("network")
         ) {
           Alert.alert(
-            "Connessione lenta",
-            "Il like verrà sincronizzato quando la connessione migliorerà",
+            t("BarberPost.slowConnectionTitle"),
+            t("BarberPost.likeSyncLater"),
           );
         } else {
-          Alert.alert("Errore", "Impossibile aggiornare il like. Riprova.");
+          Alert.alert(t("BarberPost.errorTitle"), t("BarberPost.likeUpdateError"));
         }
       }
     } catch (error) {
       console.error("BarberPost: Errore toggle like:", error);
-      Alert.alert("Errore", "Errore nell'aggiornamento del like");
+      Alert.alert(t("BarberPost.errorTitle"), t("BarberPost.likeGenericError"));
     }
   };
 
   const handleShare = async () => {
     try {
       await Share.share({
-        message: `Guarda questo fantastico lavoro di ${barber.salonName}! 💇‍♂️`,
-        url: barber.postImage,
+        message: t("BarberPost.shareMessage", {
+          name: barber.salonName || barber.nomeSalone || barber.barberName,
+        }),
+        url: postImageUri,
       });
     } catch (error) {
       console.log("Errore condivisione:", error.message);
@@ -392,10 +393,13 @@ const BarberPost = ({ barber, onViewProfile, onHashtagPress }) => {
   };
 
   // Avatar helpers
+  const avatarValue = barber?.avatar || barber?.barberProfileImage;
   const avatarUri =
-    typeof barber?.avatar === "string" && barber.avatar.length > 0
-      ? barber.avatar
+    typeof avatarValue === "string" && avatarValue.length > 0
+      ? avatarValue
       : null;
+  const postImageUri =
+    barber.postImage || barber.imageUrl || barber.thumbnailUrl || barber.image || barber.mainImage;
   const placeholderInitial = (
     barber?.salonName ||
     barber?.nomeSalone ||
@@ -425,7 +429,9 @@ const BarberPost = ({ barber, onViewProfile, onHashtagPress }) => {
             </View>
           )}
           <View style={styles.barberDetails}>
-            <Text style={styles.salonName}>{barber.salonName}</Text>
+            <Text style={styles.salonName}>
+              {barber.salonName || barber.nomeSalone || barber.barberName}
+            </Text>
             <Text style={styles.barberName}>{barber.barberName}</Text>
           </View>
         </TouchableOpacity>
@@ -434,14 +440,14 @@ const BarberPost = ({ barber, onViewProfile, onHashtagPress }) => {
         </TouchableOpacity>
       </View>
 
-      {/* Immagine del lavoro con doppio tap */}
+      {/* Immagine del lavoro con doppio tap // Double tap work image */}
       <View style={styles.imageContainer}>
         <View
           style={styles.imagePress}
           onStartShouldSetResponder={() => true}
           onResponderGrant={handleImagePress}
         >
-          {imageError || !barber.postImage ? (
+          {imageError || !postImageUri ? (
             <View
               style={[styles.fallbackImage, { backgroundColor: fallbackColor }]}
             >
@@ -449,7 +455,7 @@ const BarberPost = ({ barber, onViewProfile, onHashtagPress }) => {
             </View>
           ) : (
             <Image
-              source={{ uri: barber.postImage }}
+              source={{ uri: postImageUri }}
               style={styles.workImage}
               onError={() => setImageError(true)}
             />
@@ -536,7 +542,20 @@ const BarberPost = ({ barber, onViewProfile, onHashtagPress }) => {
 
       {/* Likes only - descrizione rimossa */}
       <View style={styles.captionContainer}>
-        <Text style={styles.likesCount}>{likesCount} Mi piace</Text>
+        <Text style={styles.likesCount}>
+          {t("BarberPost.likesCount", { count: likesCount })}
+        </Text>
+        {barber.caption ? (
+          <View style={styles.captionRow}>
+            <Text style={styles.usernameInCaption}>
+              {barber.salonName || barber.nomeSalone || barber.barberName}
+            </Text>
+            <ClickableCaption
+              caption={barber.caption}
+              onHashtagPress={onHashtagPress}
+            />
+          </View>
+        ) : null}
       </View>
     </View>
   );
@@ -699,6 +718,7 @@ const styles = StyleSheet.create({
   captionContainer: {
     paddingHorizontal: 16,
     paddingBottom: 12,
+    flexDirection: "column"
   },
   likesCount: {
     fontSize: 14,
@@ -707,9 +727,9 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   captionRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    alignItems: "flex-start",
+    flexDirection: "column",
+    // flexWrap: "wrap",
+    // alignItems: "flex-start",
   },
   caption: {
     flexDirection: "row",
@@ -723,13 +743,13 @@ const styles = StyleSheet.create({
   captionText: {
     fontSize: 14,
     color: "#000",
-    lineHeight: 18,
+    // lineHeight: 18,
   },
   hashtagText: {
     fontSize: 14,
     color: "#00BCD4",
     fontWeight: "500",
-    lineHeight: 18,
+    // lineHeight: 18,
   },
   usernameInCaption: {
     fontSize: 14,
