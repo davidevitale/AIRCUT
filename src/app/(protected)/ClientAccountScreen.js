@@ -7,6 +7,7 @@ import {
   StyleSheet,
   ScrollView,
   Alert,
+  Dimensions,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { logoutUser, getCurrentUserData } from '../../services/authService';
@@ -14,7 +15,7 @@ import { collection, getDocs } from 'firebase/firestore';
 import { db } from '../../../config/firebase';
 import LanguageToggle from '../../components/LanguageToggle';
 import { SafeAreaView } from 'react-native-safe-area-context'
-
+const { width, height } = Dimensions.get('window');
 export default function ClientAccountScreen({ userData: propUserData, onLogout, navigate }) {
   const { t, i18n } = useTranslation();
   const [userData, setUserData] = useState(null);
@@ -133,8 +134,9 @@ export default function ClientAccountScreen({ userData: propUserData, onLogout, 
     );
   }
 
-  const profileInitial = userData?.nomeUtente?.charAt(0)?.toUpperCase() || t('ClientAccountScreen.defaultInitial');
+  const profileInitial = userData?.userName?.charAt(0)?.toUpperCase() || t('ClientAccountScreen.defaultInitial');
 
+  console.log(JSON.stringify(userData, null, 2))
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
@@ -156,7 +158,7 @@ export default function ClientAccountScreen({ userData: propUserData, onLogout, 
               </View>
 
               <View style={styles.userInfo}>
-                <Text style={styles.welcomeText}>{userData?.nomeUtente || t('ClientAccountScreen.client')}</Text>
+                <Text style={styles.welcomeText}>{userData?.userName || t('ClientAccountScreen.client')}</Text>
                 <Text style={styles.roleText}>{t('ClientAccountScreen.clientAccount')}</Text>
               </View>
             </View>
@@ -196,7 +198,7 @@ export default function ClientAccountScreen({ userData: propUserData, onLogout, 
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>{t('ClientAccountScreen.gender')}</Text>
               <Text style={styles.infoValue}>
-                {userData?.sesso === 'M' ? t('ClientAccountScreen.male') : t('ClientAccountScreen.female')}
+                {userData?.sex === 'M' ? t('ClientAccountScreen.male') : t('ClientAccountScreen.female')}
               </Text>
             </View>
           </View>
@@ -239,7 +241,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   content: {
-    padding: 20,
+    paddingHorizontal: width * 0.0465,
+    paddingVertical: height * 0.0214,
     position: 'relative',
   },
   loadingContainer: {
@@ -256,7 +259,8 @@ const styles = StyleSheet.create({
     position: 'relative',
     backgroundColor: 'white',
     borderRadius: 0,
-    padding: 25,
+    paddingHorizontal: width * 0.0465,
+    paddingVertical: height * 0.0214,
     marginBottom: 20,
     shadowColor: '#ffffff',
     shadowOffset: { width: 0, height: 2 },
@@ -310,8 +314,8 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255, 255, 255, 0.5)',
   },
   menuItem: {
-    paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingHorizontal: width * 0.0465,
+    paddingVertical: height * 0.0214,
   },
   menuItemText: {
     fontSize: 16,
@@ -324,8 +328,8 @@ const styles = StyleSheet.create({
     marginVertical: 4,
   },
   menuToggleRow: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingHorizontal: width * 0.0465,
+    paddingVertical: height * 0.0214,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -382,13 +386,14 @@ const styles = StyleSheet.create({
   section: {
     backgroundColor: 'white',
     borderRadius: 5,
-    padding: 16,
-    marginBottom: 15,
+    paddingHorizontal: width * 0.0465,
+    paddingVertical: height * 0.0214,
     shadowColor: '#ffffff',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
+
   },
   sectionTitle: {
     fontSize: 18,

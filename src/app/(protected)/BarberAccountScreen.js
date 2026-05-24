@@ -7,7 +7,6 @@ import {
   StyleSheet,
   ScrollView,
   Alert,
-  Image,
   FlatList,
   TextInput,
   Modal,
@@ -30,6 +29,7 @@ import { collection, deleteDoc, doc, getDocs, setDoc } from "firebase/firestore"
 import { auth, db } from "../../../config/firebase";
 import { deleteObject, getDownloadURL, getStorage, listAll, ref, uploadBytesResumable } from "firebase/storage";
 import { useFocusEffect } from "@react-navigation/native";
+import { Image } from "expo-image";
 
 
 export default function BarberAccountScreen({

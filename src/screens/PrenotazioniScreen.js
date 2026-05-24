@@ -4,8 +4,8 @@ import {
   Text,
   View,
   ScrollView,
-  Image
 } from 'react-native';
+import { Image } from "expo-image";
 
 const logoBook = require('../../assets/icons8-più-48.png');
 

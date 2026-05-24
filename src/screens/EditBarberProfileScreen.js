@@ -24,7 +24,7 @@ export default function EditBarberProfileScreen({ userData, onGoBack }) {
   const currentUserData = userData;
 
   const [formData, setFormData] = useState({
-    nomeSalone: '',
+    salonName: '',
     via: '',
     citta: '',
     provincia: '',
@@ -62,7 +62,7 @@ export default function EditBarberProfileScreen({ userData, onGoBack }) {
       setLoading(true);
       const userData = await getUserProfileData(userId);
       setFormData({
-        nomeSalone: userData.nomeSalone || '',
+        salonName: userData.salonName || '',
         via: userData.via || '',
         citta: userData.citta || '',
         provincia: userData.provincia || '',
@@ -87,7 +87,7 @@ export default function EditBarberProfileScreen({ userData, onGoBack }) {
       setLoading(true);
 
       // Validazione base
-      if (!formData.nomeSalone.trim() || !formData.via.trim() || !formData.telefono.trim()) {
+      if (!formData.salonName.trim() || !formData.via.trim() || !formData.telefono.trim()) {
         Alert.alert('Errore', 'Nome salone, indirizzo e telefono sono obbligatori');
         return;
       }
@@ -258,8 +258,8 @@ export default function EditBarberProfileScreen({ userData, onGoBack }) {
             <Text style={styles.label}>Nome Salone *</Text>
             <TextInput
               style={styles.input}
-              value={formData.nomeSalone}
-              onChangeText={(value) => updateField('nomeSalone', value)}
+              value={formData.salonName}
+              onChangeText={(value) => updateField('salonName', value)}
               placeholder="Nome del tuo salone"
             />
           </View>
@@ -768,3 +768,4 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
 });
+

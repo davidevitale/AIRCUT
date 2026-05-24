@@ -1,7 +1,8 @@
 import { Tabs, Redirect } from "expo-router";
-import { View, ActivityIndicator, Image } from "react-native";
+import { View, ActivityIndicator } from "react-native";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../../context/AuthContext";
+import { Image } from "expo-image";
 
 const logoHome = require("../../../assets/icons8-casa-256.png");
 const logoLike = require("../../../assets/icons8-cuore-48.png");
@@ -74,6 +75,13 @@ export default function ProtectedLayout() {
         }}
       />
       <Tabs.Screen
+        name="SearchScreen"
+        options={{
+          href: null,
+          tabBarStyle: { display: "none" },
+        }}
+      />
+      <Tabs.Screen
         name="LikeScreen"
         options={{
           title: t("Navigation.likes"),
@@ -110,6 +118,18 @@ export default function ProtectedLayout() {
       />
       <Tabs.Screen
         name="EditBarberProfileScreen"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="BarberProfileScreen"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="PostListingScreen"
         options={{
           href: null,
         }}

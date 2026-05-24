@@ -4,11 +4,11 @@ import {
   Text,
   View,
   ScrollView,
-  Image,
   TouchableOpacity,
   Alert
 } from 'react-native';
 import { logoutUser } from '../services/authService';
+import { Image } from "expo-image";
 
 const logoAccount = require('../../assets/icons8-user-96.png');
 

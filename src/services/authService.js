@@ -129,17 +129,12 @@ const normalizeUploadedPost = (postId, postData, barberData = {}) => {
   }
 
   const selectedTags = Array.isArray(postData.selectedTags) ? postData.selectedTags : [];
-  const generatedTags = selectedTags
-    .map(getLocalizedTagText)
-    .filter(Boolean)
-    .map(tag => `#${tag.replace(/^#/, '').replace(/\s+/g, '')}`);
-  const captionParts = [postData.caption, ...generatedTags].filter(Boolean);
   const likes = Array.isArray(postData.likes) ? postData.likes : [];
   const likesCount = likes.length || postData.likeCount || postData.likesCount || 0;
   const salonName =
     postData.barberName ||
     barberData.salonName ||
-    barberData.nomeSalone ||
+    barberData.salonName ||
     barberData.firstName ||
     'Salone';
   const avatarUrl =
@@ -152,7 +147,7 @@ const normalizeUploadedPost = (postId, postData, barberData = {}) => {
     postId,
     barberId: postData.barberId,
     salonName,
-    nomeSalone: salonName,
+    salonName: salonName,
     barberName: barberData.nomiDipendenti?.[0] || postData.barberName || salonName,
     nickName: barberData.nickName || postData.nickName || '',
     firstName: barberData.firstName || postData.firstName || '',
@@ -170,7 +165,6 @@ const normalizeUploadedPost = (postId, postData, barberData = {}) => {
     likedBy: likes,
     isLiked: false,
     isFollowing: false,
-    caption: captionParts.join(' '),
     selectedTags,
     photoGender: postData.photoGender || barberData.workGender || '',
     location: barberData.via || '',
@@ -193,10 +187,10 @@ export const checkUsernameUniqueness = async (username) => {
       );
       const clientsSnapshot = await getDocs(clientsQuery);
 
-      // Controlla nei parrucchieri (nomeSalone)
+      // Controlla nei parrucchieri (salonName)
       const barbersQuery = query(
         collection(db, 'barbers'),
-        where('nomeSalone', '==', username)
+        where('salonName', '==', username)
       );
       const barbersSnapshot = await getDocs(barbersQuery);
 
@@ -433,7 +427,7 @@ export const getUserByName = async (username) => {
     // Cerca nei parrucchieri
     const barbersQuery = query(
       collection(db, 'barbers'),
-      where('nomeSalone', '==', username)
+      where('salonName', '==', username)
     );
     const barbersSnapshot = await getDocs(barbersQuery);
 
@@ -819,7 +813,7 @@ export const getAllBarbersRawData = async () => {
     snapshot.forEach((doc) => {
       const data = doc.data();
       console.log(`getAllBarbersRawData: Barber ${doc.id}:`, {
-        nomeSalone: data.nomeSalone,
+        salonName: data.salonName,
         portfolioImages: data.portfolioImages,
         portfolioVideos: data.portfolioVideos,
         hasImages: !!(data.portfolioImages && data.portfolioImages.length > 0),
@@ -887,14 +881,6 @@ export const getAllBarberPosts = async () => {
 // FUNZIONI DI RICERCA SMART
 // ===============================
 
-// Parsing hashtag da caption
-export const parseHashtagsFromCaption = (caption) => {
-  if (!caption) return [];
-  const hashtagRegex = /#\w+/g;
-  const hashtags = caption.match(hashtagRegex) || [];
-  return [...new Set(hashtags)]; // Rimuove duplicati
-};
-
 // Ricerca per hashtag
 export const searchPostsByHashtag = async (hashtag) => {
   try {
@@ -906,12 +892,28 @@ export const searchPostsByHashtag = async (hashtag) => {
     // Prima ottieni tutti i post
     const allPosts = await getAllBarberPosts();
 
-    // Filtra i post che contengono l'hashtag nella caption
-    const filteredPosts = allPosts.filter(post => {
-      if (!post.caption) return false;
+    const normalizedSearchTag = searchHashtag
+      .toLowerCase()
+      .replace(/^#/, '')
+      .replace(/\s+/g, '');
 
-      const postHashtags = parseHashtagsFromCaption(post.caption);
-      return postHashtags.some(tag => tag.toLowerCase() === searchHashtag.toLowerCase());
+    // Filtra i post che contengono l'hashtag in selectedTags
+    const filteredPosts = allPosts.filter(post => {
+      const tags = Array.isArray(post.selectedTags) ? post.selectedTags : [];
+      if (tags.length === 0) return false;
+
+      return tags.some((tag) => {
+        const rawValues = [
+          tag?.id,
+          tag?.en,
+          tag?.it,
+          getLocalizedTagText(tag),
+        ].filter(Boolean);
+
+        return rawValues.some((value) => (
+          String(value).toLowerCase().replace(/^#/, '').replace(/\s+/g, '') === normalizedSearchTag
+        ));
+      });
     });
 
     console.log('searchPostsByHashtag: Found posts:', filteredPosts.length);
@@ -939,7 +941,7 @@ export const searchPostsByBarberText = async (searchText) => {
           post.name,
           post.barberName,
           post.salonName,
-          post.nomeSalone,
+          post.salonName,
           post.nickName,
           post.firstName,
           post.lastName,
@@ -972,7 +974,7 @@ export const searchBarbersByName = async (searchText) => {
 
     barbersSnapshot.forEach((docSnap) => {
       const data = docSnap.data();
-      const salonName = data.salonName || data.nomeSalone || '';
+      const salonName = data.salonName || data.salonName || '';
       const barberName = data.barberName || data.firstName || '';
       const location = data.address || data.via || '';
       const matchesBarber = includesSearchQuery(
@@ -992,7 +994,7 @@ export const searchBarbersByName = async (searchText) => {
       if (matchesBarber) {
         results.push({
           id: docSnap.id,
-          nomeSalone: salonName,
+          salonName: salonName,
           salonName,
           barberName,
           nickName: data.nickName || '',
@@ -1070,7 +1072,7 @@ export const createOrUpdatePost = async (postData) => {
       barberId: postData.barberId,
       photoId: postData.photoId,
       imageUrl: postData.imageUrl,
-      caption: postData.caption || '',
+      selectedTags: Array.isArray(postData.selectedTags) ? postData.selectedTags : [],
       likes: [], // Array di userId che hanno messo like
       createdAt: new Date().toISOString(),
       ...postData
@@ -1133,7 +1135,7 @@ export const togglePostLike = async (postId, userId) => {
           barberId: postId.split('_')[0],
           photoId: postId.split('_')[2] || 'unknown',
           imageUrl: '',
-          caption: '',
+          selectedTags: [],
           likes: [userId], // Aggiungi subito il like
           createdAt: new Date().toISOString()
         });
@@ -1719,21 +1721,41 @@ export const updateBarberPrices = async (barberId, prezziServizi) => {
 export const getBarberProfileData = async (barberName) => {
   try {
     console.log('getBarberProfileData: Recupero dati profilo per:', barberName);
+    const normalizedInput = String(barberName || '').trim().toLowerCase();
 
-    // Cerca il parrucchiere per nome salone
-    const barbersQuery = query(
-      collection(db, 'barbers'),
-      where('nomeSalone', '==', barberName)
-    );
+    if (!normalizedInput) {
+      console.log('getBarberProfileData: Nome barbiere vuoto');
+      return null;
+    }
 
-    const barbersSnapshot = await getDocs(barbersQuery);
+    // Recupera e confronta su più campi nominativi usati nel progetto
+    const barbersSnapshot = await getDocs(collection(db, 'barbers'));
 
     if (barbersSnapshot.empty) {
       console.log('getBarberProfileData: Parrucchiere non trovato');
       return null;
     }
 
-    const barberDoc = barbersSnapshot.docs[0];
+    const barberDoc = barbersSnapshot.docs.find((docSnap) => {
+      const data = docSnap.data() || {};
+      const candidates = [
+        data.salonName,
+        data.salonName,
+        data.barberName,
+        data.nickName,
+        data.firstName,
+      ]
+        .filter(Boolean)
+        .map((value) => String(value).trim().toLowerCase());
+
+      return candidates.includes(normalizedInput);
+    });
+
+    if (!barberDoc) {
+      console.log('getBarberProfileData: Parrucchiere non trovato');
+      return null;
+    }
+
     const barberData = {
       id: barberDoc.id,
       ...barberDoc.data()
@@ -1746,5 +1768,6 @@ export const getBarberProfileData = async (barberName) => {
     return null;
   }
 };
+
 
 

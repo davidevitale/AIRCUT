@@ -310,5 +310,10 @@
     "priceLabel": "Prezzo (?)",
     "pricePlaceholder": "es. 15.00",
     "update": "Aggiorna"
+  },
+  "BarberProfileScreen": {
+    "loadingProfile": "Caricamento profilo...",
+    "categoryLabel": "Salone di bellezza / Hair Artist",
+    "informationTitle": "Informazioni"
   }
 }

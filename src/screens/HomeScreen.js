@@ -237,13 +237,13 @@ const HomeScreen = ({ onViewProfile, onHashtagPress }) => {
                 <UserListItem
                   user={item}
                   onUserPress={() => {
-                    console.log('HomeScreen: User clicked:', item.nomeSalone);
-                    if (onViewProfile && item.nomeSalone) {
-                      onViewProfile(item.nomeSalone);
+                    console.log('HomeScreen: User clicked:', item.salonName);
+                    if (onViewProfile && item.salonName) {
+                      onViewProfile(item.salonName);
                     }
                   }}
                   onPress={() => { }}
-                  onViewProfile={() => onViewProfile && onViewProfile(item.nomeSalone)}
+                  onViewProfile={() => onViewProfile && onViewProfile(item.salonName)}
                 />
               )}
               keyExtractor={(item) => item.id}
@@ -520,3 +520,4 @@ const styles = StyleSheet.create({
 });
 
 export default HomeScreen;
+

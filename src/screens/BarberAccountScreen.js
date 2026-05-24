@@ -6,7 +6,6 @@ import {
   StyleSheet,
   ScrollView,
   Alert,
-  Image,
   FlatList,
   TextInput,
   Modal,
@@ -23,6 +22,7 @@ import {
   pickVideos,
   uploadMultipleFiles,
 } from "../services/mediaService";
+import { Image } from "expo-image";
 
 export default function BarberAccountScreen({
   userData: propUserData,
@@ -494,7 +494,7 @@ export default function BarberAccountScreen({
                 ) : (
                   <View style={styles.profileImagePlaceholder}>
                     <Text style={styles.profileImagePlaceholderText}>
-                      {userData?.nomeSalone?.charAt(0) || "S"}
+                      {userData?.salonName?.charAt(0) || "S"}
                     </Text>
                   </View>
                 )}
@@ -507,7 +507,7 @@ export default function BarberAccountScreen({
 
               {/* Name and role to the right */}
               <View style={styles.salonInfo}>
-                <Text style={styles.salonName}>{userData?.nomeSalone}</Text>
+                <Text style={styles.salonName}>{userData?.salonName}</Text>
                 <Text style={styles.roleText}>Hair Artist</Text>
               </View>
             </View>
@@ -519,7 +519,7 @@ export default function BarberAccountScreen({
 
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>Nome:</Text>
-              <Text style={styles.infoValue}>{userData?.nomeSalone}</Text>
+              <Text style={styles.infoValue}>{userData?.salonName}</Text>
             </View>
 
             <View style={styles.infoRow}>
@@ -1304,3 +1304,4 @@ const styles = StyleSheet.create({
     color: "#00BCD4",
   },
 });
+

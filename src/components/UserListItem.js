@@ -3,18 +3,20 @@ import {
   StyleSheet,
   View,
   Text,
-  Image,
   TouchableOpacity,
 } from 'react-native';
+import Entypo from '@expo/vector-icons/Entypo';
+import { Image } from "expo-image";
 
 const UserListItem = ({ user, onUserPress }) => {
-  const profileInitial = user?.nomeSalone?.charAt(0)?.toUpperCase() || 'S';
+  const profileInitial = user?.salonName?.charAt(0)?.toUpperCase() || 'S';
 
   const handleUserPress = () => {
     if (onUserPress) {
       onUserPress(user);
     }
   };
+  // console.log(JSON.stringify(user, null, 2))
 
   return (
     <TouchableOpacity style={styles.container} onPress={handleUserPress}>
@@ -36,18 +38,19 @@ const UserListItem = ({ user, onUserPress }) => {
         {/* Informazioni Utente */}
         <View style={styles.userInfo}>
           <Text style={styles.salonName} numberOfLines={1}>
-            {user.nomeSalone || 'Salone'}
+            {user.barberName}
           </Text>
-          
-          {user.nomiDipendenti && (
+
+          {user.salonName && (
             <Text style={styles.employeeName} numberOfLines={1}>
-              {user.nomiDipendenti}
+              {user.salonName}
             </Text>
           )}
-          
+
           {user.via && (
             <Text style={styles.location} numberOfLines={1}>
-               {user.via}
+              <Entypo name="location-pin" size={14} color="black" />
+              {user.via}
             </Text>
           )}
         </View>
@@ -59,7 +62,6 @@ const UserListItem = ({ user, onUserPress }) => {
 const styles = StyleSheet.create({
   container: {
     backgroundColor: 'rgba(255,255,255,0.78)',
-    marginHorizontal: 16,
     marginVertical: 8,
     paddingHorizontal: 16,
     paddingVertical: 14,
@@ -71,6 +73,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 12,
     elevation: 5,
+
   },
   content: {
     flexDirection: 'row',
@@ -125,3 +128,4 @@ const styles = StyleSheet.create({
 });
 
 export default UserListItem;
+

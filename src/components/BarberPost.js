@@ -3,7 +3,6 @@ import {
   StyleSheet,
   Text,
   View,
-  Image,
   TouchableOpacity,
   Pressable,
   Animated,
@@ -21,8 +20,8 @@ import { useTranslation } from "react-i18next";
 import {
   togglePostLike,
   getCurrentUserData,
-  parseHashtagsFromCaption,
 } from "../services/authService";
+import { Image } from "expo-image";
 
 // Componente Cuore SVG Instagram-style
 const HeartIcon = ({ size = 24, filled = false, color = "#262626" }) => (
@@ -38,38 +37,39 @@ const HeartIcon = ({ size = 24, filled = false, color = "#262626" }) => (
   </Svg>
 );
 
-// Componente per testo con hashtag cliccabili
-const ClickableCaption = ({ caption, onHashtagPress }) => {
-  if (!caption) return null;
+// Componente per hashtag cliccabili da selectedTags
+const ClickableTags = ({ selectedTags, language, onHashtagPress }) => {
+  if (!Array.isArray(selectedTags) || selectedTags.length === 0) return null;
 
-  const hashtagRegex = /#\w+/g;
-  const parts = caption.split(hashtagRegex);
-  const hashtags = caption.match(hashtagRegex) || [];
+  const languageKey = language?.startsWith("it") ? "it" : "en";
 
-  let result = [];
-  for (let i = 0; i < parts.length; i++) {
-    if (parts[i]) {
-      result.push(
-        <Text key={`text-${i}`} style={styles.captionText}>
-          {parts[i]}
-        </Text>,
-      );
-    }
-    if (hashtags[i]) {
-      result.push(
-        <Text key={`hashtag-${i}`}
-          onPress={() => onHashtagPress && onHashtagPress(hashtags[i])} style={styles.hashtagText}>{hashtags[i]}</Text>
-      );
-    }
-  }
+  return (
+    <Text style={styles.caption}>
+      {selectedTags.map((tag, index) => {
+        const label = tag?.[languageKey] || tag?.en || tag?.it || tag?.id;
+        if (!label) return null;
+        const hashtag = `#${label}`;
+        const needsSpace = index < selectedTags.length - 1;
 
-  return <Text style={styles.caption}>{result}</Text>;
+        return (
+          <Text
+            key={`hashtag-${tag?.id || index}`}
+            onPress={() => onHashtagPress && onHashtagPress(hashtag)}
+            style={styles.hashtagText}
+          >
+            {hashtag}
+            {needsSpace ? " " : ""}
+          </Text>
+        );
+      })}
+    </Text>
+  );
 };
 
 // Componente Post del Parrucchiere
 const BarberPost = ({ barber, onViewProfile, onHashtagPress }) => {
   // console.log(JSON.stringify(barber, null, 2))
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [isLiked, setIsLiked] = useState(barber.isLiked || false);
   const [likesCount, setLikesCount] = useState(barber.likes || 0);
   const [currentUser, setCurrentUser] = useState(null);
@@ -133,7 +133,7 @@ const BarberPost = ({ barber, onViewProfile, onHashtagPress }) => {
       // Usa il nome del salone come identificatore unico
       const barberName =
         barber.salonName ||
-        barber.nomeSalone ||
+        barber.salonName ||
         barber.name ||
         barber.barberName;
       console.log(
@@ -383,7 +383,7 @@ const BarberPost = ({ barber, onViewProfile, onHashtagPress }) => {
     try {
       await Share.share({
         message: t("BarberPost.shareMessage", {
-          name: barber.salonName || barber.nomeSalone || barber.barberName,
+          name: barber.salonName || barber.salonName || barber.barberName,
         }),
         url: postImageUri,
       });
@@ -402,7 +402,7 @@ const BarberPost = ({ barber, onViewProfile, onHashtagPress }) => {
     barber.postImage || barber.imageUrl || barber.thumbnailUrl || barber.image || barber.mainImage;
   const placeholderInitial = (
     barber?.salonName ||
-    barber?.nomeSalone ||
+    barber?.salonName ||
     barber?.barberName ||
     "S"
   )
@@ -430,7 +430,7 @@ const BarberPost = ({ barber, onViewProfile, onHashtagPress }) => {
           )}
           <View style={styles.barberDetails}>
             <Text style={styles.salonName}>
-              {barber.salonName || barber.nomeSalone || barber.barberName}
+              {barber.salonName || barber.salonName || barber.barberName}
             </Text>
             <Text style={styles.barberName}>{barber.barberName}</Text>
           </View>
@@ -545,13 +545,14 @@ const BarberPost = ({ barber, onViewProfile, onHashtagPress }) => {
         <Text style={styles.likesCount}>
           {t("BarberPost.likesCount", { count: likesCount })}
         </Text>
-        {barber.caption ? (
+        {Array.isArray(barber.selectedTags) && barber.selectedTags.length > 0 ? (
           <View style={styles.captionRow}>
             <Text style={styles.usernameInCaption}>
-              {barber.salonName || barber.nomeSalone || barber.barberName}
+              {barber.salonName || barber.salonName || barber.barberName}
             </Text>
-            <ClickableCaption
-              caption={barber.caption}
+            <ClickableTags
+              selectedTags={barber.selectedTags}
+              language={i18n.language}
               onHashtagPress={onHashtagPress}
             />
           </View>
@@ -764,3 +765,4 @@ const styles = StyleSheet.create({
 });
 
 export default BarberPost;
+

@@ -175,14 +175,14 @@ const SearchScreen = ({ onHashtagPress, onUserPress, onViewProfile }) => {
                 <UserListItem
                   user={item}
                   onUserPress={() => {
-                    console.log('SearchScreen: User clicked:', item.nomeSalone);
+                    console.log('SearchScreen: User clicked:', item.salonName);
                     // Naviga al profilo del parrucchiere
-                    if (onViewProfile && item.nomeSalone) {
-                      onViewProfile(item.nomeSalone);
+                    if (onViewProfile && item.salonName) {
+                      onViewProfile(item.salonName);
                     }
                   }}
                   onPress={() => onUserPress && onUserPress(item)}
-                  onViewProfile={() => onViewProfile && onViewProfile(item.nomeSalone)}
+                  onViewProfile={() => onViewProfile && onViewProfile(item.salonName)}
                 />
               )}
               keyExtractor={(item) => item.id}
@@ -417,3 +417,4 @@ const styles = StyleSheet.create({
 });
 
 export default SearchScreen;
+

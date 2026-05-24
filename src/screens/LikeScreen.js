@@ -4,7 +4,6 @@ import {
   Text,
   View,
   ScrollView,
-  Image,
   FlatList,
   TouchableOpacity,
   Dimensions,
@@ -14,6 +13,7 @@ import {
 import { getCurrentUserData } from '../services/authService';
 import { collection, query, where, getDocs, doc, updateDoc, arrayRemove } from 'firebase/firestore';
 import { db } from '../../config/firebase'
+import { Image } from "expo-image";
 
 const logoLike = require('../../assets/icons8-cuore-48.png');
 const { width } = Dimensions.get('window');

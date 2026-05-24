@@ -5,9 +5,7 @@ import {
   TouchableOpacity,
   Alert,
   StyleSheet,
-  Image,
   ScrollView,
-  TextInput,
   ActivityIndicator,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
@@ -21,6 +19,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { getStorage, ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { serverTimestamp } from "firebase/firestore";
 import { useToast } from "@kritikhedau/react-native-toastify";
+import { Image } from "expo-image";
 
 const IMAGE_VARIANTS = {
   thumbnail: {
@@ -103,7 +102,6 @@ export default function PostScreen() {
   const [allowedTags, setAllowedTags] = useState([]);
   const [selectedTags, setSelectedTags] = useState([]);
   const [workCategory, setWorkCategory] = useState("");
-  const [caption, setCaption] = useState("");
   const [selectedImage, setSelectedImage] = useState(null);
   const [previewImage, setPreviewImage] = useState(null);
   const [userData, setUserData] = useState(null);
@@ -328,7 +326,6 @@ export default function PostScreen() {
         postId,
         barberId: auth.currentUser.uid,
         photoGender: isUnisexUser ? workCategory : userData.workGender,
-        caption: caption.trim(),
         selectedTags: localizedSelectedTags,
         imageUrl,
         thumbnailUrl,
@@ -348,7 +345,6 @@ export default function PostScreen() {
       setPreviewImage(null);
       setSelectedTags([]);
       setWorkCategory("");
-      setCaption("");
 
       show(t("PostScreen.postPreparedSuccess"))
       // Alert.alert(t("PostScreen.successTitle"), t("PostScreen.postPreparedSuccess"));
@@ -430,15 +426,6 @@ export default function PostScreen() {
             <Text style={styles.imagePickerText}>{t("PostScreen.selectImageFromGallery")}</Text>
           )}
         </TouchableOpacity>
-
-        <TextInput
-          placeholder={t("PostScreen.captionPlaceholder")}
-          placeholderTextColor="#94a3b8"
-          style={styles.captionInput}
-          value={caption}
-          onChangeText={setCaption}
-          multiline
-        />
 
         <Text style={styles.sectionTitle}>{t("PostScreen.selectTagsTitle")}</Text>
         {isUnisexUser && (
@@ -571,17 +558,6 @@ const styles = StyleSheet.create({
     width: "100%",
     height: "100%",
     resizeMode: "cover",
-  },
-  captionInput: {
-    minHeight: 64,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "rgba(0, 188, 212, 0.25)",
-    marginTop: 16,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    color: "#0f172a",
-    textAlignVertical: "top",
   },
   sectionTitle: {
     marginTop: 16,

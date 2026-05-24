@@ -3,9 +3,9 @@ import {
   StyleSheet,
   Text,
   View,
-  Image,
   TouchableOpacity
 } from 'react-native';
+import { Image } from "expo-image";
 
 const logoHome = require('../../assets/icons8-casa-256.png');
 const logoLikeB = require('../../assets/icons8-cuore-48.png');

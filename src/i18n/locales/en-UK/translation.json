@@ -310,5 +310,10 @@
     "selectTagsSubtitle": "Pick at least one tag from your registered specializations.",
     "publishButton": "PUBLISH",
     "legalText": "By publishing you confirm you have the subject's consent..."
+  },
+  "BarberProfileScreen": {
+    "loadingProfile": "Loading profile...",
+    "categoryLabel": "Beauty salon / Hair Artist",
+    "informationTitle": "Information"
   }
 }

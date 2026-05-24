@@ -5,14 +5,15 @@ import {
   StyleSheet,
   View,
   FlatList,
-  Image,
   TouchableOpacity,
   Text,
   Dimensions,
 } from 'react-native';
+import { Image } from "expo-image";
 
 const { width } = Dimensions.get('window');
-const itemSize = (width - 6) / 3; // 3 colonne con spazi di 2px
+// const itemSize = (width - 6) / 3; // 3 colonne con spazi di 2px
+const itemSize = width * 0.2883; // 3 colonne con spazi di 2px
 
 const PostGrid = ({ posts, onPostPress }) => {
   const { t } = useTranslation();
@@ -37,7 +38,7 @@ const PostGrid = ({ posts, onPostPress }) => {
           key={item.id}
           style={[
             styles.postItem,
-            { marginRight: (index + 1) % 3 === 0 ? 0 : 2 },
+            // { marginRight: (index + 1) % 3 === 0 ? 0 : 2, borderWidth: 1 },
           ]}
           onPress={() => onPostPress && onPostPress(item)}
         >
@@ -64,14 +65,14 @@ const PostGrid = ({ posts, onPostPress }) => {
         </TouchableOpacity>
       );
 
-  // ...nessuna pubblicità...
+      // ...nessuna pubblicità...
     });
     return items;
   };
 
   return (
     <View style={styles.container}>
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: width * 0.0186 }}>
         {renderItemsWithAds()}
       </View>
     </View>
@@ -85,12 +86,14 @@ const styles = StyleSheet.create({
   postItem: {
     width: itemSize,
     height: itemSize,
-    marginBottom: 2,
     backgroundColor: '#f2f2f2',
+    borderRadius: 20
+
   },
   postImage: {
     width: '100%',
     height: '100%',
+    borderRadius: 20
   },
   overlay: {
     position: 'absolute',

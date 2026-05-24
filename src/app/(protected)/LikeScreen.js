@@ -1,25 +1,28 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   StyleSheet,
   Text,
   View,
   ScrollView,
-  Image,
   FlatList,
   TouchableOpacity,
   Dimensions,
   Alert,
-  AppState
+  AppState,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context'
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
+import { router, useFocusEffect } from 'expo-router';
 import { getCurrentUserData } from '../../services/authService';
 import { collection, query, where, getDocs, doc, updateDoc, arrayRemove } from 'firebase/firestore';
-import { db } from '../../../config/firebase'
+import { db } from '../../../config/firebase';
+import { setPostListingContext } from '../../services/postListingStore';
+import Entypo from '@expo/vector-icons/Entypo';
+import { Image } from 'expo-image';
 
 const logoLike = require('../../../assets/icons8-cuore-48.png');
 const { width } = Dimensions.get('window');
-const itemSize = width - 48; // 1 colonna fullwidth
+const itemSize = width * 0.2883;
 
 const LikeScreen = () => {
   const { t } = useTranslation();
@@ -28,15 +31,15 @@ const LikeScreen = () => {
   const [currentUser, setCurrentUser] = useState(null);
   const [appState, setAppState] = useState(AppState.currentState);
 
-  useEffect(() => {
-    loadLikedPosts();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      loadLikedPosts();
+    }, []),
+  );
 
-  // Ricarica i dati quando l'app torna in foreground
   useEffect(() => {
     const handleAppStateChange = (nextAppState) => {
       if (appState.match(/inactive|background/) && nextAppState === 'active') {
-        console.log('LikeScreen: App tornata in foreground, ricaricando like...');
         loadLikedPosts();
       }
       setAppState(nextAppState);
@@ -52,33 +55,35 @@ const LikeScreen = () => {
       const userData = await getCurrentUserData();
       if (userData) {
         setCurrentUser(userData);
-        console.log('LikeScreen: Loading liked posts for user:', userData.user.uid);
 
-        // Carica tutti i post che contengono l'userId nell'array likes
         const postsQuery = query(
           collection(db, 'posts'),
-          where('likes', 'array-contains', userData.user.uid)
+          where('likes', 'array-contains', userData.user.uid),
         );
 
         const querySnapshot = await getDocs(postsQuery);
         const likedPostsData = [];
 
-        querySnapshot.forEach((doc) => {
-          const postData = doc.data();
+        querySnapshot.forEach((postDoc) => {
+          const postData = postDoc.data();
           likedPostsData.push({
-            postId: doc.id,
+            id: postDoc.id,
+            postId: postDoc.id,
             imageUrl: postData.imageUrl,
+            thumbnailUrl: postData.thumbnailUrl,
+            postImage: postData.imageUrl,
             barberName: postData.barberName || t('LikeScreen.defaultBarberName'),
+            salonName: postData.barberName || t('LikeScreen.defaultBarberName'),
             barberId: postData.barberId,
-            likedAt: new Date().toISOString(), // Per ora usiamo data corrente
-            ...postData
+            likesCount: Array.isArray(postData.likes) ? postData.likes.length : 0,
+            likes: Array.isArray(postData.likes) ? postData.likes.length : 0,
+            likedAt: new Date().toISOString(),
+            ...postData,
           });
         });
 
-        console.log('LikeScreen: Loaded liked posts:', likedPostsData.length);
         setLikedPosts(likedPostsData);
       } else {
-        console.log('LikeScreen: No user logged in');
         setLikedPosts([]);
       }
     } catch (error) {
@@ -101,48 +106,47 @@ const LikeScreen = () => {
           onPress: async () => {
             try {
               if (currentUser) {
-                console.log('LikeScreen: Removing like for post:', postId);
-
-                // Rimuovi l'userId dall'array likes del post
                 const postRef = doc(db, 'posts', postId);
                 await updateDoc(postRef, {
-                  likes: arrayRemove(currentUser.user.uid)
+                  likes: arrayRemove(currentUser.user.uid),
                 });
 
-                // Aggiorna la lista locale
-                setLikedPosts(prev => prev.filter(post => post.postId !== postId));
-                console.log('LikeScreen: Like rimosso con successo');
+                setLikedPosts((prev) => prev.filter((post) => post.postId !== postId));
               }
             } catch (error) {
               console.error('LikeScreen: Errore rimozione like:', error);
               Alert.alert(t('LikeScreen.errorTitle'), t('LikeScreen.removeError'));
             }
-          }
-        }
-      ]
+          },
+        },
+      ],
     );
   };
 
-  const renderLikedPost = ({ item }) => (
-    <TouchableOpacity
-      style={styles.postContainer}
-      onLongPress={() => handleRemoveLike(item.postId)}
-    >
+  const openLikedListing = (selectedPost) => {
+    if (!Array.isArray(likedPosts) || likedPosts.length === 0) return;
+
+    setPostListingContext({
+      posts: likedPosts,
+      selectedPostId: selectedPost?.id || selectedPost?.postId || null,
+    });
+
+    router.push('/(protected)/PostListingScreen');
+  };
+
+  const renderLikedPost = ({ item, index }) => (
+    <TouchableOpacity style={[styles.postContainer, {
+      marginRight: (index + 1) % 3 === 0 ? 0 : width * 0.0186,
+      marginBottom: 8,
+    }]} onPress={() => openLikedListing(item)}>
       <Image
-        source={{ uri: item.imageUrl || item.mediaUrl }}
+        source={{ uri: item.thumbnailUrl || item.imageUrl || item.mediaUrl || item.postImage }}
         style={styles.postImage}
         resizeMode="cover"
       />
-      <View style={styles.postInfo}>
-        <Text style={styles.barberName} numberOfLines={1}>
-          {item.barberName || t('LikeScreen.defaultBarberName')}
-        </Text>
-      </View>
-      <TouchableOpacity
-        style={styles.unlikeButton}
-        onPress={() => handleRemoveLike(item.postId)}
-      >
-        <Text style={styles.unlikeText}>✕</Text>
+      <TouchableOpacity style={styles.unlikeButton} onPress={() => handleRemoveLike(item.postId)}>
+        {/* <Text style={styles.unlikeText}></Text> */}
+        <Entypo name="cross" size={16} color="white" />
       </TouchableOpacity>
     </TouchableOpacity>
   );
@@ -161,9 +165,7 @@ const LikeScreen = () => {
         <View style={styles.emptyState}>
           <Image source={logoLike} style={styles.emptyIcon} />
           <Text style={styles.emptyTitle}>{t('LikeScreen.yourLikesTitle')}</Text>
-          <Text style={styles.emptyDescription}>
-            {t('LikeScreen.emptyDescription')}
-          </Text>
+          <Text style={styles.emptyDescription}>{t('LikeScreen.emptyDescription')}</Text>
         </View>
       </ScrollView>
     );
@@ -173,16 +175,14 @@ const LikeScreen = () => {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>{t('LikeScreen.yourFavoritesTitle')}</Text>
-        <Text style={styles.headerCount}>
-          {t('LikeScreen.photosCount', { count: likedPosts.length })}
-        </Text>
+        <Text style={styles.headerCount}>{t('LikeScreen.photosCount', { count: likedPosts.length })}</Text>
       </View>
 
       <FlatList
         data={likedPosts}
         renderItem={renderLikedPost}
         keyExtractor={(item) => item.postId}
-        numColumns={1}
+        numColumns={3}
         contentContainerStyle={styles.gridContainer}
         showsVerticalScrollIndicator={false}
       />
@@ -239,63 +239,38 @@ const styles = StyleSheet.create({
     color: '#666',
   },
   gridContainer: {
-    padding: 16,
+    paddingHorizontal: width * 0.0465,
+    paddingTop: 12,
+    paddingBottom: 24,
   },
   postContainer: {
     width: itemSize,
-    marginRight: 16,
-    marginBottom: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.6)',
-    borderRadius: 24,
-    borderWidth: 1.5,
-    borderColor: 'rgba(255, 255, 255, 0.5)',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 8,
-    },
-    shadowOpacity: 0.12,
-    shadowRadius: 12,
-    elevation: 5,
+    height: itemSize,
+
+    backgroundColor: '#f2f2f2',
     overflow: 'hidden',
+    borderRadius: 20
   },
   postImage: {
     width: '100%',
-    height: 350,
+    height: '100%',
     backgroundColor: '#f0f0f0',
-  },
-  postInfo: {
-    padding: 8,
-    paddingBottom: 4,
-  },
-  barberName: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#00BCD4',
-    marginBottom: 2,
   },
   unlikeButton: {
     position: 'absolute',
-    top: 12,
-    right: 12,
-    backgroundColor: 'rgba(255, 82, 82, 0.3)',
-    borderRadius: 20,
-    width: 40,
-    height: 40,
+    top: 6,
+    right: 6,
+    backgroundColor: 'rgba(255, 82, 82, 0.78)',
+    borderRadius: 11,
+    width: 22,
+    height: 22,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1.5,
-    borderColor: 'rgba(255, 255, 255, 0.6)',
-    shadowColor: '#FF5252',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
   },
   unlikeText: {
-    fontSize: 20,
+    fontSize: 12,
     fontWeight: 'bold',
-    color: '#FF5252',
+    color: '#fff',
   },
   emptyState: {
     alignItems: 'center',

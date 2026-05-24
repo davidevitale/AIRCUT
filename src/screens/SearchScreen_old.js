@@ -3,7 +3,7 @@ import {
   StyleSheet, Text, View, TextInput, ScrollView, TouchableOpacity,
   Image, FlatList, ActivityIndicator, Alert, Keyboard
 } from 'react-native';
-import { smartSearch, parseHashtagsFromCaption } from '../services/authService';
+import { smartSearch } from '../services/authService';
 import PostGrid from '../../components/PostGrid';
 import UserListItem from '../../components/UserListItem';
 
@@ -90,18 +90,18 @@ const SearchScreen = ({ onViewProfile, initialHashtag }) => {
   };
 
   const handleUserPress = (user) => {
-    console.log('SearchScreen: User pressed:', user.nomeSalone);
+    console.log('SearchScreen: User pressed:', user.salonName);
     if (onViewProfile) {
-      onViewProfile(user.nomeSalone);
+      onViewProfile(user.salonName);
     }
   };
 
   const handleFollowPress = (user, isFollowing) => {
-    console.log('SearchScreen: Follow pressed:', user.nomeSalone, isFollowing);
+    console.log('SearchScreen: Follow pressed:', user.salonName, isFollowing);
     // Implementa la logica di follow qui
     Alert.alert(
       'Follow',
-      `${isFollowing ? 'Hai iniziato a seguire' : 'Hai smesso di seguire'} ${user.nomeSalone}`
+      `${isFollowing ? 'Hai iniziato a seguire' : 'Hai smesso di seguire'} ${user.salonName}`
     );
   };
 
@@ -275,7 +275,7 @@ const renderSearchResult = ({ item }) => (
       style={styles.resultAvatar}
     />
     <View style={styles.resultInfo}>
-      <Text style={styles.resultName}>{item.nomeSalone}</Text>
+      <Text style={styles.resultName}>{item.salonName}</Text>
       <Text style={styles.resultLocation}>📍 {item.via}</Text>
       {item.nomiDipendenti && (
         <Text style={styles.resultBarbers}>👨‍💼 {item.nomiDipendenti}</Text>
@@ -299,7 +299,7 @@ const renderRecentSearch = ({ item }) => (
   >
     <Text style={styles.clockIcon}>🕐</Text>
     <View style={styles.recentInfo}>
-      <Text style={styles.recentName}>{item.nomeSalone}</Text>
+      <Text style={styles.recentName}>{item.salonName}</Text>
       <Text style={styles.recentLocation}>{item.via}</Text>
     </View>
   </TouchableOpacity>
@@ -525,3 +525,4 @@ const styles = StyleSheet.create({
 });
 
 export default SearchScreen;
+

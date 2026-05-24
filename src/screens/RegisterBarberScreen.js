@@ -19,7 +19,7 @@ export default function RegisterBarberScreen({ onGoToLogin, navigation }) {
     confirmPassword: '',
     
     // 2) Nome salone, nomi dipendenti, via, specializzazioni taglio
-    nomeSalone: '',
+    salonName: '',
     nomiDipendenti: '',
     via: '',
     tipiTaglio: [], // Array per selezione multipla specializzazioni
@@ -92,7 +92,7 @@ export default function RegisterBarberScreen({ onGoToLogin, navigation }) {
   const handleRegister = async () => {
     // Validazione campi obbligatori
     if (!formData.email || !formData.password || !formData.confirmPassword || 
-        !formData.nomeSalone || !formData.via || !formData.telefono || 
+        !formData.salonName || !formData.via || !formData.telefono || 
         !formData.emailContatto) {
       Alert.alert('Errore', 'Completa tutti i campi obbligatori');
       return;
@@ -188,8 +188,8 @@ export default function RegisterBarberScreen({ onGoToLogin, navigation }) {
               <TextInput
                 style={styles.input}
                 placeholder="Nome del Salone"
-                value={formData.nomeSalone}
-                onChangeText={(value) => updateField('nomeSalone', value)}
+                value={formData.salonName}
+                onChangeText={(value) => updateField('salonName', value)}
               />
             </View>
 
@@ -521,3 +521,4 @@ const styles = StyleSheet.create({
     marginLeft: 5,
   },
 });
+
