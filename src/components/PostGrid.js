@@ -43,7 +43,8 @@ const PostGrid = ({ posts, onPostPress }) => {
           onPress={() => onPostPress && onPostPress(item)}
         >
           <Image
-            source={{ uri: item.thumbnailUrl || item.postImage || item.imageUrl || item.image || item.mainImage }}
+            source={{ uri: item.thumbnailUrl }}
+            // source={{ uri: item.thumbnailUrl || item.postImage || item.imageUrl || item.image || item.mainImage }}
             style={styles.postImage}
             resizeMode="cover"
           />

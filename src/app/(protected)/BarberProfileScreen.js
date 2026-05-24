@@ -11,8 +11,11 @@ import {
 import { router, useLocalSearchParams } from "expo-router";
 import { useTranslation } from "react-i18next";
 import PostGrid from "../../components/PostGrid";
-import { getBarberProfileData, getBarberPrices, getCurrentUserData, getAllBarberPosts } from "../../services/authService";
+import { getBarberProfileData, getBarberPrices } from "../../services/barberService";
+import { getAllBarberPosts } from "../../services/postService";
+import { getCurrentUserData } from "../../services/userService";
 import { setPostListingContext } from "../../services/postListingStore";
+import { getBarberProfileContext } from "../../services/barberProfileStore";
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Image } from "expo-image";
 
@@ -68,15 +71,32 @@ export default function BarberProfileScreen() {
     setPostListingContext({
       posts: portfolioPosts,
       selectedPostId: selectedPost?.id || null,
+      returnTo: {
+        pathname: "/(protected)/BarberProfileScreen",
+        params: { barberName: resolvedBarberName },
+      },
     });
     router.push("/(protected)/PostListingScreen");
+  };
+
+  const handleBack = () => {
+    const { returnTo } = getBarberProfileContext();
+    if (returnTo?.pathname) {
+      router.replace({
+        pathname: returnTo.pathname,
+        params: returnTo.params || {},
+      });
+      return;
+    }
+
+    router.back();
   };
 
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+          <TouchableOpacity onPress={handleBack} style={styles.backButton}>
             <Ionicons name="arrow-back" size={24} color="black" />
           </TouchableOpacity>
         </View>
@@ -98,7 +118,7 @@ export default function BarberProfileScreen() {
     <SafeAreaView style={styles.container}>
       <ScrollView style={styles.scrollView}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+          <TouchableOpacity onPress={handleBack} style={styles.backButton}>
             <Ionicons name="arrow-back" size={24} color="black" />
           </TouchableOpacity>
         </View>

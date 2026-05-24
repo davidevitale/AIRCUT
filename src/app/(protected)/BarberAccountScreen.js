@@ -16,9 +16,9 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 import {
   logoutUser,
-  getCurrentUserData,
-  updateBarberPortfolio,
 } from "../../services/authService";
+import { getCurrentUserData } from "../../services/userService";
+import { updateBarberPortfolio } from "../../services/barberService";
 import {
   pickImages,
   pickVideos,

@@ -10,7 +10,8 @@ import {
   Dimensions,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { logoutUser, getCurrentUserData } from '../../services/authService';
+import { logoutUser } from '../../services/authService';
+import { getCurrentUserData } from '../../services/userService';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '../../../config/firebase';
 import LanguageToggle from '../../components/LanguageToggle';

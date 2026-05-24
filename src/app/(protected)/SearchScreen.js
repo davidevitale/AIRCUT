@@ -13,12 +13,15 @@ import {
   Dimensions,
 } from 'react-native';
 import { BlurView } from 'expo-blur';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import PostGrid from '../../components/PostGrid';
 import UserListItem from '../../components/UserListItem';
-import { getAllBarberPosts, getCurrentUserData, smartSearch } from '../../services/authService';
+import { getAllBarberPosts } from '../../services/postService';
+import { smartSearch } from '../../services/searchService';
+import { getCurrentUserData } from '../../services/userService';
 import { setPostListingContext } from '../../services/postListingStore';
+import { setBarberProfileContext } from '../../services/barberProfileStore';
 import AntDesign from '@expo/vector-icons/AntDesign';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Entypo from '@expo/vector-icons/Entypo';
@@ -37,7 +40,9 @@ const ScreenShell = ({ children }) => (
 
 const SearchScreen = ({ onViewProfile }) => {
   const { t, i18n } = useTranslation();
+  const { openFilter } = useLocalSearchParams();
   const inputRef = useRef(null);
+  const hasHandledOpenFilterRef = useRef(false);
   const { width, height } = Dimensions.get('window')
   const searchRequestIdRef = useRef(0);
   const [currentUser, setCurrentUser] = useState(null);
@@ -124,12 +129,24 @@ const SearchScreen = ({ onViewProfile }) => {
   }, [getLocalizedText]);
 
   useEffect(() => {
+    if (openFilter === '1') {
+      return undefined;
+    }
+
     const focusTimeout = setTimeout(() => {
       inputRef.current?.focus();
     }, 100);
 
     return () => clearTimeout(focusTimeout);
-  }, []);
+  }, [openFilter]);
+
+  useEffect(() => {
+    if (openFilter === '1' && !hasHandledOpenFilterRef.current) {
+      hasHandledOpenFilterRef.current = true;
+      setDraftSelectedTags(selectedTags);
+      setFilterModalVisible(true);
+    }
+  }, [openFilter, selectedTags]);
 
   const clearSearch = useCallback(() => {
     searchRequestIdRef.current += 1;
@@ -241,6 +258,12 @@ const SearchScreen = ({ onViewProfile }) => {
       return;
     }
 
+    setBarberProfileContext({
+      returnTo: {
+        pathname: '/(protected)/SearchScreen',
+      },
+    });
+
     router.push({
       pathname: '/(protected)/BarberProfileScreen',
       params: { barberName },
@@ -253,6 +276,9 @@ const SearchScreen = ({ onViewProfile }) => {
     setPostListingContext({
       posts,
       selectedPostId: selectedPost?.id || null,
+      returnTo: {
+        pathname: '/(protected)/SearchScreen',
+      },
     });
 
     router.push('/(protected)/PostListingScreen');
@@ -349,14 +375,7 @@ const SearchScreen = ({ onViewProfile }) => {
 
     return (
       <View style={styles.searchResultsContainer}>
-        {searchPosts.length > 0 && (
-          <View style={[styles.section, { paddingHorizontal: width * 0.0465 }]}>
-            <PostGrid
-              posts={searchPosts}
-              onPostPress={(post) => openPostListing(searchPosts, post)}
-            />
-          </View>
-        )}
+
 
         {users.length > 0 && (
           <View style={[styles.section, { paddingHorizontal: width * 0.0465 }]}>
@@ -369,6 +388,15 @@ const SearchScreen = ({ onViewProfile }) => {
                 />
               ))}
             </View>
+          </View>
+        )}
+
+        {searchPosts.length > 0 && (
+          <View style={[styles.section, { paddingHorizontal: width * 0.0465 }]}>
+            <PostGrid
+              posts={searchPosts.slice(0, 3)}
+              onPostPress={(post) => openPostListing(searchPosts, post)}
+            />
           </View>
         )}
       </View>
@@ -407,11 +435,12 @@ const SearchScreen = ({ onViewProfile }) => {
                   setDraftSelectedTags(selectedTags);
                   setFilterModalVisible(true);
                 }}
-                style={{ width: 30, height: 30 }}
+                style={{ width: 20, height: 20 }}
               >
                 <Image
                   source={require('../../../assets/filter.png')}
                   style={{ width: '100%', height: '100%' }}
+                  tintColor='#262626'
                 />
               </Pressable>
             )}
@@ -496,7 +525,7 @@ const styles = StyleSheet.create({
   },
   mainContent: {
     flex: 1,
-    backgroundColor: 'transparent',
+    backgroundColor: '#fff',
   },
   searchHeader: {
     flexDirection: 'row',
@@ -726,4 +755,3 @@ const styles = StyleSheet.create({
 });
 
 export default SearchScreen;
-

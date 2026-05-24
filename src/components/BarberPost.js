@@ -17,10 +17,8 @@ import Svg, {
   Stop,
 } from "react-native-svg";
 import { useTranslation } from "react-i18next";
-import {
-  togglePostLike,
-  getCurrentUserData,
-} from "../services/authService";
+import { togglePostLike } from "../services/postService";
+import { getCurrentUserData } from "../services/userService";
 import { Image } from "expo-image";
 
 // Componente Cuore SVG Instagram-style
@@ -398,8 +396,10 @@ const BarberPost = ({ barber, onViewProfile, onHashtagPress }) => {
     typeof avatarValue === "string" && avatarValue.length > 0
       ? avatarValue
       : null;
+  // const postImageUri =
+  //   barber.postImage || barber.imageUrl || barber.thumbnailUrl || barber.image || barber.mainImage;
   const postImageUri =
-    barber.postImage || barber.imageUrl || barber.thumbnailUrl || barber.image || barber.mainImage;
+    barber.thumbnailUrl
   const placeholderInitial = (
     barber?.salonName ||
     barber?.salonName ||
@@ -435,9 +435,9 @@ const BarberPost = ({ barber, onViewProfile, onHashtagPress }) => {
             <Text style={styles.barberName}>{barber.barberName}</Text>
           </View>
         </TouchableOpacity>
-        <TouchableOpacity>
+        {/* <TouchableOpacity>
           <Text style={styles.moreDotsIcon}>⋯</Text>
-        </TouchableOpacity>
+        </TouchableOpacity> */}
       </View>
 
       {/* Immagine del lavoro con doppio tap // Double tap work image */}

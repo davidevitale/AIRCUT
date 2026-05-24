@@ -13,7 +13,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { router, useFocusEffect } from 'expo-router';
-import { getCurrentUserData } from '../../services/authService';
+import { getCurrentUserData } from '../../services/userService';
 import { collection, query, where, getDocs, doc, updateDoc, arrayRemove } from 'firebase/firestore';
 import { db } from '../../../config/firebase';
 import { setPostListingContext } from '../../services/postListingStore';
@@ -129,6 +129,9 @@ const LikeScreen = () => {
     setPostListingContext({
       posts: likedPosts,
       selectedPostId: selectedPost?.id || selectedPost?.postId || null,
+      returnTo: {
+        pathname: '/(protected)/LikeScreen',
+      },
     });
 
     router.push('/(protected)/PostListingScreen');
@@ -140,7 +143,7 @@ const LikeScreen = () => {
       marginBottom: 8,
     }]} onPress={() => openLikedListing(item)}>
       <Image
-        source={{ uri: item.thumbnailUrl || item.imageUrl || item.mediaUrl || item.postImage }}
+        source={{ uri: item.thumbnailUrl }}
         style={styles.postImage}
         resizeMode="cover"
       />

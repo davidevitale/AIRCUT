@@ -7,12 +7,16 @@ import {
   RefreshControl,
   TouchableOpacity,
   FlatList,
+  Pressable,
 } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import BarberPost from '../../components/BarberPost';
-import { getAllPostsWithLikeStatus, getCurrentUserData } from '../../services/authService';
+import { getAllPostsWithLikeStatus } from '../../services/postService';
+import { getCurrentUserData } from '../../services/userService';
+import { setBarberProfileContext } from '../../services/barberProfileStore';
+import { Image } from 'expo-image';
 
 const isFirebaseConnectionError = (error) => (
   error.message?.includes('client is offline') ||
@@ -35,10 +39,20 @@ const SearchBar = ({
     <BlurView intensity={24} tint="light" style={styles.searchBlur}>
       <TouchableOpacity
         activeOpacity={0.8}
-        style={styles.searchInputContainer}
+        style={[styles.searchInputContainer, { flexDirection: 'row', justifyContent: 'space-between' }]}
         onPress={onPress}
       >
         <Text style={styles.searchPlaceholder}>{placeholder}</Text>
+        <Pressable
+          onPress={onPress}
+          style={{ width: 20, height: 20 }}
+        >
+          <Image
+            source={require('../../../assets/filter.png')}
+            style={{ width: '100%', height: '100%' }}
+            tintColor='#8e8e8e'
+          />
+        </Pressable>
       </TouchableOpacity>
     </BlurView>
   </View>
@@ -59,7 +73,11 @@ const HomeScreen = ({ onViewProfile, onHashtagPress }) => {
 
       const userData = await getCurrentUserData();
       const userId = userData?.user?.uid;
-      const postsWithLikeStatus = await getAllPostsWithLikeStatus(userId);
+      const userSelectedTags = userData?.userData?.typesCut || [];
+      const postsWithLikeStatus = await getAllPostsWithLikeStatus(
+        userId,
+        userSelectedTags,
+      );
 
       setPosts(postsWithLikeStatus);
     } catch (error) {
@@ -93,6 +111,12 @@ const HomeScreen = ({ onViewProfile, onHashtagPress }) => {
         return;
       }
 
+      setBarberProfileContext({
+        returnTo: {
+          pathname: "/(protected)/HomeScreen",
+        },
+      });
+
       router.push({
         pathname: "/(protected)/BarberProfileScreen",
         params: { barberName },
@@ -104,7 +128,12 @@ const HomeScreen = ({ onViewProfile, onHashtagPress }) => {
   const listHeader = (
     <SearchBar
       placeholder={t('HomeScreen.searchPlaceholder')}
-      onPress={() => router.push('/(protected)/SearchScreen')}
+      onPress={() =>
+        router.push({
+          pathname: '/(protected)/SearchScreen',
+          params: { openFilter: '1' },
+        })
+      }
     />
   );
 

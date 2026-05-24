@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { getCurrentUserData, onAuthStateChange } from '../services/authService';
+import { onAuthStateChange } from '../services/authService';
+import { getCurrentUserData } from '../services/userService';
 
 // 1. Create context
 const AuthContext = createContext(null);

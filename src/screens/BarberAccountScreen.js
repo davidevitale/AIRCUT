@@ -13,9 +13,9 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
   logoutUser,
-  getCurrentUserData,
-  updateBarberPortfolio,
 } from "../services/authService";
+import { getCurrentUserData } from "../services/userService";
+import { updateBarberPortfolio } from "../services/barberService";
 import { auth } from '../../config/firebase';
 import {
   pickImages,

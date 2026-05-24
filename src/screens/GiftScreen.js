@@ -10,7 +10,8 @@ import {
   Dimensions,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { getCurrentUserData, updateUserXP, getUserXP, checkDailySlot, updateDailySlot } from '../services/authService';
+import { getCurrentUserData } from '../services/userService';
+import { updateUserXP, getUserXP, checkDailySlot, updateDailySlot } from '../services/xpService';
 
 const { width, height } = Dimensions.get('window');
 

@@ -9,7 +9,7 @@ import {
   FlatList,
   StyleSheet,
 } from 'react-native';
-import { smartSearch } from '../services/authService';
+import { smartSearch } from '../services/searchService';
 import PostGrid from '../../components/PostGrid';
 import UserListItem from '../../components/UserListItem';
 

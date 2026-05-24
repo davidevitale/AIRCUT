@@ -14,7 +14,9 @@ import { BlurView } from 'expo-blur';
 import BarberPost from '../components/BarberPost';
 import PostGrid from '../components/PostGrid';
 import UserListItem from '../components/UserListItem';
-import { getAllPostsWithLikeStatus, getCurrentUserData, smartSearch } from '../services/authService';
+import { getAllPostsWithLikeStatus } from '../services/postService';
+import { getCurrentUserData } from '../services/userService';
+import { smartSearch } from '../services/searchService';
 
 /* CODICE COMMENTATO - DA RIUTILIZZARE NEL SEARCH COMPONENT
   // Debounced search

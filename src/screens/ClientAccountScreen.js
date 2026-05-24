@@ -9,7 +9,8 @@ import {
   Alert,
   Image
 } from 'react-native';
-import { logoutUser, getCurrentUserData } from '../services/authService';
+import { logoutUser } from '../services/authService';
+import { getCurrentUserData } from '../services/userService';
 import { auth } from '../../config/firebase';
 
 export default function ClientAccountScreen({ userData: propUserData, onLogout, navigate }) {

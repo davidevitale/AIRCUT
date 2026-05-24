@@ -10,7 +10,7 @@ import {
   Alert,
   AppState
 } from 'react-native';
-import { getCurrentUserData } from '../services/authService';
+import { getCurrentUserData } from '../services/userService';
 import { collection, query, where, getDocs, doc, updateDoc, arrayRemove } from 'firebase/firestore';
 import { db } from '../../config/firebase'
 import { Image } from "expo-image";

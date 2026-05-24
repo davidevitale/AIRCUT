@@ -6,13 +6,26 @@ import AntDesign from "@expo/vector-icons/AntDesign";
 import { SafeAreaView } from "react-native-safe-area-context";
 import BarberPost from "../../components/BarberPost";
 import { getPostListingContext } from "../../services/postListingStore";
-import { getAllPostsWithLikeStatus, getCurrentUserData } from "../../services/authService";
+import { getAllPostsWithLikeStatus } from "../../services/postService";
+import { getCurrentUserData } from "../../services/userService";
 
 const PostListingScreen = () => {
-  const { posts, selectedPostId } = getPostListingContext();
+  const { posts, selectedPostId, returnTo } = getPostListingContext();
   const [postsWithLikeStatus, setPostsWithLikeStatus] = useState(
     Array.isArray(posts) ? posts : [],
   );
+
+  const handleBack = () => {
+    if (returnTo?.pathname) {
+      router.replace({
+        pathname: returnTo.pathname,
+        params: returnTo.params || {},
+      });
+      return;
+    }
+
+    router.back();
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -85,7 +98,7 @@ const PostListingScreen = () => {
     <SafeAreaView style={styles.screen}>
       <BlurView intensity={28} tint="light" style={styles.backgroundBlur} pointerEvents="none" />
       <View style={styles.searchHeader}>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+        <TouchableOpacity style={styles.backButton} onPress={handleBack}>
           <AntDesign name="arrow-left" size={24} color="black" />
         </TouchableOpacity>
       </View>

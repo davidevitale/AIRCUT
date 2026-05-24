@@ -16,7 +16,7 @@ import {
   updateUserPassword,
   sendPasswordResetEmailToUser,
   getUserProfileData
-} from '../services/authService';
+} from '../services/userService';
 import { auth } from '../../config/firebase'
 
 export default function EditBarberProfileScreen({ userData, onGoBack }) {

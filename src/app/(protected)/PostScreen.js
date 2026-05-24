@@ -13,7 +13,7 @@ import * as ImageManipulator from "expo-image-manipulator";
 import { useTranslation } from "react-i18next";
 import { collection, doc, getDocs, setDoc } from "firebase/firestore";
 import { auth, db } from "../../../config/firebase";
-import { getCurrentUserData } from "../../services/authService";
+import { getCurrentUserData } from "../../services/userService";
 import { uploadFileToPath } from "../../services/mediaService";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { getStorage, ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
