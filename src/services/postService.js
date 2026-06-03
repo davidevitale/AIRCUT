@@ -20,6 +20,15 @@ const extractTagKeys = (tags = []) => (
     .filter(Boolean)
 );
 
+// Recommended feed tiers:
+// matched posts rank above generic posts, then matchCount decides the order.
+const FEED_PRIORITY = { MATCHED: 2, GENERIC: 1 };
+
+const getFeedPriority = (matchCount) => {
+  if (matchCount > 0) return FEED_PRIORITY.MATCHED;
+  return FEED_PRIORITY.GENERIC;
+};
+
 const rankPostsByUserTags = (posts = [], userSelectedTags = []) => {
   const userTagSet = new Set(extractTagKeys(userSelectedTags));
   if (userTagSet.size === 0) return posts;
@@ -36,12 +45,15 @@ const rankPostsByUserTags = (posts = [], userSelectedTags = []) => {
         post,
         index,
         matchCount,
-        priority: matchCount > 1 ? 3 : matchCount === 1 ? 2 : 1,
+        priority: getFeedPriority(matchCount),
       };
     })
     .sort((a, b) => {
+      // 1) First, posts with at least one matching tag.
       if (b.priority !== a.priority) return b.priority - a.priority;
+      // 2) Inside the matched tier, the most shared tags rank first.
       if (b.matchCount !== a.matchCount) return b.matchCount - a.matchCount;
+      // 3) Keep the original order for ties (already date desc).
       return a.index - b.index;
     })
     .map((entry) => entry.post);

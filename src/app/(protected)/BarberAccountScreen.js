@@ -14,6 +14,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
+import * as ImageManipulator from "expo-image-manipulator";
 import {
   logoutUser,
 } from "../../services/authService";
@@ -407,15 +408,28 @@ export default function BarberAccountScreen({
   const toggleMenu = () => setMenuOpen((prev) => !prev);
   const closeMenu = () => setMenuOpen(false);
 
-  const uploadProfileImageToStorage = async (uri, userId, contentType = "image/jpeg") => {
-    const response = await fetch(uri);
+  const createProfileImageThumbnail = async (uri) => {
+    const processed = await ImageManipulator.manipulateAsync(
+      uri,
+      [{ resize: { width: 400 } }],
+      {
+        compress: 0.75,
+        format: ImageManipulator.SaveFormat.WEBP,
+      },
+    );
+
+    return processed.uri;
+  };
+
+  const uploadProfileImageToStorage = async (uri, userId) => {
+    const thumbnailUri = await createProfileImageThumbnail(uri);
+    const response = await fetch(thumbnailUri);
     const blob = await response.blob();
     const storage = getStorage();
-    const extension = contentType.split("/")[1] || "jpg";
-    const storageRef = ref(storage, `profile/${userId}/profile_${Date.now()}.${extension}`);
+    const storageRef = ref(storage, `profile/${userId}/thumbnail.webp`);
     const uploadTask = uploadBytesResumable(storageRef, blob, {
       cacheControl: "public, max-age=31536000",
-      contentType,
+      contentType: "image/webp",
     });
 
     return await new Promise((resolve, reject) => {
@@ -448,18 +462,19 @@ export default function BarberAccountScreen({
         const imageUrl = await uploadProfileImageToStorage(
           picked.uri,
           currentUser.uid,
-          picked.mimeType || "image/jpeg",
         );
 
         if (imageUrl) {
 
           await updateBarberPortfolio(currentUser.uid, {
             profileImage: imageUrl,
+            profileImageThumbnail: imageUrl,
           });
 
           setUserData((prev) => ({
             ...prev,
             profileImage: imageUrl,
+            profileImageThumbnail: imageUrl,
           }));
           setLocalProfileUri(null);
 

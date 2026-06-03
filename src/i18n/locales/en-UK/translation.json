@@ -227,6 +227,7 @@
     "gender": "Gender",
     "male": "Male",
     "female": "Female",
+    "other": "Other",
     "yourPreferences": "Your preferences",
     "favoriteCuts": "Favorite haircut types",
     "logoutTitle": "Sign out",

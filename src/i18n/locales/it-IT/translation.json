@@ -247,6 +247,7 @@
     "gender": "Sesso",
     "male": "Maschio",
     "female": "Femmina",
+    "other": "Altro",
     "yourPreferences": "Le tue preferenze",
     "favoriteCuts": "Tipi di taglio preferiti",
     "logoutTitle": "Disconnessione",

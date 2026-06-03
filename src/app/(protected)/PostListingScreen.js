@@ -16,6 +16,16 @@ const PostListingScreen = () => {
   );
 
   const handleBack = () => {
+    // Pop the navigation stack so the previous screen (e.g. the barber
+    // profile) stays mounted and keeps its scroll position / state.
+    // Using router.replace here would tear down and re-create that screen,
+    // which is what caused the jump back to Home.
+    if (router.canGoBack?.()) {
+      router.back();
+      return;
+    }
+
+    // Fallback only when there is nothing to pop (e.g. deep-link entry).
     if (returnTo?.pathname) {
       router.replace({
         pathname: returnTo.pathname,

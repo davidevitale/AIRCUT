@@ -80,6 +80,11 @@ export default function BarberProfileScreen() {
   };
 
   const handleBack = () => {
+    if (router.canGoBack?.()) {
+      router.back();
+      return;
+    }
+
     const { returnTo } = getBarberProfileContext();
     if (returnTo?.pathname) {
       router.replace({
@@ -113,6 +118,7 @@ export default function BarberProfileScreen() {
   if (!barberData) return null;
 
   const profileInitial = barberData?.salonName?.charAt(0)?.toUpperCase() || "S";
+  const profileImageUrl = barberData?.profileImageThumbnail || barberData?.profileImage || null;
 
   return (
     <SafeAreaView style={styles.container}>
@@ -126,8 +132,8 @@ export default function BarberProfileScreen() {
         <View style={styles.profileSection}>
           <View style={styles.profileHeader}>
             <View style={styles.profileAvatar}>
-              {portfolioImages?.[0] ? (
-                <Image source={{ uri: portfolioImages[0] }} style={styles.profileImage} />
+              {profileImageUrl ? (
+                <Image source={{ uri: profileImageUrl }} style={styles.profileImage} />
               ) : (
                 <Text style={styles.profileInitial}>{profileInitial}</Text>
               )}

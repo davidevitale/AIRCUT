@@ -357,6 +357,11 @@ const SearchScreen = ({ onViewProfile }) => {
     const { posts: searchPosts = [], users = [] } = searchResults;
     const isHashtagSearch = searchText.startsWith('#');
     const hasResults = searchPosts.length > 0 || users.length > 0;
+    const getPreviewPostsForUser = (user) => (
+      searchPosts
+        .filter((post) => post?.barberId === user?.id)
+        .slice(0, 3)
+    );
 
     if (!hasResults) {
       return (
@@ -380,18 +385,32 @@ const SearchScreen = ({ onViewProfile }) => {
         {users.length > 0 && (
           <View style={[styles.section, { paddingHorizontal: width * 0.0465 }]}>
             <View style={styles.userListContent}>
-              {users.map((item) => (
-                <UserListItem
-                  key={item.id}
-                  user={item}
-                  onUserPress={() => openUserProfile(item)}
-                />
-              ))}
+              {users.map((item) => {
+                const previewPosts = getPreviewPostsForUser(item);
+
+                return (
+                  <View key={item.id} style={styles.userResultBlock}>
+                    <UserListItem
+                      user={item}
+                      onUserPress={() => openUserProfile(item)}
+                    />
+
+                    {previewPosts.length > 0 && (
+                      <View style={styles.userPreviewGrid}>
+                        <PostGrid
+                          posts={previewPosts}
+                          onPostPress={(post) => openPostListing(previewPosts, post)}
+                        />
+                      </View>
+                    )}
+                  </View>
+                );
+              })}
             </View>
           </View>
         )}
 
-        {searchPosts.length > 0 && (
+        {users.length === 0 && searchPosts.length > 0 && (
           <View style={[styles.section, { paddingHorizontal: width * 0.0465 }]}>
             <PostGrid
               posts={searchPosts.slice(0, 3)}
@@ -621,6 +640,12 @@ const styles = StyleSheet.create({
   },
   userListContent: {
     paddingBottom: 20,
+  },
+  userResultBlock: {
+    marginBottom: 18,
+  },
+  userPreviewGrid: {
+    marginTop: 4,
   },
   selectedFilterHeader: {
     flexDirection: 'row',

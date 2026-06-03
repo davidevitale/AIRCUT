@@ -126,7 +126,7 @@ const searchBarbersByName = async (searchText) => {
           emailContatto: data.emailContact || data.emailContatto,
           sitoWeb: data.website || data.sitoWeb,
           typesCut: data.typesCut || data.tipiTaglio || [],
-          profileImage: data.profileImage || null,
+          profileImage: data.profileImageThumbnail || data.profileImage || null,
           followerCount: Math.floor(Math.random() * 1000),
           isFollowing: false,
           type: 'barber'

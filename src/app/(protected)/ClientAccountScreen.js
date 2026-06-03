@@ -94,6 +94,24 @@ export default function ClientAccountScreen({ userData: propUserData, onLogout, 
     ? userData.preferenceCut.map(getLocalizedTagLabel).filter(Boolean)
     : [];
 
+  const getGenderLabel = (value) => {
+    const normalizedGender = String(value || '').trim().toLowerCase();
+
+    if (['m', 'male', 'maschio', 'man', 'uomo'].includes(normalizedGender)) {
+      return t('ClientAccountScreen.male');
+    }
+
+    if (['f', 'female', 'femmina', 'woman', 'donna'].includes(normalizedGender)) {
+      return t('ClientAccountScreen.female');
+    }
+
+    if (['altro', 'other', 'o', 'non-binary', 'nonbinary'].includes(normalizedGender)) {
+      return t('ClientAccountScreen.other');
+    }
+
+    return value || '-';
+  };
+
   const toggleMenu = () => setMenuOpen((prev) => !prev);
   const closeMenu = () => setMenuOpen(false);
 
@@ -137,7 +155,6 @@ export default function ClientAccountScreen({ userData: propUserData, onLogout, 
 
   const profileInitial = userData?.userName?.charAt(0)?.toUpperCase() || t('ClientAccountScreen.defaultInitial');
 
-  console.log(JSON.stringify(userData, null, 2))
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
@@ -199,7 +216,7 @@ export default function ClientAccountScreen({ userData: propUserData, onLogout, 
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>{t('ClientAccountScreen.gender')}</Text>
               <Text style={styles.infoValue}>
-                {userData?.sex === 'M' ? t('ClientAccountScreen.male') : t('ClientAccountScreen.female')}
+                {getGenderLabel(userData?.sex || userData?.gender)}
               </Text>
             </View>
           </View>

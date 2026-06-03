@@ -33,28 +33,30 @@ const ScreenShell = ({ children }) => (
 
 const SearchBar = ({
   placeholder,
-  onPress,
+  onSearchPress,
+  onFilterPress,
 }) => (
   <View style={styles.searchHeader}>
     <BlurView intensity={24} tint="light" style={styles.searchBlur}>
       <TouchableOpacity
         activeOpacity={0.8}
-        style={[styles.searchInputContainer, { flexDirection: 'row', justifyContent: 'space-between' }]}
-        onPress={onPress}
+        style={styles.searchInputContainer}
+        onPress={onSearchPress}
       >
         <Text style={styles.searchPlaceholder}>{placeholder}</Text>
-        <Pressable
-          onPress={onPress}
-          style={{ width: 20, height: 20 }}
-        >
-          <Image
-            source={require('../../../assets/filter.png')}
-            style={{ width: '100%', height: '100%' }}
-            tintColor='#8e8e8e'
-          />
-        </Pressable>
       </TouchableOpacity>
     </BlurView>
+    <Pressable
+      onPress={onFilterPress}
+      style={styles.filterButton}
+      hitSlop={8}
+    >
+      <Image
+        source={require('../../../assets/filter.png')}
+        style={styles.filterIcon}
+        tintColor='#8e8e8e'
+      />
+    </Pressable>
   </View>
 );
 
@@ -73,7 +75,7 @@ const HomeScreen = ({ onViewProfile, onHashtagPress }) => {
 
       const userData = await getCurrentUserData();
       const userId = userData?.user?.uid;
-      const userSelectedTags = userData?.userData?.typesCut || [];
+      const userSelectedTags = userData?.userData?.preferenceCut || userData?.userData?.typesCut || [];
       const postsWithLikeStatus = await getAllPostsWithLikeStatus(
         userId,
         userSelectedTags,
@@ -128,7 +130,10 @@ const HomeScreen = ({ onViewProfile, onHashtagPress }) => {
   const listHeader = (
     <SearchBar
       placeholder={t('HomeScreen.searchPlaceholder')}
-      onPress={() =>
+      onSearchPress={() =>
+        router.push('/(protected)/SearchScreen')
+      }
+      onFilterPress={() =>
         router.push({
           pathname: '/(protected)/SearchScreen',
           params: { openFilter: '1' },
@@ -255,12 +260,15 @@ const styles = StyleSheet.create({
     lineHeight: 24,
   },
   searchHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: 'transparent',
     paddingHorizontal: 16,
     paddingTop: 12,
     paddingBottom: 12,
   },
   searchBlur: {
+    flex: 1,
     borderRadius: 22,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.7)',
@@ -278,6 +286,21 @@ const styles = StyleSheet.create({
   searchPlaceholder: {
     fontSize: 16,
     color: '#8e8e8e',
+  },
+  filterButton: {
+    width: 44,
+    height: 44,
+    marginLeft: 10,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.5)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.7)',
+  },
+  filterIcon: {
+    width: 20,
+    height: 20,
   },
   glassCard: {
     marginHorizontal: 12,

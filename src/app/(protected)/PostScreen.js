@@ -14,7 +14,6 @@ import { useTranslation } from "react-i18next";
 import { collection, doc, getDocs, setDoc } from "firebase/firestore";
 import { auth, db } from "../../../config/firebase";
 import { getCurrentUserData } from "../../services/userService";
-import { uploadFileToPath } from "../../services/mediaService";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { getStorage, ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { serverTimestamp } from "firebase/firestore";
@@ -26,12 +25,6 @@ const IMAGE_VARIANTS = {
     size: 400,
     quality: 0.7,
     fileName: "thumbnail.webp",
-    mimeType: "image/webp",
-  },
-  standard: {
-    size: 1080,
-    quality: 0.8,
-    fileName: "standard.webp",
     mimeType: "image/webp",
   },
 };
@@ -184,12 +177,9 @@ export default function PostScreen() {
   };
 
   const createPostImageVariants = async (imageAsset) => {
-    const [thumbnail, standard] = await Promise.all([
-      createSquareImageVariant(imageAsset, IMAGE_VARIANTS.thumbnail),
-      createSquareImageVariant(imageAsset, IMAGE_VARIANTS.standard),
-    ]);
+    const thumbnail = await createSquareImageVariant(imageAsset, IMAGE_VARIANTS.thumbnail);
 
-    return { thumbnail, standard };
+    return { thumbnail };
   };
 
   const validateSelectedTags = () => {
@@ -304,18 +294,13 @@ export default function PostScreen() {
         selectedTags,
         visibleTags
       );
-      const { thumbnail, standard } = await createPostImageVariants(selectedImage);
+      const { thumbnail } = await createPostImageVariants(selectedImage);
 
-      const [thumbnailUrl, imageUrl, currentUser] = await Promise.all([
+      const [thumbnailUrl, currentUser] = await Promise.all([
         uploadToStorage(
           thumbnail.uri,
           `posts/${postId}/${IMAGE_VARIANTS.thumbnail.fileName}`,
           IMAGE_VARIANTS.thumbnail.mimeType
-        ),
-        uploadToStorage(
-          standard.uri,
-          `posts/${postId}/${IMAGE_VARIANTS.standard.fileName}`,
-          IMAGE_VARIANTS.standard.mimeType
         ),
         getCurrentUserData(),
       ]);
@@ -327,7 +312,7 @@ export default function PostScreen() {
         barberId: auth.currentUser.uid,
         photoGender: isUnisexUser ? workCategory : userData.workGender,
         selectedTags: localizedSelectedTags,
-        imageUrl,
+        imageUrl: thumbnailUrl,
         thumbnailUrl,
         likeCount: 0,
         likes: [],
@@ -335,7 +320,7 @@ export default function PostScreen() {
         barberName:
           barberProfile.salonName ||
           "",
-        barberProfileImage: barberProfile.profileImage || null,
+        barberProfileImage: barberProfile.profileImageThumbnail || barberProfile.profileImage || null,
       };
 
       // return console.log(JSON.stringify(postDoc, null, 2))

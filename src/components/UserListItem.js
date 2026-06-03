@@ -10,6 +10,10 @@ import { Image } from "expo-image";
 
 const UserListItem = ({ user, onUserPress }) => {
   const profileInitial = user?.salonName?.charAt(0)?.toUpperCase() || 'S';
+  const primaryName = user?.salonName || user?.barberName || user?.nickName || 'Salon';
+  const secondaryName = [user?.barberName, user?.nickName]
+    .filter((value) => value && value !== primaryName)
+    .join(' - ');
 
   const handleUserPress = () => {
     if (onUserPress) {
@@ -38,14 +42,14 @@ const UserListItem = ({ user, onUserPress }) => {
         {/* Informazioni Utente */}
         <View style={styles.userInfo}>
           <Text style={styles.salonName} numberOfLines={1}>
-            {user.barberName}
+            {primaryName}
           </Text>
 
-          {user.salonName && (
+          {secondaryName ? (
             <Text style={styles.employeeName} numberOfLines={1}>
-              {user.salonName}
+              {secondaryName}
             </Text>
-          )}
+          ) : null}
 
           {user.via && (
             <Text style={styles.location} numberOfLines={1}>
