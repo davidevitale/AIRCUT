@@ -322,10 +322,26 @@ const getAllPostsWithLikeStatus = async (currentUserId = null, userSelectedTags 
   }
 };
 
+// Ottieni i post di un barbiere filtrando per authorUid (= barberId) (M4 §6).
+// Stesso Document ID dei post del feed: riusa getAllPostsWithLikeStatus così
+// lo stato like e i campi normalizzati sono identici a quelli mostrati nel feed.
+const getBarberPostsByUid = async (barberUid, currentUserId = null) => {
+  if (!barberUid) return [];
+
+  try {
+    const allPosts = await getAllPostsWithLikeStatus(currentUserId);
+    return allPosts.filter((post) => post.barberId === barberUid);
+  } catch (error) {
+    console.error("getBarberPostsByUid: errore filtraggio post per uid:", error);
+    return [];
+  }
+};
+
 export {
   getAllBarberPosts,
   createOrUpdatePost,
   getPost,
   togglePostLike,
   getAllPostsWithLikeStatus,
+  getBarberPostsByUid,
 }

@@ -316,5 +316,34 @@
     "loadingProfile": "Caricamento profilo...",
     "categoryLabel": "Salone di bellezza / Hair Artist",
     "informationTitle": "Informazioni"
+  },
+  "post": {
+    "bookNow": "prenota"
+  },
+  "share": {
+    "message": "Guarda questo taglio su Aircut!",
+    "label": "Condividi"
+  },
+  "editProfile": {
+    "title": "Modifica profilo",
+    "nickname": "Nickname",
+    "salonName": "Nome salone",
+    "website": "Sito web",
+    "phone": "Telefono",
+    "privacyPolicy": "Informativa Privacy",
+    "terms": "Termini di Servizio",
+    "save": "Salva modifiche",
+    "changeAvatar": "Tocca per cambiare la foto profilo",
+    "required": "Obbligatorio",
+    "nicknameValidation": "Il nickname deve avere almeno 2 caratteri",
+    "salonNameValidation": "Il nome salone deve avere almeno 2 caratteri",
+    "websiteValidation": "Inserisci un URL valido (https://...)",
+    "nicknameTaken": "Questo nickname e gia in uso",
+    "successTitle": "Fatto",
+    "errorTitle": "Errore",
+    "saved": "Profilo aggiornato con successo",
+    "saveError": "Impossibile salvare il profilo",
+    "avatarUpdated": "Foto profilo aggiornata",
+    "avatarError": "Impossibile caricare la foto"
   }
 }

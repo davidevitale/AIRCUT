@@ -316,5 +316,34 @@
     "loadingProfile": "Loading profile...",
     "categoryLabel": "Beauty salon / Hair Artist",
     "informationTitle": "Information"
+  },
+  "post": {
+    "bookNow": "book now"
+  },
+  "share": {
+    "message": "Check out this haircut on Aircut!",
+    "label": "Share"
+  },
+  "editProfile": {
+    "title": "Edit profile",
+    "nickname": "Nickname",
+    "salonName": "Salon name",
+    "website": "Website",
+    "phone": "Phone",
+    "privacyPolicy": "Privacy Policy",
+    "terms": "Terms of Service",
+    "save": "Save changes",
+    "changeAvatar": "Tap to change profile photo",
+    "required": "Required",
+    "nicknameValidation": "Nickname must be at least 2 characters",
+    "salonNameValidation": "Salon name must be at least 2 characters",
+    "websiteValidation": "Enter a valid URL (https://...)",
+    "nicknameTaken": "This nickname is already taken",
+    "successTitle": "Success",
+    "errorTitle": "Error",
+    "saved": "Profile updated successfully",
+    "saveError": "Unable to save the profile",
+    "avatarUpdated": "Profile photo updated",
+    "avatarError": "Unable to upload the photo"
   }
 }

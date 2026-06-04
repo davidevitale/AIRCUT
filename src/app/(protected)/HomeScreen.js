@@ -105,11 +105,11 @@ const HomeScreen = ({ onViewProfile, onHashtagPress }) => {
   }, [loadData]);
 
   const handleViewProfile = useCallback(
-    (barberName) => {
-      if (!barberName) return;
+    (barberName, barberUid) => {
+      if (!barberName && !barberUid) return;
 
       if (onViewProfile) {
-        onViewProfile(barberName);
+        onViewProfile(barberName, barberUid);
         return;
       }
 
@@ -119,9 +119,10 @@ const HomeScreen = ({ onViewProfile, onHashtagPress }) => {
         },
       });
 
+      // Naviga per uid quando disponibile (identità canonica), altrimenti per nome.
       router.push({
         pathname: "/(protected)/BarberProfileScreen",
-        params: { barberName },
+        params: barberUid ? { uid: barberUid } : { barberName },
       });
     },
     [onViewProfile],

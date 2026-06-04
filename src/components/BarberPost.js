@@ -17,9 +17,10 @@ import Svg, {
   Stop,
 } from "react-native-svg";
 import { useTranslation } from "react-i18next";
-import { togglePostLike } from "../services/postService";
 import { getCurrentUserData } from "../services/userService";
 import { Image } from "expo-image";
+import useLikesStore, { resolvePostId } from "../services/likesStore";
+import { canBookNow, openBookNow } from "../services/bookingActions";
 
 // Componente Cuore SVG Instagram-style
 const HeartIcon = ({ size = 24, filled = false, color = "#262626" }) => (
@@ -68,10 +69,26 @@ const ClickableTags = ({ selectedTags, language, onHashtagPress }) => {
 const BarberPost = ({ barber, onViewProfile, onHashtagPress }) => {
   // console.log(JSON.stringify(barber, null, 2))
   const { t, i18n } = useTranslation();
-  const [isLiked, setIsLiked] = useState(barber.isLiked || false);
-  const [likesCount, setLikesCount] = useState(barber.likes || 0);
+
+  // Stato like da store condiviso (single source of truth feed ↔ profilo, M4 §4.2).
+  const postId = resolvePostId(barber);
+  const isLiked = useLikesStore((s) => !!s.liked[postId]);
+  const storeCount = useLikesStore((s) => s.counts[postId]);
+  const toggleLikeInStore = useLikesStore((s) => s.toggleLike);
+  const hydrateFromPosts = useLikesStore((s) => s.hydrateFromPosts);
+  const likesCount =
+    typeof storeCount === "number"
+      ? storeCount
+      : barber.likesCount || barber.likes || 0;
+
   const [currentUser, setCurrentUser] = useState(null);
   const [imageError, setImageError] = useState(false);
+
+  // Display name barbiere: "{nickName} - {salonName}" (M4 §2.1 / §4.4).
+  const displayName = [barber.nickName, barber.salonName]
+    .filter(Boolean)
+    .join(" - ") || barber.salonName || barber.barberName || "";
+  const bookingEnabled = canBookNow(barber);
 
   const fallbackColors = [
     "#A8D8EA",
@@ -107,11 +124,11 @@ const BarberPost = ({ barber, onViewProfile, onHashtagPress }) => {
     loadCurrentUser();
   }, []);
 
-  // Sincronizza lo stato locale con le props quando cambiano
+  // Idrata lo store condiviso con i dati iniziali del post (senza sovrascrivere
+  // uno stato già toggle-ato localmente per lo stesso postId).
   useEffect(() => {
-    setIsLiked(barber.isLiked || false);
-    setLikesCount(barber.likesCount || barber.likes || 0);
-  }, [barber.isLiked, barber.likesCount, barber.likes]);
+    hydrateFromPosts([barber]);
+  }, [barber, hydrateFromPosts]);
 
   const loadCurrentUser = async () => {
     try {
@@ -123,29 +140,12 @@ const BarberPost = ({ barber, onViewProfile, onHashtagPress }) => {
   };
 
   const handleProfilePress = () => {
-    console.log("BarberPost: handleProfilePress called");
-    console.log("BarberPost: barber object:", barber);
-    console.log("BarberPost: onViewProfile function:", typeof onViewProfile);
+    if (!onViewProfile) return;
 
-    if (onViewProfile) {
-      // Usa il nome del salone come identificatore unico
-      const barberName =
-        barber.salonName ||
-        barber.salonName ||
-        barber.name ||
-        barber.barberName;
-      console.log(
-        "BarberPost: calling onViewProfile with barberName:",
-        barberName,
-      );
-      if (barberName) {
-        onViewProfile(barberName);
-      } else {
-        console.log("BarberPost: No valid barber name found");
-      }
-    } else {
-      console.log("BarberPost: onViewProfile not available");
-    }
+    // Preferisci l'uid del barbiere (identità canonica M4 §2.2); fallback al nome.
+    const barberName =
+      barber.salonName || barber.name || barber.barberName;
+    onViewProfile(barberName, barber.barberId);
   };
 
   const handleImagePress = (event) => {
@@ -172,24 +172,14 @@ const BarberPost = ({ barber, onViewProfile, onHashtagPress }) => {
 
       // Solo aggiungi like se non è già piaciuto (doppio tap per aggiungere like)
       if (!isLiked) {
-        // Usa il postId del barber che viene passato dal parent
-        const postId =
-          barber.postId ||
-          `${barber.barberId}_img_${barber.id.split("_").pop()}`;
-
         console.log(
           "BarberPost: Doppio tap - aggiungendo like al post:",
           postId,
         );
 
-        // Usa la nuova funzione togglePostLike
-        const result = await togglePostLike(postId, currentUserData.user.uid);
-
-        if (result.isLiked) {
-          setIsLiked(true);
-          setLikesCount(result.likesCount);
-          console.log("BarberPost: Like aggiunto tramite doppio tap");
-        }
+        // Toggle tramite store condiviso (persiste con togglePostLike + sync feed/profilo)
+        await toggleLikeInStore(postId, currentUserData.user.uid);
+        console.log("BarberPost: Like aggiunto tramite doppio tap");
       }
     } catch (error) {
       console.error("Errore nel gestire il doppio tap like:", error);
@@ -289,39 +279,20 @@ const BarberPost = ({ barber, onViewProfile, onHashtagPress }) => {
         return;
       }
 
-      // Usa il postId del barber che viene passato dal parent
-      const postId =
-        barber.postId || `${barber.barberId}_img_${barber.id.split("_").pop()}`;
+      const willLike = !isLiked;
 
       console.log("BarberPost toggleLike:", {
         postId,
         currentIsLiked: isLiked,
         userId: currentUserData.user.uid,
-        barberData: {
-          id: barber.id,
-          barberId: barber.barberId,
-          postId: barber.postId,
-        },
       });
 
-      // Aggiorna immediatamente l'UI per feedback istantaneo
-      const newIsLiked = !isLiked;
-      const newLikesCount = newIsLiked
-        ? likesCount + 1
-        : Math.max(0, likesCount - 1);
-
-      setIsLiked(newIsLiked);
-      setLikesCount(newLikesCount);
-
       try {
-        // Chiama la nuova funzione togglePostLike
-        const result = await togglePostLike(postId, currentUserData.user.uid);
+        // Toggle tramite store condiviso: update ottimistico + persistenza
+        // (togglePostLike) + rollback automatico in caso di errore.
+        await toggleLikeInStore(postId, currentUserData.user.uid);
 
-        // Sincronizza con il risultato del server
-        setIsLiked(result.isLiked);
-        setLikesCount(result.likesCount);
-
-        if (result.isLiked) {
+        if (willLike) {
           // Animazione del cuore piccolo quando si mette like
           Animated.sequence([
             Animated.timing(heartScale, {
@@ -341,13 +312,10 @@ const BarberPost = ({ barber, onViewProfile, onHashtagPress }) => {
           console.log("BarberPost: Like rimosso dal post:", postId);
         }
       } catch (serverError) {
-        // Se il server fallisce, ripristina lo stato precedente
         console.error(
-          "BarberPost: Errore server, ripristinando stato precedente:",
+          "BarberPost: Errore server (rollback gestito dallo store):",
           serverError,
         );
-        setIsLiked(!newIsLiked);
-        setLikesCount(likesCount);
 
         // Gestisci diversi tipi di errore
         if (
@@ -379,15 +347,18 @@ const BarberPost = ({ barber, onViewProfile, onHashtagPress }) => {
 
   const handleShare = async () => {
     try {
+      // Deep link al profilo del barbiere autore (M4 §4.4 / D5).
       await Share.share({
-        message: t("BarberPost.shareMessage", {
-          name: barber.salonName || barber.salonName || barber.barberName,
-        }),
-        url: postImageUri,
+        message: t("share.message"),
+        url: `aircut://profile/${barber.barberId}`,
       });
     } catch (error) {
       console.log("Errore condivisione:", error.message);
     }
+  };
+
+  const handleBookNow = async () => {
+    await openBookNow(barber);
   };
 
   // Avatar helpers
@@ -429,15 +400,24 @@ const BarberPost = ({ barber, onViewProfile, onHashtagPress }) => {
             </View>
           )}
           <View style={styles.barberDetails}>
-            <Text style={styles.salonName}>
-              {barber.salonName || barber.salonName || barber.barberName}
+            <Text style={styles.salonName} numberOfLines={1}>
+              {displayName}
             </Text>
-            <Text style={styles.barberName}>{barber.barberName}</Text>
           </View>
         </TouchableOpacity>
-        {/* <TouchableOpacity>
-          <Text style={styles.moreDotsIcon}>⋯</Text>
-        </TouchableOpacity> */}
+
+        {/* BOOK NOW a destra del nome, su ogni post (M4 D3 / §4.4) */}
+        <TouchableOpacity
+          style={[styles.bookNowButton, !bookingEnabled && styles.bookNowButtonDisabled]}
+          onPress={handleBookNow}
+          disabled={!bookingEnabled}
+        >
+          <Text
+            style={[styles.bookNowText, !bookingEnabled && styles.bookNowTextDisabled]}
+          >
+            {t("post.bookNow")}
+          </Text>
+        </TouchableOpacity>
       </View>
 
       {/* Immagine del lavoro con doppio tap // Double tap work image */}
@@ -534,7 +514,11 @@ const BarberPost = ({ barber, onViewProfile, onHashtagPress }) => {
               />
             </Animated.View>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.actionBtn} onPress={handleShare}>
+          <TouchableOpacity
+            style={styles.actionBtn}
+            onPress={handleShare}
+            accessibilityLabel={t("share.label")}
+          >
             <Text style={styles.shareIcon}>↗</Text>
           </TouchableOpacity>
         </View>
@@ -548,7 +532,7 @@ const BarberPost = ({ barber, onViewProfile, onHashtagPress }) => {
         {Array.isArray(barber.selectedTags) && barber.selectedTags.length > 0 ? (
           <View style={styles.captionRow}>
             <Text style={styles.usernameInCaption}>
-              {barber.salonName || barber.salonName || barber.barberName}
+              {displayName}
             </Text>
             <ClickableTags
               selectedTags={barber.selectedTags}
@@ -578,6 +562,29 @@ const styles = StyleSheet.create({
   barberInfo: {
     flexDirection: "row",
     alignItems: "center",
+    flex: 1,
+    marginRight: 12,
+  },
+  bookNowButton: {
+    backgroundColor: "rgba(0, 188, 212, 0.35)",
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: "rgba(0, 188, 212, 0.7)",
+  },
+  bookNowButtonDisabled: {
+    backgroundColor: "rgba(200, 200, 200, 0.2)",
+    borderColor: "rgba(200, 200, 200, 0.4)",
+  },
+  bookNowText: {
+    color: "#00BCD4",
+    fontSize: 12,
+    fontWeight: "700",
+    textTransform: "uppercase",
+  },
+  bookNowTextDisabled: {
+    color: "#aaa",
   },
   barberAvatar: {
     width: 30,

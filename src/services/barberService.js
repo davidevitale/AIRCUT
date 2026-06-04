@@ -53,6 +53,23 @@ const getBarberProfileData = async (barberName) => {
   }
 };
 
+// Ottieni il documento barbiere per uid (= doc id). Identità canonica M4 §2.2.
+const getBarberProfileByUid = async (uid) => {
+  try {
+    if (!uid) return null;
+    const barberRef = doc(db, 'barbers', uid);
+    const snap = await getDoc(barberRef);
+    if (!snap.exists()) {
+      console.log('getBarberProfileByUid: barbiere non trovato per uid:', uid);
+      return null;
+    }
+    return { id: snap.id, ...snap.data() };
+  } catch (error) {
+    console.error('Errore recupero barbiere per uid:', error);
+    return null;
+  }
+};
+
 // =================== GESTIONE PREZZI PARRUCCHIERE ===================
 
 // Ottieni i prezzi di un parrucchiere
@@ -141,6 +158,6 @@ const getAllBarbersRawData = async () => {
     throw error;
   }
 };
-export { getBarberProfileData, getBarberPrices, updateBarberPrices, updateBarberPortfolio, getAllBarbersRawData, };
+export { getBarberProfileData, getBarberProfileByUid, getBarberPrices, updateBarberPrices, updateBarberPortfolio, getAllBarbersRawData, };
 
 

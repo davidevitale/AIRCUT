@@ -167,11 +167,13 @@ export const normalizeUploadedPost = (postId, postData, barberData = {}) => {
     isFollowing: false,
     selectedTags,
     photoGender: postData.photoGender || barberData.workGender || '',
-    location: barberData.via || '',
+    location: barberData.address || barberData.via || '',
     specialties: barberData.typesCut || barberData.tipiTaglio || [],
-    phone: barberData.telefono || '',
-    website: barberData.sitoWeb || '',
-    email: barberData.emailContatto || '',
+    // Campi reali sul documento barbiere: `telephone` / `website` (con alias legacy).
+    // Sorgente del bottone BOOK NOW (M4 §2.2 / D2).
+    phone: barberData.telephone || barberData.telefono || '',
+    website: barberData.website || barberData.sitoWeb || '',
+    email: barberData.emailContact || barberData.emailContatto || '',
     createdAt: postData.createdAt || null,
   };
 };
