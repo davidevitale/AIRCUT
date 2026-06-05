@@ -16,6 +16,7 @@ import BarberPost from '../../components/BarberPost';
 import { getAllPostsWithLikeStatus } from '../../services/postService';
 import { getCurrentUserData } from '../../services/userService';
 import { setBarberProfileContext } from '../../services/barberProfileStore';
+import { getActiveFilterCount, subscribeActiveFilters } from '../../services/filterStore';
 import { Image } from 'expo-image';
 
 const isFirebaseConnectionError = (error) => (
@@ -35,30 +36,44 @@ const SearchBar = ({
   placeholder,
   onSearchPress,
   onFilterPress,
-}) => (
-  <View style={styles.searchHeader}>
-    <BlurView intensity={24} tint="light" style={styles.searchBlur}>
-      <TouchableOpacity
-        activeOpacity={0.8}
-        style={styles.searchInputContainer}
-        onPress={onSearchPress}
+  activeFilterCount = 0,
+}) => {
+  const hasActiveFilters = activeFilterCount > 0;
+
+  return (
+    <View style={styles.searchHeader}>
+      <BlurView intensity={24} tint="light" style={styles.searchBlur}>
+        <TouchableOpacity
+          activeOpacity={0.8}
+          style={styles.searchInputContainer}
+          onPress={onSearchPress}
+        >
+          <Text style={styles.searchPlaceholder}>{placeholder}</Text>
+        </TouchableOpacity>
+      </BlurView>
+      <Pressable
+        onPress={onFilterPress}
+        style={[styles.filterButton, hasActiveFilters && styles.filterButtonActive]}
+        hitSlop={8}
+        accessibilityRole="button"
+        accessibilityState={{ selected: hasActiveFilters }}
       >
-        <Text style={styles.searchPlaceholder}>{placeholder}</Text>
-      </TouchableOpacity>
-    </BlurView>
-    <Pressable
-      onPress={onFilterPress}
-      style={styles.filterButton}
-      hitSlop={8}
-    >
-      <Image
-        source={require('../../../assets/filter.png')}
-        style={styles.filterIcon}
-        tintColor='#8e8e8e'
-      />
-    </Pressable>
-  </View>
-);
+        <Image
+          source={require('../../../assets/filter.png')}
+          style={styles.filterIcon}
+          tintColor={hasActiveFilters ? '#00BCD4' : '#8e8e8e'}
+        />
+        {hasActiveFilters ? (
+          <View style={styles.filterBadge}>
+            <Text style={styles.filterBadgeText}>
+              {activeFilterCount > 9 ? '9+' : activeFilterCount}
+            </Text>
+          </View>
+        ) : null}
+      </Pressable>
+    </View>
+  );
+};
 
 const HomeScreen = ({ onViewProfile, onHashtagPress }) => {
   const { t } = useTranslation();
@@ -66,6 +81,7 @@ const HomeScreen = ({ onViewProfile, onHashtagPress }) => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [hasConnectionError, setHasConnectionError] = useState(false);
+  const [activeFilterCount, setActiveFilterCount] = useState(getActiveFilterCount());
 
   // console.log(JSON.stringify(posts, null, 2))
   const loadData = useCallback(async () => {
@@ -97,6 +113,15 @@ const HomeScreen = ({ onViewProfile, onHashtagPress }) => {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  // Sincronizza il badge filtri con lo store condiviso (Task 4).
+  useEffect(() => {
+    setActiveFilterCount(getActiveFilterCount());
+    const unsubscribe = subscribeActiveFilters((tags) => {
+      setActiveFilterCount(Array.isArray(tags) ? tags.length : 0);
+    });
+    return unsubscribe;
+  }, []);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -131,6 +156,7 @@ const HomeScreen = ({ onViewProfile, onHashtagPress }) => {
   const listHeader = (
     <SearchBar
       placeholder={t('HomeScreen.searchPlaceholder')}
+      activeFilterCount={activeFilterCount}
       onSearchPress={() =>
         router.push('/(protected)/SearchScreen')
       }
@@ -299,9 +325,31 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.7)',
   },
+  filterButtonActive: {
+    borderColor: 'rgba(0, 188, 212, 0.7)',
+    backgroundColor: 'rgba(0, 188, 212, 0.12)',
+  },
   filterIcon: {
     width: 20,
     height: 20,
+  },
+  filterBadge: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    minWidth: 16,
+    height: 16,
+    paddingHorizontal: 3,
+    borderRadius: 8,
+    backgroundColor: '#00BCD4',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  filterBadgeText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: '700',
+    lineHeight: 12,
   },
   glassCard: {
     marginHorizontal: 12,

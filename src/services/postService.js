@@ -2,62 +2,12 @@ import { arrayRemove, arrayUnion, collection, doc, getDoc, getDocs, setDoc, upda
 import { db } from "../../config/firebase";
 import { handleFirebaseConnectionError, normalizeUploadedPost, toCreatedAtMillis, withRetry } from "./authService";
 import { updateUserXP } from "./xpService";
-
-const normalizeTagKey = (value) => (
-  String(value || "")
-    .toLowerCase()
-    .replace(/^#/, "")
-    .replace(/\s+/g, "")
-);
-
-const extractTagKeys = (tags = []) => (
-  (Array.isArray(tags) ? tags : [])
-    .flatMap((tag) => {
-      if (typeof tag === "string") return [tag];
-      return [tag?.id, tag?.en, tag?.it, tag?.label?.en, tag?.label?.it].filter(Boolean);
-    })
-    .map(normalizeTagKey)
-    .filter(Boolean)
-);
-
-// Recommended feed tiers:
-// matched posts rank above generic posts, then matchCount decides the order.
-const FEED_PRIORITY = { MATCHED: 2, GENERIC: 1 };
-
-const getFeedPriority = (matchCount) => {
-  if (matchCount > 0) return FEED_PRIORITY.MATCHED;
-  return FEED_PRIORITY.GENERIC;
-};
-
-const rankPostsByUserTags = (posts = [], userSelectedTags = []) => {
-  const userTagSet = new Set(extractTagKeys(userSelectedTags));
-  if (userTagSet.size === 0) return posts;
-
-  return [...posts]
-    .map((post, index) => {
-      const postTagSet = new Set(extractTagKeys(post?.selectedTags));
-      let matchCount = 0;
-      userTagSet.forEach((tag) => {
-        if (postTagSet.has(tag)) matchCount += 1;
-      });
-
-      return {
-        post,
-        index,
-        matchCount,
-        priority: getFeedPriority(matchCount),
-      };
-    })
-    .sort((a, b) => {
-      // 1) First, posts with at least one matching tag.
-      if (b.priority !== a.priority) return b.priority - a.priority;
-      // 2) Inside the matched tier, the most shared tags rank first.
-      if (b.matchCount !== a.matchCount) return b.matchCount - a.matchCount;
-      // 3) Keep the original order for ties (already date desc).
-      return a.index - b.index;
-    })
-    .map((entry) => entry.post);
-};
+// Logica di ranking del feed estratta in un modulo PURO e testabile (Task 1).
+import {
+  rankPostsByUserTags,
+  getFeedPriority,
+  extractTagKeys,
+} from "./feedRanking";
 
 // Ottieni tutti i post caricati dai parrucchieri per la home.
 const getAllBarberPosts = async () => {
@@ -344,4 +294,8 @@ export {
   togglePostLike,
   getAllPostsWithLikeStatus,
   getBarberPostsByUid,
+  // Esportati per i test unitari dell'algoritmo di feed (Task 1).
+  rankPostsByUserTags,
+  getFeedPriority,
+  extractTagKeys,
 }

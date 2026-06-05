@@ -20,15 +20,25 @@ import { serverTimestamp } from "firebase/firestore";
 import { useToast } from "@kritikhedau/react-native-toastify";
 import { Image } from "expo-image";
 
+// Sistema a 2 livelli (M1 §Task 7):
+//   L1 thumbnail.webp  400x400  q45  -> feed/griglia, caricamento immediato
+//   L2 zoom-ready.webp 1000x1000 q75 -> prefetch nel viewport, zoom fino a ~3x
 const IMAGE_VARIANTS = {
   thumbnail: {
     size: 400,
-    quality: 0.7,
+    quality: 0.45,
     fileName: "thumbnail.webp",
+    mimeType: "image/webp",
+  },
+  zoomReady: {
+    size: 1000,
+    quality: 0.75,
+    fileName: "zoom-ready.webp",
     mimeType: "image/webp",
   },
 };
 
+// Anteprima locale durante la composizione del post (non caricata).
 const PREVIEW_VARIANT = {
   size: 1080,
   quality: 0.8,
@@ -177,9 +187,13 @@ export default function PostScreen() {
   };
 
   const createPostImageVariants = async (imageAsset) => {
-    const thumbnail = await createSquareImageVariant(imageAsset, IMAGE_VARIANTS.thumbnail);
+    // Genera entrambi i livelli (L1 + L2). Nessun standard.webp.
+    const [thumbnail, zoomReady] = await Promise.all([
+      createSquareImageVariant(imageAsset, IMAGE_VARIANTS.thumbnail),
+      createSquareImageVariant(imageAsset, IMAGE_VARIANTS.zoomReady),
+    ]);
 
-    return { thumbnail };
+    return { thumbnail, zoomReady };
   };
 
   const validateSelectedTags = () => {
@@ -294,13 +308,18 @@ export default function PostScreen() {
         selectedTags,
         visibleTags
       );
-      const { thumbnail } = await createPostImageVariants(selectedImage);
+      const { thumbnail, zoomReady } = await createPostImageVariants(selectedImage);
 
-      const [thumbnailUrl, currentUser] = await Promise.all([
+      const [thumbnailUrl, zoomReadyUrl, currentUser] = await Promise.all([
         uploadToStorage(
           thumbnail.uri,
           `posts/${postId}/${IMAGE_VARIANTS.thumbnail.fileName}`,
           IMAGE_VARIANTS.thumbnail.mimeType
+        ),
+        uploadToStorage(
+          zoomReady.uri,
+          `posts/${postId}/${IMAGE_VARIANTS.zoomReady.fileName}`,
+          IMAGE_VARIANTS.zoomReady.mimeType
         ),
         getCurrentUserData(),
       ]);
@@ -314,6 +333,8 @@ export default function PostScreen() {
         selectedTags: localizedSelectedTags,
         imageUrl: thumbnailUrl,
         thumbnailUrl,
+        // L2 per pinch-to-zoom (prefetch lato client dopo 1.2s nel viewport).
+        zoomReadyUrl,
         likeCount: 0,
         likes: [],
         createdAt,

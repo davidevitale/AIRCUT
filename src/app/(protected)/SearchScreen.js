@@ -22,6 +22,8 @@ import { smartSearch } from '../../services/searchService';
 import { getCurrentUserData } from '../../services/userService';
 import { setPostListingContext } from '../../services/postListingStore';
 import { setBarberProfileContext } from '../../services/barberProfileStore';
+import { setActiveFilterTags, clearActiveFilterTags } from '../../services/filterStore';
+import { getTopPostsByLikes } from '../../services/photoPreview';
 import AntDesign from '@expo/vector-icons/AntDesign';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Entypo from '@expo/vector-icons/Entypo';
@@ -160,6 +162,7 @@ const SearchScreen = ({ onViewProfile }) => {
     setSelectedTags([]);
     setDraftSelectedTags([]);
     setFilteredPosts([]);
+    clearActiveFilterTags();
   }, []);
 
   const toggleTag = useCallback((tagId) => {
@@ -178,6 +181,7 @@ const SearchScreen = ({ onViewProfile }) => {
     if (draftSelectedTags.length === 0) {
       setSelectedTags([]);
       setFilteredPosts([]);
+      clearActiveFilterTags();
       return;
     }
 
@@ -200,6 +204,8 @@ const SearchScreen = ({ onViewProfile }) => {
 
       setSelectedTags(draftSelectedTags);
       setFilteredPosts(matchingPosts);
+      // Condividi i filtri attivi con la Home per il badge (Task 4).
+      setActiveFilterTags(draftSelectedTags);
     } catch (error) {
       console.error('SearchScreen: Error filtering posts by tags:', error);
       setFilteredPosts([]);
@@ -357,10 +363,12 @@ const SearchScreen = ({ onViewProfile }) => {
     const { posts: searchPosts = [], users = [] } = searchResults;
     const isHashtagSearch = searchText.startsWith('#');
     const hasResults = searchPosts.length > 0 || users.length > 0;
+    // Preview 3 foto (Task 2): le 3 con più like; fallback alle più recenti.
     const getPreviewPostsForUser = (user) => (
-      searchPosts
-        .filter((post) => post?.barberId === user?.id)
-        .slice(0, 3)
+      getTopPostsByLikes(
+        searchPosts.filter((post) => post?.barberId === user?.id),
+        3,
+      )
     );
 
     if (!hasResults) {
@@ -413,7 +421,7 @@ const SearchScreen = ({ onViewProfile }) => {
         {users.length === 0 && searchPosts.length > 0 && (
           <View style={[styles.section, { paddingHorizontal: width * 0.0465 }]}>
             <PostGrid
-              posts={searchPosts.slice(0, 3)}
+              posts={getTopPostsByLikes(searchPosts, 3)}
               onPostPress={(post) => openPostListing(searchPosts, post)}
             />
           </View>

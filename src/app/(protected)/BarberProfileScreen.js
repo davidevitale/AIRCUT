@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   StyleSheet,
   Text,
@@ -19,7 +19,11 @@ import {
 import { getBarberPostsByUid } from "../../services/postService";
 import { getCurrentUserData } from "../../services/userService";
 import { setPostListingContext } from "../../services/postListingStore";
-import { getBarberProfileContext } from "../../services/barberProfileStore";
+import {
+  getBarberProfileContext,
+  setBarberProfileScrollOffset,
+  getBarberProfileScrollOffset,
+} from "../../services/barberProfileStore";
 import useLikesStore from "../../services/likesStore";
 import { canBookNow, openBookNow } from "../../services/bookingActions";
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -37,6 +41,12 @@ export default function BarberProfileScreen() {
   const [portfolioPosts, setPortfolioPosts] = useState([]);
 
   const hydrateFromPosts = useLikesStore((s) => s.hydrateFromPosts);
+
+  // Ripristino scroll (Task 3): identità stabile del profilo + ref alla ScrollView.
+  const scrollViewRef = useRef(null);
+  const currentScrollYRef = useRef(0);
+  const hasRestoredScrollRef = useRef(false);
+  const scrollIdentity = { uid: resolvedUid, barberName: resolvedBarberName };
 
   useEffect(() => {
     const load = async () => {
@@ -74,8 +84,31 @@ export default function BarberProfileScreen() {
     load();
   }, [resolvedBarberName, resolvedUid, hydrateFromPosts]);
 
+  // Salva l'offset corrente prima di aprire la foto, così al ritorno
+  // (router.back, schermata ancora montata) la posizione è già corretta;
+  // in caso di rimontaggio viene comunque ripristinata da restoreScroll().
+  const handleScroll = (event) => {
+    const offsetY = event?.nativeEvent?.contentOffset?.y ?? 0;
+    currentScrollYRef.current = offsetY;
+    setBarberProfileScrollOffset(scrollIdentity, offsetY);
+  };
+
+  // Ripristina lo scroll salvato una sola volta, dopo che il contenuto
+  // (incluso il portfolio) ha un'altezza stabile.
+  const restoreScroll = () => {
+    if (hasRestoredScrollRef.current) return;
+    const savedOffset = getBarberProfileScrollOffset(scrollIdentity);
+    if (savedOffset > 0 && scrollViewRef.current) {
+      hasRestoredScrollRef.current = true;
+      // Senza animazione per un ripristino preciso (±10px, M1 Task 3).
+      scrollViewRef.current.scrollTo({ y: savedOffset, animated: false });
+    }
+  };
+
   const openPostListing = (selectedPost) => {
     if (!portfolioPosts.length) return;
+    // Persisti l'ultimo offset noto prima di navigare alla foto.
+    setBarberProfileScrollOffset(scrollIdentity, currentScrollYRef.current);
     setPostListingContext({
       posts: portfolioPosts,
       selectedPostId: selectedPost?.id || null,
@@ -140,7 +173,13 @@ export default function BarberProfileScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView style={styles.scrollView}>
+      <ScrollView
+        ref={scrollViewRef}
+        style={styles.scrollView}
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
+        onContentSizeChange={restoreScroll}
+      >
         <View style={styles.header}>
           <TouchableOpacity onPress={handleBack} style={styles.backButton}>
             <Ionicons name="arrow-back" size={24} color="black" />

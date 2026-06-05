@@ -12,6 +12,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import { logoutUser } from '../../services/authService';
 import { getCurrentUserData } from '../../services/userService';
+import { resolveGenderKey, extractRawGender } from '../../services/genderMapping';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '../../../config/firebase';
 import LanguageToggle from '../../components/LanguageToggle';
@@ -94,21 +95,13 @@ export default function ClientAccountScreen({ userData: propUserData, onLogout, 
     ? userData.preferenceCut.map(getLocalizedTagLabel).filter(Boolean)
     : [];
 
+  // Mapping genere centralizzato e testabile (Task 6): la chiave canonica
+  // arriva da resolveGenderKey, qui la si converte nella stringa localizzata.
   const getGenderLabel = (value) => {
-    const normalizedGender = String(value || '').trim().toLowerCase();
-
-    if (['m', 'male', 'maschio', 'man', 'uomo'].includes(normalizedGender)) {
-      return t('ClientAccountScreen.male');
-    }
-
-    if (['f', 'female', 'femmina', 'woman', 'donna'].includes(normalizedGender)) {
-      return t('ClientAccountScreen.female');
-    }
-
-    if (['altro', 'other', 'o', 'non-binary', 'nonbinary'].includes(normalizedGender)) {
-      return t('ClientAccountScreen.other');
-    }
-
+    const key = resolveGenderKey(value);
+    if (key === 'male') return t('ClientAccountScreen.male');
+    if (key === 'female') return t('ClientAccountScreen.female');
+    if (key === 'other') return t('ClientAccountScreen.other');
     return value || '-';
   };
 
@@ -216,7 +209,7 @@ export default function ClientAccountScreen({ userData: propUserData, onLogout, 
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>{t('ClientAccountScreen.gender')}</Text>
               <Text style={styles.infoValue}>
-                {getGenderLabel(userData?.sex || userData?.gender)}
+                {getGenderLabel(extractRawGender(userData))}
               </Text>
             </View>
           </View>

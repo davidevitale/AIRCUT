@@ -158,6 +158,8 @@ export const normalizeUploadedPost = (postId, postData, barberData = {}) => {
     image: postData.thumbnailUrl || imageUrl,
     mainImage: imageUrl,
     thumbnailUrl: postData.thumbnailUrl || imageUrl,
+    // L2 per pinch-to-zoom (Task 7). Null se il post è legacy (solo thumbnail).
+    zoomReadyUrl: postData.zoomReadyUrl || null,
     imageUrl,
     name: salonName,
     likes: likesCount,
