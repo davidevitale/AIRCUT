@@ -129,8 +129,11 @@ const FilterModal = ({ visible, initialSelected = [], onApply, onClose }) => {
     onClose?.();
   };
 
+  // "Pulisci" azzera E applica immediatamente i filtri, senza bisogno di "Applica".
   const handleClear = () => {
     setDraftSelected([]);
+    onApply?.([]);
+    onClose?.();
   };
 
   const colorOptions = getColorTagOptions();
