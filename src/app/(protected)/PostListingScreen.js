@@ -8,12 +8,29 @@ import BarberPost from "../../components/BarberPost";
 import { getPostListingContext } from "../../services/postListingStore";
 import { getAllPostsWithLikeStatus } from "../../services/postService";
 import { getCurrentUserData } from "../../services/userService";
+import { setBarberProfileContext } from "../../services/barberProfileStore";
 
 const PostListingScreen = () => {
   const { posts, selectedPostId, returnTo } = getPostListingContext();
   const [postsWithLikeStatus, setPostsWithLikeStatus] = useState(
     Array.isArray(posts) ? posts : [],
   );
+
+  // Navigazione al profilo barbiere dal nickname del post (anche da "Mi piace").
+  const handleViewProfile = (barberName, barberUid) => {
+    if (!barberName && !barberUid) return;
+
+    setBarberProfileContext({
+      returnTo: {
+        pathname: "/(protected)/PostListingScreen",
+      },
+    });
+
+    router.push({
+      pathname: "/(protected)/BarberProfileScreen",
+      params: barberUid ? { uid: barberUid } : { barberName },
+    });
+  };
 
   const handleBack = () => {
     // Pop the navigation stack so the previous screen (e.g. the barber
@@ -119,7 +136,7 @@ const PostListingScreen = () => {
         keyExtractor={(item, index) => item?.id || String(index)}
         renderItem={({ item }) => (
           <BlurView intensity={26} tint="light" style={styles.glassCard}>
-            <BarberPost barber={item} zoomable />
+            <BarberPost barber={item} zoomable onViewProfile={handleViewProfile} />
           </BlurView>
         )}
         contentContainerStyle={styles.listContent}

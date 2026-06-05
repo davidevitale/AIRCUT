@@ -84,28 +84,26 @@ const LikeScreen = () => {
             thumbnailUrl: postData.thumbnailUrl,
             zoomReadyUrl: postData.zoomReadyUrl || null,
             postImage: postData.imageUrl,
-            barberName: postData.barberName || barberProfile.salonName || t('LikeScreen.defaultBarberName'),
-            salonName: postData.barberName || barberProfile.salonName || t('LikeScreen.defaultBarberName'),
-            nickName: barberProfile.nickName || postData.nickName || '',
-            barberId: postData.barberId,
-            // Campi letti da BarberPost per l'avatar (allineati al feed).
-            avatar: avatarUrl,
-            barberProfileImage: avatarUrl,
             likesCount: Array.isArray(postData.likes) ? postData.likes.length : 0,
             likes: Array.isArray(postData.likes) ? postData.likes.length : 0,
             likedAt: new Date().toISOString(),
             ...postData,
-            // Riapplica i campi derivati DOPO lo spread, così non vengono sovrascritti
-            // da eventuali valori grezzi/nulli presenti in postData.
-            avatarResolved: avatarUrl,
+            // --- Campi derivati DOPO lo spread, così non vengono sovrascritti da
+            //     valori grezzi/nulli presenti in postData. ---
+            barberId: postData.barberId,
+            // Nome/nick dal documento barbiere (più affidabile del barberName sul post).
+            salonName: barberProfile.salonName || postData.barberName || t('LikeScreen.defaultBarberName'),
+            barberName: barberProfile.salonName || postData.barberName || t('LikeScreen.defaultBarberName'),
+            nickName: barberProfile.nickName || postData.nickName || '',
+            // Avatar (Task 1): allineato al feed.
+            avatar: avatarUrl,
+            barberProfileImage: avatarUrl,
+            // Campi necessari per abilitare il bottone "Prenota" (canBookNow):
+            // stanno sul documento barbiere, non sul post.
+            website: barberProfile.website || barberProfile.sitoWeb || postData.website || '',
+            telephone: barberProfile.telephone || barberProfile.telefono || postData.telephone || '',
+            phone: barberProfile.telephone || barberProfile.phone || '',
           });
-        });
-
-        // Garantisce che avatar/barberProfileImage non siano sovrascritti dallo spread.
-        likedPostsData.forEach((p) => {
-          p.avatar = p.avatarResolved;
-          p.barberProfileImage = p.avatarResolved;
-          delete p.avatarResolved;
         });
 
         setLikedPosts(likedPostsData);
