@@ -324,6 +324,41 @@
     "message": "Guarda questo taglio su Aircut!",
     "label": "Condividi"
   },
+  "PostActionsMenu": {
+    "openMenu": "Apri menu azioni",
+    "report": "Segnala",
+    "block": "Blocca utente",
+    "cancel": "Annulla",
+    "blockConfirmTitle": "Bloccare questo utente?",
+    "blockConfirmMessage": "Non vedrai piu i suoi contenuti nel feed e nella ricerca.",
+    "blockAction": "Blocca",
+    "blockedTitle": "Utente bloccato",
+    "blockedMessage": "I suoi contenuti non saranno piu visibili.",
+    "errorTitle": "Errore",
+    "blockError": "Impossibile bloccare l'utente. Riprova.",
+    "reasonTitle": "Perche segnali questo contenuto?",
+    "reason_spam": "Spam",
+    "reason_inappropriate": "Contenuto inappropriato o sessuale",
+    "reason_harassment": "Molestie o discorso d'odio",
+    "reason_other": "Altro",
+    "reportedTitle": "Segnalazione inviata",
+    "reportedMessage": "Esamineremo questo contenuto entro 24 ore.",
+    "reportError": "Impossibile inviare la segnalazione. Riprova."
+  },
+  "DeleteAccount": {
+    "button": "Elimina account",
+    "confirmTitle": "Eliminare l'account?",
+    "confirmMessage": "Questa azione e irreversibile. Verranno eliminati profilo, post e dati. Continuare?",
+    "confirmAction": "Elimina",
+    "errorMessage": "Impossibile eliminare l'account. Riprova.",
+    "reauthTitle": "Riautenticazione richiesta",
+    "reauthMessage": "Per motivi di sicurezza, accedi di nuovo e riprova a eliminare l'account.",
+    "reauthOk": "OK"
+  },
+  "Eula": {
+    "intro": "Pubblicando contenuti accetti la nostra policy di tolleranza zero verso contenuti offensivi o abusivi e comportamenti molesti.",
+    "linkText": "Leggi l'EULA"
+  },
   "editProfile": {
     "title": "Modifica profilo",
     "nickname": "Nickname",

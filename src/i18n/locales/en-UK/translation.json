@@ -324,6 +324,41 @@
     "message": "Check out this haircut on Aircut!",
     "label": "Share"
   },
+  "PostActionsMenu": {
+    "openMenu": "Open actions menu",
+    "report": "Report",
+    "block": "Block user",
+    "cancel": "Cancel",
+    "blockConfirmTitle": "Block this user?",
+    "blockConfirmMessage": "You will no longer see their content in the feed or search.",
+    "blockAction": "Block",
+    "blockedTitle": "User blocked",
+    "blockedMessage": "Their content is no longer visible.",
+    "errorTitle": "Error",
+    "blockError": "Unable to block user. Please try again.",
+    "reasonTitle": "Why are you reporting this content?",
+    "reason_spam": "Spam",
+    "reason_inappropriate": "Inappropriate or sexual content",
+    "reason_harassment": "Harassment or hate speech",
+    "reason_other": "Other",
+    "reportedTitle": "Report submitted",
+    "reportedMessage": "We will review this content within 24 hours.",
+    "reportError": "Unable to submit the report. Please try again."
+  },
+  "DeleteAccount": {
+    "button": "Delete account",
+    "confirmTitle": "Delete account?",
+    "confirmMessage": "This action is irreversible. Your profile, posts and data will be deleted. Continue?",
+    "confirmAction": "Delete",
+    "errorMessage": "Unable to delete the account. Please try again.",
+    "reauthTitle": "Re-authentication required",
+    "reauthMessage": "For security reasons, please log in again and retry deleting the account.",
+    "reauthOk": "OK"
+  },
+  "Eula": {
+    "intro": "By posting content, you agree to our zero-tolerance policy against offensive or abusive content and harassing behaviour.",
+    "linkText": "Read the EULA"
+  },
   "editProfile": {
     "title": "Edit profile",
     "nickname": "Nickname",

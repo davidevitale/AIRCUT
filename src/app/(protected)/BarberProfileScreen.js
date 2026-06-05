@@ -28,6 +28,7 @@ import useLikesStore from "../../services/likesStore";
 import { canBookNow, openBookNow } from "../../services/bookingActions";
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Image } from "expo-image";
+import PostActionsMenu from "../../components/PostActionsMenu";
 
 export default function BarberProfileScreen() {
   const { t } = useTranslation();
@@ -184,6 +185,18 @@ export default function BarberProfileScreen() {
           <TouchableOpacity onPress={handleBack} style={styles.backButton}>
             <Ionicons name="arrow-back" size={24} color="black" />
           </TouchableOpacity>
+
+          {/* M5 §5.1.a — Menu tre puntini su profilo. Self-hide su proprio profilo. */}
+          <PostActionsMenu
+            targetType="profile"
+            targetId={barberData?.id}
+            targetOwnerUid={barberData?.id}
+            onBlocked={() => {
+              // Dopo il blocco torna indietro: i contenuti del profilo bloccato
+              // non devono restare visibili nello stack.
+              if (router.canGoBack?.()) router.back();
+            }}
+          />
         </View>
 
         <View style={styles.profileSection}>

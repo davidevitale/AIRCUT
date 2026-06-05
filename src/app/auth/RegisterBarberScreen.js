@@ -18,6 +18,11 @@ import { collection, getDocs } from "firebase/firestore";
 import { db } from "../../../config/firebase";
 import { useAuth } from "../../context/AuthContext";
 import { useToast } from "@kritikhedau/react-native-toastify";
+import * as WebBrowser from "expo-web-browser";
+
+// M5 §5.1.d — URL della pagina EULA / Policy contenuti abusivi.
+// TODO(M5): sostituire con l'URL definitivo prima della submission App Store.
+const EULA_URL = "https://aircut.app/eula";
 
 export default function RegisterBarberScreen({ onGoToLogin }) {
   const { t, i18n } = useTranslation();
@@ -570,6 +575,20 @@ export default function RegisterBarberScreen({ onGoToLogin }) {
                     {t("BarberRegistrationScreen.termsAndConditions")}
                   </Text>
                 </View>
+
+                {/* M5 §5.1.d — Link EULA / Policy contenuti abusivi (Apple Guideline 1.2). */}
+                <View style={styles.eulaContainer}>
+                  <Text style={styles.eulaText}>
+                    {t("Eula.intro")}{" "}
+                    <Text
+                      style={styles.eulaLink}
+                      onPress={() => WebBrowser.openBrowserAsync(EULA_URL)}
+                    >
+                      {t("Eula.linkText")}
+                    </Text>
+                  </Text>
+                </View>
+
                 <Text style={{ color: "red", fontSize: 12, display: touched.termsService && errors.termsService ? "flex" : "none" }}>
                   {touched.termsService && typeof errors.termsService === "string" ? errors.termsService : " "}
                 </Text>
@@ -807,5 +826,20 @@ const styles = StyleSheet.create({
     color: "#00BCD4",
     fontWeight: "bold",
     marginLeft: 5,
+  },
+  eulaContainer: {
+    paddingHorizontal: 12,
+    paddingTop: 4,
+    paddingBottom: 8,
+  },
+  eulaText: {
+    fontSize: 12,
+    color: "#64748b",
+    lineHeight: 16,
+  },
+  eulaLink: {
+    color: "#00BCD4",
+    fontWeight: "600",
+    textDecorationLine: "underline",
   },
 });

@@ -3,6 +3,8 @@ import { View, ActivityIndicator } from "react-native";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../../context/AuthContext";
 import { Image } from "expo-image";
+import { TabBarScrollProvider } from "../../context/TabBarScrollContext";
+import FloatingTabBar from "../../components/FloatingTabBar";
 
 const logoHome = require("../../../assets/icons8-casa-256.png");
 const logoLike = require("../../../assets/icons8-cuore-48.png");
@@ -10,16 +12,21 @@ const logoShop = require("../../../assets/icons8-borsa-della-spesa-96.png");
 const logoAccount = require("../../../assets/icons8-user-96.png");
 const logoAdd = require("../../../assets/icons8-add-96.png");
 
+/**
+ * TabIcon — riempe il contenitore (width/height 100%) così la FloatingTabBar
+ * può rimpicciolire l'icona variando le dimensioni del wrapper su UI thread.
+ * Manteniamo `tintColor` (cyan attivo / grigio inattivo) come da stile precedente.
+ */
 function TabIcon({ source, color }) {
   return (
     <Image
       source={source}
       style={{
-        width: 25,
-        height: 25,
-        resizeMode: "contain",
+        width: "100%",
+        height: "100%",
         tintColor: color,
       }}
+      contentFit="contain"
     />
   );
 }
@@ -42,98 +49,116 @@ export default function ProtectedLayout() {
   }
 
   return (
-    <Tabs
-      initialRouteName="HomeScreen"
-      screenOptions={{ headerShown: false }}
-    >
-      <Tabs.Screen
-        name="index"
-        options={{
-          href: null,
-          title: t("Navigation.home"),
+    // TabBarScrollProvider espone una SharedValue `scrollY` letta dalla
+    // FloatingTabBar per il comportamento shrink-on-scroll. Le singole
+    // schermate aggiornano scrollY via useAnimatedScrollHandler.
+    <TabBarScrollProvider>
+      {/* M5 Extra B (precedente): swipe back lato root stack.
+          Custom tabBar: glass + shrink + bounce; le rotte e i tabBarIcon
+          esistenti restano invariati. tabBarStyle: display:'none' disattiva
+          il tabBar default così la nostra floating bar non duplica. */}
+      {/* IMPORTANTE: NON impostare tabBarStyle:{display:'none'} qui:
+          quel valore verrebbe ereditato come default dalla NOSTRA
+          FloatingTabBar (che lo legge per nascondersi su route specifiche
+          come SearchScreen) e farebbe sparire la barra ovunque.
+          Il tabBar default di react-navigation è già sostituito dal nostro
+          `tabBar` prop: il default NON viene renderizzato comunque. */}
+      <Tabs
+        initialRouteName="HomeScreen"
+        tabBar={(props) => <FloatingTabBar {...props} />}
+        screenOptions={{
+          headerShown: false,
         }}
-      />
-      <Tabs.Screen
-        name="ClientAccountScreen"
-        options={{
-          href: null,
-          title: t("Navigation.account"),
-        }}
-      />
-      <Tabs.Screen
-        name="BarberAccountScreen"
-        options={{
-          href: null,
-          title: t("Navigation.account"),
-        }}
-      />
-      <Tabs.Screen
-        name="HomeScreen"
-        options={{
-          title: t("Navigation.home"),
-          tabBarIcon: ({ color }) => <TabIcon source={logoHome} color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="SearchScreen"
-        options={{
-          href: null,
-          tabBarStyle: { display: "none" },
-        }}
-      />
-      <Tabs.Screen
-        name="LikeScreen"
-        options={{
-          title: t("Navigation.likes"),
-          tabBarIcon: ({ color }) => <TabIcon source={logoLike} color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="PostScreen"
-        options={{
-          title: t("Navigation.add"),
-          tabBarIcon: ({ color }) => <TabIcon source={logoAdd} color={color} />,
-          href: isClient ? null : "/(protected)/PostScreen",
-        }}
-      />
-      <Tabs.Screen
-        name="ShopScreen"
-        options={{
-          title: t("Navigation.shop"),
-          tabBarIcon: ({ color }) => <TabIcon source={logoShop} color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="account/index"
-        options={{
-          title: t("Navigation.account"),
-          tabBarIcon: ({ color }) => <TabIcon source={logoAccount} color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="EditClientProfileScreen"
-        options={{
-          href: null,
-        }}
-      />
-      <Tabs.Screen
-        name="EditBarberProfileScreen"
-        options={{
-          href: null,
-        }}
-      />
-      <Tabs.Screen
-        name="BarberProfileScreen"
-        options={{
-          href: null,
-        }}
-      />
-      <Tabs.Screen
-        name="PostListingScreen"
-        options={{
-          href: null,
-        }}
-      />
-    </Tabs>
+      >
+        <Tabs.Screen
+          name="index"
+          options={{
+            href: null,
+            title: t("Navigation.home"),
+          }}
+        />
+        <Tabs.Screen
+          name="ClientAccountScreen"
+          options={{
+            href: null,
+            title: t("Navigation.account"),
+          }}
+        />
+        <Tabs.Screen
+          name="BarberAccountScreen"
+          options={{
+            href: null,
+            title: t("Navigation.account"),
+          }}
+        />
+        <Tabs.Screen
+          name="HomeScreen"
+          options={{
+            title: t("Navigation.home"),
+            tabBarIcon: ({ color }) => <TabIcon source={logoHome} color={color} />,
+          }}
+        />
+        <Tabs.Screen
+          name="SearchScreen"
+          options={{
+            href: null,
+            tabBarStyle: { display: "none" },
+          }}
+        />
+        <Tabs.Screen
+          name="LikeScreen"
+          options={{
+            title: t("Navigation.likes"),
+            tabBarIcon: ({ color }) => <TabIcon source={logoLike} color={color} />,
+          }}
+        />
+        <Tabs.Screen
+          name="PostScreen"
+          options={{
+            title: t("Navigation.add"),
+            tabBarIcon: ({ color }) => <TabIcon source={logoAdd} color={color} />,
+            href: isClient ? null : "/(protected)/PostScreen",
+          }}
+        />
+        <Tabs.Screen
+          name="ShopScreen"
+          options={{
+            title: t("Navigation.shop"),
+            tabBarIcon: ({ color }) => <TabIcon source={logoShop} color={color} />,
+          }}
+        />
+        <Tabs.Screen
+          name="account/index"
+          options={{
+            title: t("Navigation.account"),
+            tabBarIcon: ({ color }) => <TabIcon source={logoAccount} color={color} />,
+          }}
+        />
+        <Tabs.Screen
+          name="EditClientProfileScreen"
+          options={{
+            href: null,
+          }}
+        />
+        <Tabs.Screen
+          name="EditBarberProfileScreen"
+          options={{
+            href: null,
+          }}
+        />
+        <Tabs.Screen
+          name="BarberProfileScreen"
+          options={{
+            href: null,
+          }}
+        />
+        <Tabs.Screen
+          name="PostListingScreen"
+          options={{
+            href: null,
+          }}
+        />
+      </Tabs>
+    </TabBarScrollProvider>
   );
 }

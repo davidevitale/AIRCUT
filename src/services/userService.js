@@ -1,6 +1,8 @@
-import { collection, doc, getDoc, getDocs, query, updateDoc, where } from "firebase/firestore";
+import { collection, deleteDoc, doc, getDoc, getDocs, query, updateDoc, where } from "firebase/firestore";
 import { auth, db } from "../../config/firebase";
-import { EmailAuthProvider, reauthenticateWithCredential, sendPasswordResetEmail, updateEmail, updatePassword } from "firebase/auth";
+import { deleteUser, EmailAuthProvider, reauthenticateWithCredential, sendPasswordResetEmail, updateEmail, updatePassword } from "firebase/auth";
+import { deleteObject, getStorage, listAll, ref } from "firebase/storage";
+import { withRetry } from "./authService";
 
 // Recupera dati utente corrente
 const getCurrentUserData = async () => {
@@ -247,11 +249,127 @@ const sendPasswordResetEmailToUser = async (email) => {
     throw error;
   }
 };
+// Best-effort recursive delete of a Storage folder. Failures are swallowed
+// (logged) so account deletion proceeds even if some objects are missing —
+// M5 §5.2.a allows client-side cleanup for the current low-volume scope.
+const deleteStorageFolder = async (folderPath) => {
+  try {
+    const storage = getStorage();
+    const folderRef = ref(storage, folderPath);
+    const listResult = await listAll(folderRef);
+
+    const removals = listResult.items.map((itemRef) =>
+      deleteObject(itemRef).catch((err) => {
+        console.warn(`deleteStorageFolder: failed to delete ${itemRef.fullPath}:`, err?.message || err);
+      })
+    );
+    await Promise.all(removals);
+
+    // Ricorsione sulle sottocartelle (es. posts/{postId} contiene più file).
+    const subRemovals = listResult.prefixes.map((prefixRef) =>
+      deleteStorageFolder(prefixRef.fullPath)
+    );
+    await Promise.all(subRemovals);
+  } catch (error) {
+    console.warn(`deleteStorageFolder: could not enumerate ${folderPath}:`, error?.message || error);
+  }
+};
+
+// Best-effort recursive delete of a Firestore subcollection (es. `blocked`).
+const deleteSubcollection = async (parentPath, subName) => {
+  try {
+    const snap = await getDocs(collection(db, `${parentPath}/${subName}`));
+    const removals = snap.docs.map((d) =>
+      deleteDoc(d.ref).catch((err) => {
+        console.warn(`deleteSubcollection: failed to delete ${d.ref.path}:`, err?.message || err);
+      })
+    );
+    await Promise.all(removals);
+  } catch (error) {
+    console.warn(`deleteSubcollection: could not enumerate ${parentPath}/${subName}:`, error?.message || error);
+  }
+};
+
+// Cancellazione account end-to-end (M5 §5.2.a, requisito Apple 5.1.1(v)).
+// Ordine: Storage media → post del barbiere → subcollezioni utente → doc utente
+// → utente Firebase Auth. Throwa 'requires-recent-login' se serve riautenticarsi.
+const deleteAccount = async () => {
+  const user = auth.currentUser;
+  if (!user) {
+    throw new Error('Utente non autenticato');
+  }
+
+  const uid = user.uid;
+  const clientRef = doc(db, 'clients', uid);
+  const barberRef = doc(db, 'barbers', uid);
+  const clientSnap = await getDoc(clientRef);
+  const barberSnap = await getDoc(barberRef);
+  const isBarber = barberSnap.exists();
+  const isClient = clientSnap.exists();
+
+  console.log('deleteAccount: starting cleanup for', { uid, isBarber, isClient });
+
+  // 1) Media: avatar profilo + (se barbiere) post in Storage.
+  await deleteStorageFolder(`profile/${uid}`);
+  await deleteStorageFolder(`portfolio/images/${uid}`);
+  await deleteStorageFolder(`portfolio/videos/${uid}`);
+
+  // 2) Post del barbiere (collection top-level `posts` con campo barberId).
+  if (isBarber) {
+    try {
+      const postsSnap = await getDocs(
+        query(collection(db, 'posts'), where('barberId', '==', uid))
+      );
+      for (const postDoc of postsSnap.docs) {
+        // Storage media del post.
+        await deleteStorageFolder(`posts/${postDoc.id}`);
+        // Documento post.
+        await withRetry(() => deleteDoc(postDoc.ref));
+      }
+    } catch (error) {
+      console.warn('deleteAccount: post cleanup partially failed:', error?.message || error);
+    }
+  }
+
+  // 3) Subcollezioni dell'utente (es. blocked).
+  if (isClient) {
+    await deleteSubcollection(`clients/${uid}`, 'blocked');
+  }
+  if (isBarber) {
+    await deleteSubcollection(`barbers/${uid}`, 'blocked');
+  }
+
+  // 4) Documento utente.
+  if (isClient) {
+    await withRetry(() => deleteDoc(clientRef));
+  }
+  if (isBarber) {
+    await withRetry(() => deleteDoc(barberRef));
+  }
+
+  // 5) Utente Firebase Auth (può richiedere riautenticazione recente).
+  try {
+    await deleteUser(user);
+  } catch (error) {
+    if (error?.code === 'auth/requires-recent-login') {
+      // Lo screen gestirà il messaggio: chiediamo di rifare login e ritentare.
+      const wrapped = new Error('requires-recent-login');
+      wrapped.code = 'auth/requires-recent-login';
+      throw wrapped;
+    }
+    throw error;
+  }
+
+  console.log('deleteAccount: completed for', uid);
+  return { success: true };
+};
+
 export {
   getCurrentUserData, getUserByName, getUserProfileData, updateUserProfile,
   updateUserEmail,
   updateUserPassword,
   sendPasswordResetEmailToUser,
+  deleteAccount,
 };
 
 

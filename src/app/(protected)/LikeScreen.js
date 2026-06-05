@@ -20,6 +20,12 @@ import { setPostListingContext } from '../../services/postListingStore';
 import { getBarberProfilesMap, resolveBarberAvatar } from '../../services/barberService';
 import Entypo from '@expo/vector-icons/Entypo';
 import { Image } from 'expo-image';
+import Reanimated, { useAnimatedScrollHandler } from 'react-native-reanimated';
+import { useTabBarScroll } from '../../context/TabBarScrollContext';
+
+// Versioni animate per scroll on UI thread (FloatingTabBar shrink).
+const AnimatedFlatList = Reanimated.createAnimatedComponent(FlatList);
+const AnimatedScrollView = Reanimated.createAnimatedComponent(ScrollView);
 
 const logoLike = require('../../../assets/icons8-cuore-48.png');
 const { width } = Dimensions.get('window');
@@ -31,6 +37,15 @@ const LikeScreen = () => {
   const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState(null);
   const [appState, setAppState] = useState(AppState.currentState);
+
+  // FloatingTabBar shrink-on-scroll: aggiorna SharedValue su UI thread.
+  const { scrollY } = useTabBarScroll();
+  const scrollHandler = useAnimatedScrollHandler({
+    onScroll: (event) => {
+      'worklet';
+      scrollY.value = Math.max(0, event.contentOffset.y);
+    },
+  });
 
   useFocusEffect(
     useCallback(() => {
@@ -188,13 +203,18 @@ const LikeScreen = () => {
 
   if (likedPosts.length === 0) {
     return (
-      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      <AnimatedScrollView
+        style={styles.container}
+        contentContainerStyle={[styles.content, { paddingBottom: 120 }]}
+        onScroll={scrollHandler}
+        scrollEventThrottle={16}
+      >
         <View style={styles.emptyState}>
           <Image source={logoLike} style={styles.emptyIcon} />
           <Text style={styles.emptyTitle}>{t('LikeScreen.yourLikesTitle')}</Text>
           <Text style={styles.emptyDescription}>{t('LikeScreen.emptyDescription')}</Text>
         </View>
-      </ScrollView>
+      </AnimatedScrollView>
     );
   }
 
@@ -205,13 +225,15 @@ const LikeScreen = () => {
         <Text style={styles.headerCount}>{t('LikeScreen.photosCount', { count: likedPosts.length })}</Text>
       </View>
 
-      <FlatList
+      <AnimatedFlatList
         data={likedPosts}
         renderItem={renderLikedPost}
         keyExtractor={(item) => item.postId}
         numColumns={3}
-        contentContainerStyle={styles.gridContainer}
+        contentContainerStyle={[styles.gridContainer, { paddingBottom: 120 }]}
         showsVerticalScrollIndicator={false}
+        onScroll={scrollHandler}
+        scrollEventThrottle={16}
       />
     </SafeAreaView>
   );

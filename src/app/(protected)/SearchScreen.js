@@ -24,6 +24,7 @@ import { setPostListingContext } from '../../services/postListingStore';
 import { setBarberProfileContext } from '../../services/barberProfileStore';
 import { setActiveFilterTags, clearActiveFilterTags } from '../../services/filterStore';
 import { getTopPostsByLikes } from '../../services/photoPreview';
+import { filterPostsByBlocked, getBlockedUids } from '../../services/blockService';
 import AntDesign from '@expo/vector-icons/AntDesign';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Entypo from '@expo/vector-icons/Entypo';
@@ -223,8 +224,19 @@ const SearchScreen = ({ onViewProfile }) => {
       const currentUserId = currentUser?.user?.uid || null;
       const results = await smartSearch(query, currentUserId);
       if (searchRequestIdRef.current === requestId) {
-        console.log(JSON.stringify(results, null, 2))
-        setSearchResults(results);
+        // M5 §5.1.c — filtra utenti e post degli autori bloccati.
+        const blocked = await getBlockedUids();
+        const filteredResults = {
+          ...results,
+          users: Array.isArray(results?.users)
+            ? results.users.filter((u) => !blocked.has(u?.id))
+            : [],
+          posts: filterPostsByBlocked(
+            Array.isArray(results?.posts) ? results.posts : [],
+            blocked,
+          ),
+        };
+        setSearchResults(filteredResults);
       }
     } catch (error) {
       console.error('SearchScreen: Errore durante la ricerca:', error);

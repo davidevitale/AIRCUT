@@ -12,7 +12,13 @@ import {
 import { BlurView } from 'expo-blur';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
+import Reanimated, { useAnimatedScrollHandler } from 'react-native-reanimated';
+import { useTabBarScroll } from '../../context/TabBarScrollContext';
 import BarberPost from '../../components/BarberPost';
+
+// FlatList animata per scroll on UI thread (FloatingTabBar shrink).
+const AnimatedFlatList = Reanimated.createAnimatedComponent(FlatList);
+
 import FilterModal from '../../components/FilterModal';
 import { getAllPostsWithLikeStatus } from '../../services/postService';
 import { getCurrentUserData } from '../../services/userService';
@@ -20,6 +26,7 @@ import { setBarberProfileContext } from '../../services/barberProfileStore';
 import { setActiveFilterTags, clearActiveFilterTags } from '../../services/filterStore';
 import { COLOR_TAG_ID } from '../../services/tagOptions';
 import { Image } from 'expo-image';
+import { filterPostsByBlocked, getBlockedUids } from '../../services/blockService';
 
 // Normalizza una stringa tag per il confronto (rimuove #, spazi, lowercase).
 const normalizeTagText = (value) => (
@@ -98,10 +105,21 @@ const SearchBar = ({
 
 const HomeScreen = ({ onViewProfile, onHashtagPress }) => {
   const { t } = useTranslation();
+  // SharedValue scrollY condivisa con FloatingTabBar via context (UI thread, 60fps).
+  const { scrollY } = useTabBarScroll();
+  const scrollHandler = useAnimatedScrollHandler({
+    onScroll: (event) => {
+      'worklet';
+      scrollY.value = Math.max(0, event.contentOffset.y);
+    },
+  });
+
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [hasConnectionError, setHasConnectionError] = useState(false);
+  // M5 §5.1.c — blocklist locale per filtraggio immediato del feed.
+  const [blockedUids, setBlockedUids] = useState(() => new Set());
   // Filtri in-screen (Task 4): selezione locale + visibilità del Modal.
   const [selectedFilters, setSelectedFilters] = useState([]);
   const [filterVisible, setFilterVisible] = useState(false);
@@ -117,11 +135,12 @@ const HomeScreen = ({ onViewProfile, onHashtagPress }) => {
       const userData = await getCurrentUserData();
       const userId = userData?.user?.uid;
       const userSelectedTags = userData?.userData?.preferenceCut || userData?.userData?.typesCut || [];
-      const postsWithLikeStatus = await getAllPostsWithLikeStatus(
-        userId,
-        userSelectedTags,
-      );
+      const [postsWithLikeStatus, blockedSet] = await Promise.all([
+        getAllPostsWithLikeStatus(userId, userSelectedTags),
+        getBlockedUids({ force: true }),
+      ]);
 
+      setBlockedUids(blockedSet);
       setPosts(postsWithLikeStatus);
     } catch (error) {
       console.error('HomeScreen: Error loading data:', error);
@@ -143,16 +162,30 @@ const HomeScreen = ({ onViewProfile, onHashtagPress }) => {
   // contengono almeno uno dei tag selezionati. Il tag contenitore "colore" non
   // filtra di per sé (filtrano i colori scelti sotto di esso).
   const visiblePosts = React.useMemo(() => {
+    // M5 §5.1.c — filtra prima i post degli utenti bloccati (immediato, no refetch).
+    const postsAfterBlock = filterPostsByBlocked(posts, blockedUids);
+
     const activeKeys = selectedFilters
       .filter((id) => id !== COLOR_TAG_ID)
       .map(normalizeTagText);
-    if (activeKeys.length === 0) return posts;
+    if (activeKeys.length === 0) return postsAfterBlock;
 
-    return posts.filter((post) => {
+    return postsAfterBlock.filter((post) => {
       const postKeys = getPostTagKeys(post);
       return activeKeys.some((key) => postKeys.includes(key));
     });
-  }, [posts, selectedFilters]);
+  }, [posts, selectedFilters, blockedUids]);
+
+  // Callback dal menu tre puntini: aggiunge l'uid alla blocklist locale per
+  // far sparire immediatamente i contenuti dell'autore (senza refetch).
+  const handleBlocked = useCallback((blockedUid) => {
+    if (!blockedUid) return;
+    setBlockedUids((prev) => {
+      const next = new Set(prev);
+      next.add(blockedUid);
+      return next;
+    });
+  }, []);
 
   // Applica i filtri dal Modal e li condivide con lo store (per la SearchScreen).
   const handleApplyFilters = useCallback((tags) => {
@@ -219,6 +252,7 @@ const HomeScreen = ({ onViewProfile, onHashtagPress }) => {
           barber={item}
           onViewProfile={handleViewProfile}
           onHashtagPress={onHashtagPress}
+          onBlocked={handleBlocked}
         />
       </BlurView>
     );
@@ -252,7 +286,7 @@ const HomeScreen = ({ onViewProfile, onHashtagPress }) => {
 
   return (
     <ScreenShell>
-      <FlatList
+      <AnimatedFlatList
         automaticallyAdjustKeyboardInsets
         style={styles.mainContent}
         data={visiblePosts}
@@ -262,11 +296,14 @@ const HomeScreen = ({ onViewProfile, onHashtagPress }) => {
         ListEmptyComponent={renderEmptyContent}
         contentContainerStyle={[
           styles.listContent,
+          { paddingBottom: 120 }, // spazio per la FloatingTabBar (max height + safe area)
           visiblePosts.length === 0 && styles.listEmptyContent,
         ]}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
+        onScroll={scrollHandler}
+        scrollEventThrottle={16}
       />
 
       {/* Filtri in-screen (Task 4): Modal sopra la Home, nessuna navigazione. */}

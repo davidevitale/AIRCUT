@@ -50,6 +50,10 @@
       <key>NSAllowsLocalNetworking</key>
       <true/>
     </dict>
+    <key>NSPhotoLibraryUsageDescription</key>
+    <string>AirCut needs access to your photos so you can upload haircut images to your profile and feed.</string>
+    <key>NSCameraUsageDescription</key>
+    <string>AirCut needs camera access so you can take photos of haircuts to share.</string>
     <key>UILaunchStoryboardName</key>
     <string>SplashScreen</string>
     <key>UIRequiredDeviceCapabilities</key>

@@ -18,7 +18,7 @@ import * as ImageManipulator from "expo-image-manipulator";
 import {
   logoutUser,
 } from "../../services/authService";
-import { getCurrentUserData } from "../../services/userService";
+import { deleteAccount, getCurrentUserData } from "../../services/userService";
 import { updateBarberPortfolio } from "../../services/barberService";
 import {
   pickImages,
@@ -31,6 +31,10 @@ import { auth, db } from "../../../config/firebase";
 import { deleteObject, getDownloadURL, getStorage, listAll, ref, uploadBytesResumable } from "firebase/storage";
 import { useFocusEffect } from "@react-navigation/native";
 import { Image } from "expo-image";
+import Reanimated, { useAnimatedScrollHandler } from "react-native-reanimated";
+import { useTabBarScroll } from "../../context/TabBarScrollContext";
+
+const AnimatedScrollView = Reanimated.createAnimatedComponent(ScrollView);
 
 
 export default function BarberAccountScreen({
@@ -53,6 +57,15 @@ export default function BarberAccountScreen({
   const [localProfileUri, setLocalProfileUri] = useState(null);
   const [barberPosts, setBarberPosts] = useState([]);
   const [deleting, setDeleting] = useState(false);
+
+  // FloatingTabBar shrink-on-scroll
+  const { scrollY } = useTabBarScroll();
+  const scrollHandler = useAnimatedScrollHandler({
+    onScroll: (event) => {
+      'worklet';
+      scrollY.value = Math.max(0, event.contentOffset.y);
+    },
+  });
   useEffect(() => {
     console.log("BarberAccountScreen received userData:", propUserData);
     if (propUserData) {
@@ -229,6 +242,52 @@ export default function BarberAccountScreen({
         Alert.alert('Error', 'Failed to delete post. Please try again.');
       }
     }
+  };
+
+  // M5 §5.2.a — Delete Account (richiesto Apple 5.1.1(v)).
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      t('DeleteAccount.confirmTitle'),
+      t('DeleteAccount.confirmMessage'),
+      [
+        { text: t('BarberAccountScreen.cancel'), style: 'cancel' },
+        {
+          text: t('DeleteAccount.confirmAction'),
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteAccount();
+              if (typeof onLogout === 'function') {
+                onLogout();
+              }
+              router.replace('/auth');
+            } catch (error) {
+              if (error?.code === 'auth/requires-recent-login') {
+                Alert.alert(
+                  t('DeleteAccount.reauthTitle'),
+                  t('DeleteAccount.reauthMessage'),
+                  [
+                    {
+                      text: t('DeleteAccount.reauthOk'),
+                      onPress: async () => {
+                        try { await logoutUser(); } catch {}
+                        if (typeof onLogout === 'function') onLogout();
+                        router.replace('/auth');
+                      },
+                    },
+                  ],
+                );
+              } else {
+                Alert.alert(
+                  t('BarberAccountScreen.errorTitle'),
+                  t('DeleteAccount.errorMessage'),
+                );
+              }
+            }
+          },
+        },
+      ],
+    );
   };
 
   const handleLogout = async () => {
@@ -527,7 +586,12 @@ export default function BarberAccountScreen({
   }
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView style={styles.scrollView}>
+      <AnimatedScrollView
+        style={styles.scrollView}
+        onScroll={scrollHandler}
+        scrollEventThrottle={16}
+        contentContainerStyle={{ paddingBottom: 120 }}
+      >
         <View style={styles.content}>
           {/* Header Account */}
           <View style={styles.header}>
@@ -859,8 +923,13 @@ export default function BarberAccountScreen({
           <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
             <Text style={styles.logoutButtonText}> {t("BarberAccountScreen.logout")}</Text>
           </TouchableOpacity>
+
+          {/* M5 §5.2.a — Delete Account (richiesto Apple 5.1.1(v)). */}
+          <TouchableOpacity style={styles.deleteAccountButton} onPress={handleDeleteAccount}>
+            <Text style={styles.deleteAccountButtonText}>{t('DeleteAccount.button')}</Text>
+          </TouchableOpacity>
         </View>
-      </ScrollView>
+      </AnimatedScrollView>
 
       {/* Modal per aggiungere servizio al listino */}
       <Modal
@@ -1201,6 +1270,20 @@ const styles = StyleSheet.create({
     color: "#FF6B6B",
     fontSize: 18,
     fontWeight: "bold",
+  },
+  deleteAccountButton: {
+    backgroundColor: "rgba(220, 38, 38, 0.12)",
+    borderRadius: 18,
+    padding: 16,
+    alignItems: "center",
+    marginTop: 12,
+    borderWidth: 1.5,
+    borderColor: "rgba(220, 38, 38, 0.6)",
+  },
+  deleteAccountButtonText: {
+    color: "#DC2626",
+    fontSize: 16,
+    fontWeight: "700",
   },
   portfolioSection: {
     marginBottom: 20,

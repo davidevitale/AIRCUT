@@ -10,6 +10,14 @@ import {
   Alert,
   ScrollView,
 } from "react-native";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
+import Reanimated, {
+  runOnJS,
+  useAnimatedStyle,
+  useSharedValue,
+  withSequence,
+  withTiming,
+} from "react-native-reanimated";
 import { LinearGradient } from "expo-linear-gradient";
 import Svg, {
   Path,
@@ -23,6 +31,7 @@ import { Image } from "expo-image";
 import useLikesStore, { resolvePostId } from "../services/likesStore";
 import { canBookNow, openBookNow } from "../services/bookingActions";
 import { resolveBarberAvatar } from "../services/barberService";
+import PostActionsMenu from "./PostActionsMenu";
 
 // Componente Cuore SVG Instagram-style
 const HeartIcon = ({ size = 24, filled = false, color = "#262626" }) => (
@@ -68,7 +77,7 @@ const ClickableTags = ({ selectedTags, language, onHashtagPress }) => {
 };
 
 // Componente Post del Parrucchiere
-const BarberPost = ({ barber, onViewProfile, onHashtagPress, zoomable = false }) => {
+const BarberPost = ({ barber, onViewProfile, onHashtagPress, zoomable = false, onBlocked }) => {
   // console.log(JSON.stringify(barber, null, 2))
   const { t, i18n } = useTranslation();
 
@@ -114,16 +123,18 @@ const BarberPost = ({ barber, onViewProfile, onHashtagPress, zoomable = false })
     ) % fallbackColors.length
     ];
 
-  // Animazioni
-  const likeAnimation = useRef(new Animated.Value(0)).current;
+  // Animazione bottone cuore piccolo (azione like manuale) — resta su Animated.
   const heartScale = useRef(new Animated.Value(1)).current;
-  const heartVibration = useRef(new Animated.Value(0)).current;
-  const heartOpacity = useRef(new Animated.Value(0)).current;
-  const heartX = useRef(new Animated.Value(0)).current;
-  const heartY = useRef(new Animated.Value(0)).current;
 
-  // Gestione doppio tap con posizione
-  const lastTap = useRef(0);
+  // ===== M5 Extra A — Double-tap like animation (reanimated v3) =====
+  // Implementazione Instagram/TikTok-style: cuore grande spawnato esattamente
+  // sul punto del doppio tap, scale-up immediato → stabilizzazione → fade-out.
+  // Tutta l'animazione gira su UI thread (shared values + useAnimatedStyle).
+  // La toggle del like va in JS via runOnJS senza bloccare l'animazione.
+  const heartTx = useSharedValue(0);          // posizione X (centro foto)
+  const heartTy = useSharedValue(0);          // posizione Y (centro foto)
+  const heartOverlayScale = useSharedValue(0);
+  const heartOverlayOpacity = useSharedValue(0);
 
   useEffect(() => {
     loadCurrentUser();
@@ -184,128 +195,66 @@ const BarberPost = ({ barber, onViewProfile, onHashtagPress, zoomable = false })
     onViewProfile(barberName, barber.barberId);
   };
 
-  const handleImagePress = (event) => {
-    const now = Date.now();
-    const DOUBLE_PRESS_DELAY = 300;
-
-    if (lastTap.current && now - lastTap.current < DOUBLE_PRESS_DELAY) {
-      // Doppio tap rilevato - posizione fissa per lo scroll naturale
-      handleDoubleTap();
-      lastTap.current = 0;
-    } else {
-      // Primo tap
-      lastTap.current = now;
-    }
-  };
-
-  const handleDoubleTap = async () => {
+  // M5 Extra A — like solo additivo dal doppio tap (mai distruttivo, da brief).
+  // L'animazione del cuore non aspetta questa funzione: parte sull'UI thread
+  // mentre il like va in JS.
+  const performDoubleTapLike = async () => {
     try {
       const currentUserData = await getCurrentUserData();
       if (!currentUserData) {
         Alert.alert(t("BarberPost.errorTitle"), t("BarberPost.mustBeLoggedIn"));
         return;
       }
-
-      // Solo aggiungi like se non è già piaciuto (doppio tap per aggiungere like)
       if (!isLiked) {
-        console.log(
-          "BarberPost: Doppio tap - aggiungendo like al post:",
-          postId,
-        );
-
-        // Toggle tramite store condiviso (persiste con togglePostLike + sync feed/profilo)
         await toggleLikeInStore(postId, currentUserData.user.uid);
-        console.log("BarberPost: Like aggiunto tramite doppio tap");
       }
     } catch (error) {
-      console.error("Errore nel gestire il doppio tap like:", error);
+      console.error("BarberPost: doppio tap like error:", error);
     }
-
-    // Posizione fissa in basso a destra (zona di scroll naturale del pollice)
-    const fixedX = 280; // Posizione fissa a destra
-    const fixedY = 200; // Posizione fissa in basso
-
-    // Reset delle animazioni con posizione fissa
-    likeAnimation.setValue(0);
-    heartOpacity.setValue(1);
-    heartX.setValue(fixedX);
-    heartY.setValue(fixedY);
-    heartVibration.setValue(0);
-
-    // Animazione complessa del cuore
-    Animated.parallel([
-      // Animazione principale (scala e fade)
-      Animated.sequence([
-        // Apparizione rapida
-        Animated.timing(likeAnimation, {
-          toValue: 1,
-          duration: 200,
-          useNativeDriver: true,
-        }),
-        // Mantieni visibile
-        Animated.delay(300),
-        // Scomparsa
-        Animated.timing(likeAnimation, {
-          toValue: 0,
-          duration: 400,
-          useNativeDriver: true,
-        }),
-      ]),
-
-      // Vibrazione del cuore
-      Animated.sequence([
-        Animated.timing(heartVibration, {
-          toValue: 1,
-          duration: 100,
-          useNativeDriver: true,
-        }),
-        Animated.timing(heartVibration, {
-          toValue: -1,
-          duration: 100,
-          useNativeDriver: true,
-        }),
-        Animated.timing(heartVibration, {
-          toValue: 1,
-          duration: 100,
-          useNativeDriver: true,
-        }),
-        Animated.timing(heartVibration, {
-          toValue: 0,
-          duration: 100,
-          useNativeDriver: true,
-        }),
-      ]),
-
-      // Movimento verso il bottone like (in basso a sinistra)
-      Animated.sequence([
-        Animated.delay(400),
-        Animated.timing(heartX, {
-          toValue: 30, // Posizione del bottone like
-          duration: 500,
-          useNativeDriver: true,
-        }),
-      ]),
-
-      Animated.sequence([
-        Animated.delay(400),
-        Animated.timing(heartY, {
-          toValue: 350, // Verso il basso (bottone like)
-          duration: 500,
-          useNativeDriver: true,
-        }),
-      ]),
-
-      // Fade out graduale durante il movimento
-      Animated.sequence([
-        Animated.delay(600),
-        Animated.timing(heartOpacity, {
-          toValue: 0,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-      ]),
-    ]).start();
   };
+
+  // Gestore double-tap (gesture-handler v2): position-aware, niente delay JS.
+  // Spawniamo il cuore alle coordinate del tap (event.x/y, relative alla view
+  // dell'immagine) e avviamo un'animazione sequenziale su UI thread:
+  //   scale 0 → 1.2 (pop-up) → 1 (stabilizzazione) → opacity 1 → 0 (fade out).
+  // Il like vero e proprio parte in JS via runOnJS, senza bloccare la UI.
+  const HEART_SIZE = 100;
+  const doubleTapGesture = Gesture.Tap()
+    .numberOfTaps(2)
+    .maxDelay(280) // tighter than 300ms default → più reattivo
+    .onEnd((event) => {
+      "worklet";
+      // Centra il cuore sul punto del tap (offset di metà heart-size).
+      heartTx.value = event.x - HEART_SIZE / 2;
+      heartTy.value = event.y - HEART_SIZE / 2;
+
+      // Reset stato per consentire double-tap ripetuti in posti diversi.
+      heartOverlayScale.value = 0;
+      heartOverlayOpacity.value = 1;
+
+      heartOverlayScale.value = withSequence(
+        withTiming(1.15, { duration: 140 }),
+        withTiming(1, { duration: 120 }),
+        withTiming(1, { duration: 300 }) // hold
+      );
+      heartOverlayOpacity.value = withSequence(
+        withTiming(1, { duration: 0 }),
+        withTiming(1, { duration: 480 }),
+        withTiming(0, { duration: 280 })
+      );
+
+      runOnJS(performDoubleTapLike)();
+    });
+
+  // Stile animato del cuore overlay (transforms sull'UI thread).
+  const heartOverlayStyle = useAnimatedStyle(() => ({
+    opacity: heartOverlayOpacity.value,
+    transform: [
+      { translateX: heartTx.value },
+      { translateY: heartTy.value },
+      { scale: heartOverlayScale.value },
+    ],
+  }));
 
   const handleLikePress = async () => {
     try {
@@ -451,6 +400,15 @@ const BarberPost = ({ barber, onViewProfile, onHashtagPress, zoomable = false })
             {t("post.bookNow")}
           </Text>
         </TouchableOpacity>
+
+        {/* M5 §5.1.a — Menu tre puntini: Report + Block.
+            Si auto-nasconde sui propri contenuti (check internal). */}
+        <PostActionsMenu
+          targetType="post"
+          targetId={postId}
+          targetOwnerUid={barber.barberId}
+          onBlocked={onBlocked}
+        />
       </View>
 
       {/* Immagine del lavoro.
@@ -484,77 +442,41 @@ const BarberPost = ({ barber, onViewProfile, onHashtagPress, zoomable = false })
             />
           </ScrollView>
         ) : (
-          <View
-            style={styles.imagePress}
-            onStartShouldSetResponder={() => true}
-            onResponderGrant={handleImagePress}
-          >
-            <Image
-              source={{ uri: postImageUri }}
-              style={styles.workImage}
-              onError={() => setImageError(true)}
-            />
-          </View>
+          // M5 Extra A — double-tap fluido via gesture-handler, position-aware.
+          <GestureDetector gesture={doubleTapGesture}>
+            <View style={styles.imagePress} collapsable={false}>
+              <Image
+                source={{ uri: postImageUri }}
+                style={styles.workImage}
+                onError={() => setImageError(true)}
+              />
+            </View>
+          </GestureDetector>
         )}
 
-        {/* Cuore animato per doppio tap - Instagram Style */}
-        <Animated.View
-          style={[
-            styles.likeHeartOverlay,
-            {
-              opacity: Animated.multiply(likeAnimation, heartOpacity),
-              transform: [
-                {
-                  translateX: heartX,
-                },
-                {
-                  translateY: heartY,
-                },
-                {
-                  scale: likeAnimation.interpolate({
-                    inputRange: [0, 0.3, 1],
-                    outputRange: [0, 1.2, 1],
-                  }),
-                },
-                {
-                  rotate: heartVibration.interpolate({
-                    inputRange: [-1, 0, 1],
-                    outputRange: ["-15deg", "0deg", "15deg"],
-                  }),
-                },
-              ],
-            },
-          ]}
+        {/* M5 Extra A — Heart overlay (reanimated, UI thread).
+            Posizionato in alto-sinistra del container (top:0,left:0); le translate
+            sono assolute = coordinate del tap menos metà heart-size, così il cuore
+            è centrato esattamente dove il dito ha toccato. */}
+        <Reanimated.View
+          pointerEvents="none"
+          style={[styles.doubleTapHeartOverlay, heartOverlayStyle]}
         >
-          <View style={styles.instagramHeart}>
-            {/* Cuore SVG 2D con gradiente diretto */}
-            <Svg
-              width={80}
-              height={80}
-              viewBox="0 0 24 24"
-              style={styles.heartSvg}
-            >
-              <Defs>
-                <SvgLinearGradient
-                  id="heartGradient"
-                  x1="0%"
-                  y1="0%"
-                  x2="100%"
-                  y2="100%"
-                >
-                  <Stop offset="0%" stopColor="#007BFF" />
-                  <Stop offset="50%" stopColor="#00D4AA" />
-                  <Stop offset="100%" stopColor="#40E0D0" />
-                </SvgLinearGradient>
-              </Defs>
-              <Path
-                d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"
-                fill="url(#heartGradient)"
-                stroke="none"
-              />
-            </Svg>
-          </View>
-        </Animated.View>
+          <Svg width={HEART_SIZE} height={HEART_SIZE} viewBox="0 0 24 24" style={styles.heartSvg}>
+            <Defs>
+              <SvgLinearGradient id="heartGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                <Stop offset="0%" stopColor="#007BFF" />
+                <Stop offset="50%" stopColor="#00D4AA" />
+                <Stop offset="100%" stopColor="#40E0D0" />
+              </SvgLinearGradient>
+            </Defs>
+            <Path
+              d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"
+              fill="url(#heartGradient)"
+              stroke="none"
+            />
+          </Svg>
+        </Reanimated.View>
       </View>
 
       {/* Azioni e follow button */}
@@ -716,7 +638,19 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
 
-  // Overlay del cuore per doppio tap - Instagram Style
+  // M5 Extra A — overlay reanimated (posizione assoluta da event.x/y).
+  doubleTapHeartOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    width: 100,
+    height: 100,
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 1000,
+  },
+  // (Legacy) Overlay precedente del cuore — mantenuto per non rompere altri usi
+  // ma non più referenziato dal nuovo flusso double-tap.
   likeHeartOverlay: {
     position: "absolute",
     top: 0,

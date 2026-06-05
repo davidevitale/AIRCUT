@@ -8,10 +8,22 @@ import {
 } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { useTranslation } from 'react-i18next';
+import Reanimated, { useAnimatedScrollHandler } from 'react-native-reanimated';
+import { useTabBarScroll } from '../../context/TabBarScrollContext';
+
+const AnimatedFlatList = Reanimated.createAnimatedComponent(FlatList);
 
 const ShopScreen = () => {
   const { t } = useTranslation();
   const [products, setProducts] = useState([]);
+  // FloatingTabBar shrink-on-scroll
+  const { scrollY } = useTabBarScroll();
+  const scrollHandler = useAnimatedScrollHandler({
+    onScroll: (event) => {
+      'worklet';
+      scrollY.value = Math.max(0, event.contentOffset.y);
+    },
+  });
 
   const randomProducts = [
     { id: '1', name: t('ShopScreen.products.shampoo'), brand: 'Luxe Hair', price: 'EUR 12.99', color: '#FF6B6B' },
@@ -49,13 +61,15 @@ const ShopScreen = () => {
 
   return (
     <View style={styles.container}>
-      <FlatList
+      <AnimatedFlatList
         data={products}
         renderItem={renderProductItem}
         keyExtractor={(item) => item.id}
         numColumns={1}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={[styles.listContent, { paddingBottom: 120 }]}
         scrollEnabled
+        onScroll={scrollHandler}
+        scrollEventThrottle={16}
       />
 
       <BlurView intensity={35} style={styles.blurOverlay}>
