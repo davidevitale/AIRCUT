@@ -353,7 +353,9 @@
     "errorMessage": "Impossibile eliminare l'account. Riprova.",
     "reauthTitle": "Riautenticazione richiesta",
     "reauthMessage": "Per motivi di sicurezza, accedi di nuovo e riprova a eliminare l'account.",
-    "reauthOk": "OK"
+    "reauthOk": "OK",
+    "cancel": "Annulla",
+    "success": "Account eliminato"
   },
   "Eula": {
     "intro": "Pubblicando contenuti accetti la nostra policy di tolleranza zero verso contenuti offensivi o abusivi e comportamenti molesti.",
@@ -379,6 +381,24 @@
     "saved": "Profilo aggiornato con successo",
     "saveError": "Impossibile salvare il profilo",
     "avatarUpdated": "Foto profilo aggiornata",
-    "avatarError": "Impossibile caricare la foto"
+    "avatarError": "Impossibile caricare la foto",
+    "address": "Indirizzo",
+    "contactEmail": "Email di contatto",
+    "addressValidation": "L'indirizzo deve avere almeno 3 caratteri",
+    "phoneValidation": "Inserisci un numero di telefono valido",
+    "emailValidation": "Inserisci un'email valida"
+  },
+  "editProfileClient": {
+    "title": "Modifica account",
+    "userName": "Nome utente",
+    "sex": "Sesso",
+    "preferenceCut": "Tipi di taglio preferiti",
+    "save": "Salva modifiche",
+    "required": "Obbligatorio",
+    "userNameValidation": "Il nome utente deve avere almeno 3 caratteri",
+    "sexValidation": "Seleziona un valore valido",
+    "preferenceCutValidation": "Seleziona almeno una preferenza",
+    "saved": "Profilo aggiornato con successo",
+    "saveError": "Impossibile salvare il profilo"
   }
 }

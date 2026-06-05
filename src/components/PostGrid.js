@@ -32,9 +32,10 @@ const GridItem = ({ item, onPostPress }) => {
       onPress={() => onPostPress && onPostPress(item)}
     >
       <Image
-        source={{ uri: item.thumbnailUrl }}
+        source={{ uri: item.zoomReadyUrl || item.thumbnailUrl || item.imageUrl }}
         style={styles.postImage}
         resizeMode="cover"
+        cachePolicy="memory-disk"
       />
       <View style={styles.likeBadge}>
         <Text style={styles.heartIcon}>{isLiked ? "❤️" : "🤍"}</Text>

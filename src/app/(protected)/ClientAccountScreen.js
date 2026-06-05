@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { logoutUser } from '../../services/authService';
-import { deleteAccount, getCurrentUserData } from '../../services/userService';
+import { getCurrentUserData } from '../../services/userService';
 import { resolveGenderKey, extractRawGender } from '../../services/genderMapping';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '../../../config/firebase';
@@ -123,53 +123,6 @@ export default function ClientAccountScreen({ userData: propUserData, onLogout, 
 
   const goToEditProfile = () => {
     router.push('/(protected)/EditClientProfileScreen');
-  };
-
-  // M5 §5.2.a — Delete Account flusso completo: conferma forte → service →
-  // logout/redirect. Gestione esplicita di 'requires-recent-login'.
-  const handleDeleteAccount = () => {
-    Alert.alert(
-      t('DeleteAccount.confirmTitle'),
-      t('DeleteAccount.confirmMessage'),
-      [
-        { text: t('ClientAccountScreen.cancel'), style: 'cancel' },
-        {
-          text: t('DeleteAccount.confirmAction'),
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await deleteAccount();
-              if (typeof onLogout === 'function') {
-                onLogout();
-              }
-              router.replace('/auth');
-            } catch (error) {
-              if (error?.code === 'auth/requires-recent-login') {
-                Alert.alert(
-                  t('DeleteAccount.reauthTitle'),
-                  t('DeleteAccount.reauthMessage'),
-                  [
-                    {
-                      text: t('DeleteAccount.reauthOk'),
-                      onPress: async () => {
-                        try { await logoutUser(); } catch {}
-                        if (typeof onLogout === 'function') onLogout();
-                        router.replace('/auth');
-                      },
-                    },
-                  ],
-                );
-              } else {
-                Alert.alert(
-                  t('ClientAccountScreen.errorTitle'),
-                  t('DeleteAccount.errorMessage'),
-                );
-              }
-            }
-          },
-        },
-      ],
-    );
   };
 
   const handleLogout = async () => {
@@ -299,12 +252,6 @@ export default function ClientAccountScreen({ userData: propUserData, onLogout, 
 
           <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
             <Text style={styles.logoutButtonText}> {t('ClientAccountScreen.logout')}</Text>
-          </TouchableOpacity>
-
-          {/* M5 §5.2.a — Delete Account (richiesto Apple 5.1.1(v)). Stile danger
-              in coerenza con logout, ma più marcato per segnalare l'irreversibilità. */}
-          <TouchableOpacity style={styles.deleteAccountButton} onPress={handleDeleteAccount}>
-            <Text style={styles.deleteAccountButtonText}>{t('DeleteAccount.button')}</Text>
           </TouchableOpacity>
         </View>
       </AnimatedScrollView>
@@ -564,19 +511,5 @@ const styles = StyleSheet.create({
     color: '#FF6B6B',
     fontSize: 18,
     fontWeight: 'bold',
-  },
-  deleteAccountButton: {
-    backgroundColor: 'rgba(220, 38, 38, 0.12)',
-    borderRadius: 18,
-    padding: 16,
-    alignItems: 'center',
-    marginTop: 12,
-    borderWidth: 1.5,
-    borderColor: 'rgba(220, 38, 38, 0.6)',
-  },
-  deleteAccountButtonText: {
-    color: '#DC2626',
-    fontSize: 16,
-    fontWeight: '700',
   },
 });

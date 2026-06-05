@@ -353,7 +353,9 @@
     "errorMessage": "Unable to delete the account. Please try again.",
     "reauthTitle": "Re-authentication required",
     "reauthMessage": "For security reasons, please log in again and retry deleting the account.",
-    "reauthOk": "OK"
+    "reauthOk": "OK",
+    "cancel": "Cancel",
+    "success": "Account deleted"
   },
   "Eula": {
     "intro": "By posting content, you agree to our zero-tolerance policy against offensive or abusive content and harassing behaviour.",
@@ -379,6 +381,24 @@
     "saved": "Profile updated successfully",
     "saveError": "Unable to save the profile",
     "avatarUpdated": "Profile photo updated",
-    "avatarError": "Unable to upload the photo"
+    "avatarError": "Unable to upload the photo",
+    "address": "Address",
+    "contactEmail": "Contact email",
+    "addressValidation": "The address must be at least 3 characters",
+    "phoneValidation": "Enter a valid phone number",
+    "emailValidation": "Enter a valid email"
+  },
+  "editProfileClient": {
+    "title": "Edit account",
+    "userName": "Username",
+    "sex": "Gender",
+    "preferenceCut": "Favorite cut types",
+    "save": "Save changes",
+    "required": "Required",
+    "userNameValidation": "Username must be at least 3 characters",
+    "sexValidation": "Select a valid value",
+    "preferenceCutValidation": "Select at least one preference",
+    "saved": "Profile updated successfully",
+    "saveError": "Unable to save the profile"
   }
 }

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   StyleSheet,
   View,
@@ -20,7 +20,10 @@ import BarberPost from '../../components/BarberPost';
 const AnimatedFlatList = Reanimated.createAnimatedComponent(FlatList);
 
 import FilterModal from '../../components/FilterModal';
-import { getAllPostsWithLikeStatus } from '../../services/postService';
+import {
+  getPostsPageWithLikeStatus,
+  invalidateFeedCache,
+} from '../../services/postService';
 import { getCurrentUserData } from '../../services/userService';
 import { setBarberProfileContext } from '../../services/barberProfileStore';
 import { setActiveFilterTags, clearActiveFilterTags } from '../../services/filterStore';
@@ -117,6 +120,7 @@ const HomeScreen = ({ onViewProfile, onHashtagPress }) => {
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [hasConnectionError, setHasConnectionError] = useState(false);
   // M5 §5.1.c — blocklist locale per filtraggio immediato del feed.
   const [blockedUids, setBlockedUids] = useState(() => new Set());
@@ -126,22 +130,44 @@ const HomeScreen = ({ onViewProfile, onHashtagPress }) => {
   // Il badge riflette i filtri "applicabili" (esclude il tag contenitore "colore").
   const activeFilterCount = selectedFilters.filter((id) => id !== COLOR_TAG_ID).length;
 
-  // console.log(JSON.stringify(posts, null, 2))
-  const loadData = useCallback(async () => {
+  // Stato paginazione del feed (ref per evluso re-render e per leggere il valore
+  // aggiornato dentro i callback senza ricrearli).
+  const feedCursor = useRef(null);
+  const feedHasMore = useRef(true);
+  const feedUserId = useRef(null);
+  const feedUserTags = useRef([]);
+  const isFetchingPage = useRef(false);
+
+  // Carica la PRIMA pagina del feed. force=true bypassa la cache TTL (refresh).
+  const loadData = useCallback(async ({ force = false } = {}) => {
     try {
       setLoading(true);
       setHasConnectionError(false);
 
       const userData = await getCurrentUserData();
       const userId = userData?.user?.uid;
-      const userSelectedTags = userData?.userData?.preferenceCut || userData?.userData?.typesCut || [];
-      const [postsWithLikeStatus, blockedSet] = await Promise.all([
-        getAllPostsWithLikeStatus(userId, userSelectedTags),
+      const userSelectedTags =
+        userData?.userData?.preferenceCut || userData?.userData?.typesCut || [];
+      feedUserId.current = userId;
+      feedUserTags.current = userSelectedTags;
+
+      if (force) invalidateFeedCache();
+
+      const [page, blockedSet] = await Promise.all([
+        getPostsPageWithLikeStatus({
+          currentUserId: userId,
+          userSelectedTags,
+          cursor: null,
+          force,
+        }),
         getBlockedUids({ force: true }),
       ]);
 
+      feedCursor.current = page.cursor;
+      feedHasMore.current = page.hasMore;
+
       setBlockedUids(blockedSet);
-      setPosts(postsWithLikeStatus);
+      setPosts(page.posts);
     } catch (error) {
       console.error('HomeScreen: Error loading data:', error);
       setPosts([]);
@@ -151,6 +177,36 @@ const HomeScreen = ({ onViewProfile, onHashtagPress }) => {
       }
     } finally {
       setLoading(false);
+    }
+  }, []);
+
+  // Carica la pagina SUCCESSIVA (onEndReached). Appende senza rifare la prima.
+  const loadMore = useCallback(async () => {
+    if (isFetchingPage.current || !feedHasMore.current || !feedCursor.current) {
+      return;
+    }
+    isFetchingPage.current = true;
+    setLoadingMore(true);
+    try {
+      const page = await getPostsPageWithLikeStatus({
+        currentUserId: feedUserId.current,
+        userSelectedTags: feedUserTags.current,
+        cursor: feedCursor.current,
+      });
+      feedCursor.current = page.cursor;
+      feedHasMore.current = page.hasMore;
+
+      // Dedup difensivo per id (evita doppioni se un post entra/esce tra pagine).
+      setPosts((prev) => {
+        const seen = new Set(prev.map((p) => p.id));
+        const fresh = page.posts.filter((p) => !seen.has(p.id));
+        return [...prev, ...fresh];
+      });
+    } catch (error) {
+      console.error('HomeScreen: Error loading more:', error);
+    } finally {
+      isFetchingPage.current = false;
+      setLoadingMore(false);
     }
   }, []);
 
@@ -201,7 +257,8 @@ const HomeScreen = ({ onViewProfile, onHashtagPress }) => {
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await loadData();
+    // Pull-to-refresh: invalida la cache TTL e rilegge la prima pagina.
+    await loadData({ force: true });
     setRefreshing(false);
   }, [loadData]);
 
@@ -273,6 +330,22 @@ const HomeScreen = ({ onViewProfile, onHashtagPress }) => {
     </View>
   );
 
+  // Footer: spinner mentre si carica la pagina successiva (paginazione).
+  const renderListFooter = () => {
+    if (!loadingMore) return null;
+    return (
+      <View style={styles.footerLoader}>
+        <ActivityIndicator size="small" color="#00BCD4" />
+      </View>
+    );
+  };
+
+  // Carica la pagina successiva quando si avvicina la fine. I filtri attivi
+  // riducono i post visibili: in quel caso continua a paginare per riempire.
+  const handleEndReached = () => {
+    if (!refreshing) loadMore();
+  };
+
   if (loading) {
     return (
       <ScreenShell>
@@ -294,6 +367,7 @@ const HomeScreen = ({ onViewProfile, onHashtagPress }) => {
         keyExtractor={(item) => item.id}
         ListHeaderComponent={listHeader}
         ListEmptyComponent={renderEmptyContent}
+        ListFooterComponent={renderListFooter}
         contentContainerStyle={[
           styles.listContent,
           { paddingBottom: 120 }, // spazio per la FloatingTabBar (max height + safe area)
@@ -304,6 +378,8 @@ const HomeScreen = ({ onViewProfile, onHashtagPress }) => {
         showsVerticalScrollIndicator={false}
         onScroll={scrollHandler}
         scrollEventThrottle={16}
+        onEndReached={handleEndReached}
+        onEndReachedThreshold={0.5}
       />
 
       {/* Filtri in-screen (Task 4): Modal sopra la Home, nessuna navigazione. */}
@@ -349,6 +425,11 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingBottom: 24,
+  },
+  footerLoader: {
+    paddingVertical: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   listEmptyContent: {
     flexGrow: 1,

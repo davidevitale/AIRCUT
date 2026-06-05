@@ -1,4 +1,17 @@
-import { arrayRemove, arrayUnion, collection, doc, getDoc, getDocs, setDoc, updateDoc } from "firebase/firestore";
+import {
+  arrayRemove,
+  arrayUnion,
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  setDoc,
+  updateDoc,
+  query,
+  orderBy,
+  limit as fbLimit,
+  startAfter,
+} from "firebase/firestore";
 import { db } from "../../config/firebase";
 import { handleFirebaseConnectionError, normalizeUploadedPost, toCreatedAtMillis, withRetry } from "./authService";
 import { updateUserXP } from "./xpService";
@@ -9,24 +22,144 @@ import {
   extractTagKeys,
 } from "./feedRanking";
 
+// ===== Paginazione + caching del feed =====
+// Obiettivo (richiesta utente): NON rileggere tutta la collezione `posts` ad
+// ogni apertura della home.
+//  - Paginazione: si legge una pagina alla volta (orderBy createdAt desc + limit),
+//    le successive con startAfter(cursor) su onEndReached.
+//  - Caching documenti: la prima pagina viene tenuta in memoria con un TTL.
+//    Riaprendo la home entro il TTL si riusa la cache senza toccare Firestore.
+//  - Profili barbiere: niente più getDocs su tutta la collezione `barbers`;
+//    si caricano (con cache) solo i profili dei barberId presenti nella pagina.
+export const FEED_PAGE_SIZE = 12;
+const FEED_CACHE_TTL_MS = 60 * 1000; // 60s: riaprendo la home a breve, no refetch.
+
+// Cache prima pagina del feed (normalizzata, pre-likeStatus).
+const feedFirstPageCache = {
+  posts: null,
+  cursor: null,
+  hasMore: true,
+  fetchedAt: 0,
+};
+
+// Cache profili barbiere (uid -> data), per evitare riletture ripetute.
+const barberProfileCache = new Map();
+
+const isFeedCacheFresh = () =>
+  Array.isArray(feedFirstPageCache.posts) &&
+  Date.now() - feedFirstPageCache.fetchedAt < FEED_CACHE_TTL_MS;
+
+// Invalida la cache del feed (chiamata dal pull-to-refresh e dopo nuovo post).
+const invalidateFeedCache = () => {
+  feedFirstPageCache.posts = null;
+  feedFirstPageCache.cursor = null;
+  feedFirstPageCache.hasMore = true;
+  feedFirstPageCache.fetchedAt = 0;
+};
+
+// Carica i profili barbiere mancanti per un set di uid, usando la cache.
+const loadBarberProfiles = async (barberIds = []) => {
+  const uniqueIds = [...new Set(barberIds.filter(Boolean))];
+  const missing = uniqueIds.filter((id) => !barberProfileCache.has(id));
+
+  if (missing.length > 0) {
+    await Promise.all(
+      missing.map(async (uid) => {
+        try {
+          const snap = await getDoc(doc(db, "barbers", uid));
+          barberProfileCache.set(uid, snap.exists() ? snap.data() : {});
+        } catch (error) {
+          console.warn("loadBarberProfiles: errore profilo", uid, error?.message || error);
+          barberProfileCache.set(uid, {});
+        }
+      })
+    );
+  }
+
+  const result = {};
+  uniqueIds.forEach((id) => {
+    result[id] = barberProfileCache.get(id) || {};
+  });
+  return result;
+};
+
+// Costruisce la query paginata della collezione posts (più recenti prima).
+const buildPostsPageQuery = (cursor = null) => {
+  const constraints = cursor
+    ? [orderBy("createdAt", "desc"), startAfter(cursor), fbLimit(FEED_PAGE_SIZE)]
+    : [orderBy("createdAt", "desc"), fbLimit(FEED_PAGE_SIZE)];
+  return query(collection(db, "posts"), ...constraints);
+};
+
+// Carica UNA pagina di post normalizzati. Ritorna { posts, cursor, hasMore }.
+// cursor === null => prima pagina (usa la cache TTL salvo force).
+const getBarberPostsPage = async ({ cursor = null, force = false } = {}) => {
+  const isFirstPage = !cursor;
+
+  if (isFirstPage && !force && isFeedCacheFresh()) {
+    console.log("getBarberPostsPage: prima pagina servita dalla cache");
+    return {
+      posts: feedFirstPageCache.posts,
+      cursor: feedFirstPageCache.cursor,
+      hasMore: feedFirstPageCache.hasMore,
+    };
+  }
+
+  try {
+    const snapshot = await withRetry(async () => {
+      return await getDocs(buildPostsPageQuery(cursor));
+    }, 3, 1000);
+
+    const docs = snapshot.docs;
+    const lastDoc = docs.length > 0 ? docs[docs.length - 1] : null;
+    const hasMore = docs.length === FEED_PAGE_SIZE;
+
+    const barberIds = docs.map((d) => d.data()?.barberId);
+    const barberProfiles = await loadBarberProfiles(barberIds);
+
+    const posts = docs
+      .map((postDoc) => {
+        const postData = postDoc.data();
+        return normalizeUploadedPost(
+          postDoc.id,
+          postData,
+          barberProfiles[postData.barberId] || {}
+        );
+      })
+      .filter(Boolean);
+
+    if (isFirstPage) {
+      feedFirstPageCache.posts = posts;
+      feedFirstPageCache.cursor = lastDoc;
+      feedFirstPageCache.hasMore = hasMore;
+      feedFirstPageCache.fetchedAt = Date.now();
+    }
+
+    return { posts, cursor: lastDoc, hasMore };
+  } catch (error) {
+    console.error("getBarberPostsPage: errore caricamento pagina:", error);
+    const errorInfo = handleFirebaseConnectionError(error);
+    if (errorInfo.isConnectionError) {
+      return { posts: [], cursor: null, hasMore: false };
+    }
+    throw new Error(`Errore caricamento posts: ${error.message}`);
+  }
+};
+
 // Ottieni tutti i post caricati dai parrucchieri per la home.
+// Mantenuta per compatibilità (profilo barbiere via getBarberPostsByUid e
+// percorsi che vogliono l'elenco completo). Usa comunque la query ordinata e
+// la cache profili; NON usa la cache TTL della prima pagina.
 const getAllBarberPosts = async () => {
   try {
     console.log('getAllBarberPosts: Starting to fetch uploaded posts...');
 
-    const barbersSnapshot = await withRetry(async () => {
-      return await getDocs(collection(db, 'barbers'));
-    }, 3, 1000);
-    console.log("barbersSnapshot", barbersSnapshot)
-
-    const barberProfiles = {};
-    barbersSnapshot.docs.forEach((barberDoc) => {
-      barberProfiles[barberDoc.id] = barberDoc.data();
-    });
-
     const postsSnapshot = await withRetry(async () => {
-      return await getDocs(collection(db, 'posts'));
+      return await getDocs(query(collection(db, 'posts'), orderBy('createdAt', 'desc')));
     }, 3, 1000);
+
+    const barberIds = postsSnapshot.docs.map((d) => d.data()?.barberId);
+    const barberProfiles = await loadBarberProfiles(barberIds);
 
     const posts = postsSnapshot.docs
       .map((postDoc) => {
@@ -272,6 +405,51 @@ const getAllPostsWithLikeStatus = async (currentUserId = null, userSelectedTags 
   }
 };
 
+// Versione PAGINATA del feed con stato like, per la Home.
+// Differenze chiave rispetto a getAllPostsWithLikeStatus:
+//  - legge una sola pagina (FEED_PAGE_SIZE) invece di tutta la collezione;
+//  - prima pagina servita dalla cache TTL (no refetch a ogni apertura);
+//  - lo stato like è derivato dai dati GIÀ letti (likedBy), senza un secondo
+//    getDoc per ogni post.
+// Il ranking per tag è applicato sulla singola pagina (i post più rilevanti
+// salgono all'interno della pagina). Ritorna { posts, cursor, hasMore }.
+const getPostsPageWithLikeStatus = async ({
+  currentUserId = null,
+  userSelectedTags = [],
+  cursor = null,
+  force = false,
+} = {}) => {
+  try {
+    const { posts, cursor: nextCursor, hasMore } = await getBarberPostsPage({ cursor, force });
+
+    const withLike = posts.map((post) => {
+      const likedBy = Array.isArray(post.likedBy) ? post.likedBy : [];
+      const likesCount = likedBy.length || post.likesCount || post.likes || 0;
+      const postId = post.postId || `${post.barberId}_img_${String(post.id).split('_').pop()}`;
+      return {
+        ...post,
+        postId,
+        isLiked: currentUserId ? likedBy.includes(currentUserId) : false,
+        likesCount,
+        likes: likesCount,
+      };
+    });
+
+    return {
+      posts: rankPostsByUserTags(withLike, userSelectedTags),
+      cursor: nextCursor,
+      hasMore,
+    };
+  } catch (error) {
+    console.error('getPostsPageWithLikeStatus: errore:', error);
+    const errorInfo = handleFirebaseConnectionError(error);
+    if (errorInfo.isConnectionError) {
+      return { posts: [], cursor: null, hasMore: false };
+    }
+    return { posts: [], cursor: null, hasMore: false };
+  }
+};
+
 // Ottieni i post di un barbiere filtrando per authorUid (= barberId) (M4 §6).
 // Stesso Document ID dei post del feed: riusa getAllPostsWithLikeStatus così
 // lo stato like e i campi normalizzati sono identici a quelli mostrati nel feed.
@@ -294,6 +472,10 @@ export {
   togglePostLike,
   getAllPostsWithLikeStatus,
   getBarberPostsByUid,
+  // Feed paginato + caching (Home).
+  getPostsPageWithLikeStatus,
+  getBarberPostsPage,
+  invalidateFeedCache,
   // Esportati per i test unitari dell'algoritmo di feed (Task 1).
   rankPostsByUserTags,
   getFeedPriority,

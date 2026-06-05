@@ -94,9 +94,6 @@ const BarberPost = ({ barber, onViewProfile, onHashtagPress, zoomable = false, o
 
   const [currentUser, setCurrentUser] = useState(null);
   const [imageError, setImageError] = useState(false);
-  // Quando il prefetch L2 è completato, si passa a mostrare zoom-ready.webp
-  // (qualità superiore per il pinch-to-zoom). Default: thumbnail.webp (L1).
-  const [zoomReadyLoaded, setZoomReadyLoaded] = useState(false);
 
   // Display name barbiere: "{nickName} - {salonName}" (M4 §2.1 / §4.4).
   const displayName = [barber.nickName, barber.salonName]
@@ -139,37 +136,6 @@ const BarberPost = ({ barber, onViewProfile, onHashtagPress, zoomable = false, o
   useEffect(() => {
     loadCurrentUser();
   }, []);
-
-  // Prefetch L2 (Task 7): quando il post resta visibile per >= 1.2s, scarica in
-  // background zoom-ready.webp. Al termine si passa a mostrare la variante L2,
-  // pronta per il pinch-to-zoom senza scatti. I post legacy (senza zoomReadyUrl)
-  // restano su thumbnail.webp.
-  const zoomReadyUri =
-    typeof barber?.zoomReadyUrl === "string" && barber.zoomReadyUrl.length > 0
-      ? barber.zoomReadyUrl
-      : null;
-
-  useEffect(() => {
-    if (!zoomReadyUri) return undefined;
-
-    let isMounted = true;
-    const timer = setTimeout(async () => {
-      try {
-        // expo-image espone Image.prefetch per il warming della cache.
-        if (typeof Image.prefetch === "function") {
-          await Image.prefetch(zoomReadyUri);
-        }
-        if (isMounted) setZoomReadyLoaded(true);
-      } catch (error) {
-        console.warn("BarberPost: prefetch zoom-ready fallito:", error?.message || error);
-      }
-    }, 1200);
-
-    return () => {
-      isMounted = false;
-      clearTimeout(timer);
-    };
-  }, [zoomReadyUri]);
 
   // Idrata lo store condiviso con i dati iniziali del post (senza sovrascrivere
   // uno stato già toggle-ato localmente per lo stesso postId).
@@ -349,10 +315,11 @@ const BarberPost = ({ barber, onViewProfile, onHashtagPress, zoomable = false, o
   // Avatar helpers — sorgente UNICA condivisa con feed/like (Task 1).
   // resolveBarberAvatar preferisce thumbnail.webp e applica il fallback graduale.
   const avatarUri = resolveBarberAvatar(barber);
-  // Base = thumbnail.webp (L1). Dopo il prefetch (>=1.2s) si usa zoom-ready.webp
-  // (L2) per una resa migliore in zoom. Fallback a L1 se L2 non disponibile.
+  // Variante UNICA: zoom-ready. È usata sia nel feed che nel pinch-to-zoom.
+  // I nuovi post hanno zoomReadyUrl === thumbnailUrl; teniamo i fallback per
+  // robustezza verso eventuali documenti senza zoomReadyUrl.
   const postImageUri =
-    zoomReadyLoaded && zoomReadyUri ? zoomReadyUri : barber.thumbnailUrl;
+    barber.zoomReadyUrl || barber.thumbnailUrl || barber.imageUrl;
   const placeholderInitial = (
     barber?.salonName ||
     barber?.salonName ||
@@ -438,6 +405,7 @@ const BarberPost = ({ barber, onViewProfile, onHashtagPress, zoomable = false, o
             <Image
               source={{ uri: postImageUri }}
               style={styles.workImage}
+              cachePolicy="memory-disk"
               onError={() => setImageError(true)}
             />
           </ScrollView>
@@ -448,6 +416,7 @@ const BarberPost = ({ barber, onViewProfile, onHashtagPress, zoomable = false, o
               <Image
                 source={{ uri: postImageUri }}
                 style={styles.workImage}
+                cachePolicy="memory-disk"
                 onError={() => setImageError(true)}
               />
             </View>

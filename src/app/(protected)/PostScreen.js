@@ -20,17 +20,14 @@ import { serverTimestamp } from "firebase/firestore";
 import { useToast } from "@kritikhedau/react-native-toastify";
 import { Image } from "expo-image";
 import { COLOR_TAG, COLOR_TAG_ID, getColorTagOptions, isColorTagId } from "../../services/tagOptions";
+import { invalidateFeedCache } from "../../services/postService";
 
-// Sistema a 2 livelli (M1 §Task 7):
-//   L1 thumbnail.webp  400x400  q45  -> feed/griglia, caricamento immediato
-//   L2 zoom-ready.webp 1000x1000 q75 -> prefetch nel viewport, zoom fino a ~3x
+// Variante UNICA: zoom-ready (richiesta utente).
+//   zoom-ready.webp 1000x1000 q75 -> usata ovunque (feed, griglia, dettaglio/zoom).
+// Non si genera più la thumbnail: ogni immagine è salvata e scaricata in qualità
+// zoom-ready. La cache (expo-image memory-disk + cacheControl 1 anno su Storage)
+// evita il ri-download ad ogni apertura del feed.
 const IMAGE_VARIANTS = {
-  thumbnail: {
-    size: 400,
-    quality: 0.45,
-    fileName: "thumbnail.webp",
-    mimeType: "image/webp",
-  },
   zoomReady: {
     size: 1000,
     quality: 0.75,
@@ -198,13 +195,13 @@ export default function PostScreen() {
   };
 
   const createPostImageVariants = async (imageAsset) => {
-    // Genera entrambi i livelli (L1 + L2). Nessun standard.webp.
-    const [thumbnail, zoomReady] = await Promise.all([
-      createSquareImageVariant(imageAsset, IMAGE_VARIANTS.thumbnail),
-      createSquareImageVariant(imageAsset, IMAGE_VARIANTS.zoomReady),
-    ]);
+    // Variante UNICA zoom-ready. Niente thumbnail/standard.
+    const zoomReady = await createSquareImageVariant(
+      imageAsset,
+      IMAGE_VARIANTS.zoomReady
+    );
 
-    return { thumbnail, zoomReady };
+    return { zoomReady };
   };
 
   const validateSelectedTags = () => {
@@ -329,14 +326,9 @@ export default function PostScreen() {
         selectedTags.filter((id) => id !== COLOR_TAG_ID),
         tagLookupPool
       );
-      const { thumbnail, zoomReady } = await createPostImageVariants(selectedImage);
+      const { zoomReady } = await createPostImageVariants(selectedImage);
 
-      const [thumbnailUrl, zoomReadyUrl, currentUser] = await Promise.all([
-        uploadToStorage(
-          thumbnail.uri,
-          `posts/${postId}/${IMAGE_VARIANTS.thumbnail.fileName}`,
-          IMAGE_VARIANTS.thumbnail.mimeType
-        ),
+      const [zoomReadyUrl, currentUser] = await Promise.all([
         uploadToStorage(
           zoomReady.uri,
           `posts/${postId}/${IMAGE_VARIANTS.zoomReady.fileName}`,
@@ -345,6 +337,10 @@ export default function PostScreen() {
         getCurrentUserData(),
       ]);
 
+      // Unica qualità: tutti i campi immagine puntano alla zoom-ready, così
+      // feed/griglia (che leggono thumbnailUrl/imageUrl) mostrano la zoom-ready.
+      const thumbnailUrl = zoomReadyUrl;
+
       const barberProfile = currentUser?.userData || {};
       const createdAt = serverTimestamp();
       const postDoc = {
@@ -352,9 +348,9 @@ export default function PostScreen() {
         barberId: auth.currentUser.uid,
         photoGender: isUnisexUser ? workCategory : userData.workGender,
         selectedTags: localizedSelectedTags,
-        imageUrl: thumbnailUrl,
+        imageUrl: zoomReadyUrl,
         thumbnailUrl,
-        // L2 per pinch-to-zoom (prefetch lato client dopo 1.2s nel viewport).
+        // Unica variante: zoom-ready usata anche per feed/griglia.
         zoomReadyUrl,
         likeCount: 0,
         likes: [],
@@ -367,6 +363,9 @@ export default function PostScreen() {
 
       // return console.log(JSON.stringify(postDoc, null, 2))
       await setDoc(postRef, postDoc);
+
+      // Invalida la cache del feed così la Home mostra subito il nuovo post.
+      invalidateFeedCache();
 
       setSelectedImage(null);
       setPreviewImage(null);

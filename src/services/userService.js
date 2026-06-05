@@ -142,6 +142,39 @@ const updateUserProfile = async (userId, updates) => {
   }
 };
 
+// Aggiorna il documento cliente (clients/{uid}) con i SOLI campi editabili dal
+// profilo: userName, sex, preferenceCut. Campi di sistema/non editabili
+// (email, role, accountType, roleCode, createdAt) non vengono mai toccati.
+// Passa da withRetry per coerenza con il resto del service layer.
+const EDITABLE_CLIENT_FIELDS = ['userName', 'sex', 'preferenceCut'];
+
+const updateClient = async (uid, updates = {}) => {
+  const user = auth.currentUser;
+  if (!user) {
+    throw new Error('Utente non autenticato');
+  }
+  const targetUid = uid || user.uid;
+  if (user.uid !== targetUid) {
+    throw new Error('Non autorizzato ad aggiornare questo profilo');
+  }
+
+  // Whitelist: scrive solo i campi realmente editabili.
+  const safeUpdates = {};
+  for (const field of EDITABLE_CLIENT_FIELDS) {
+    if (updates[field] !== undefined) {
+      safeUpdates[field] = updates[field];
+    }
+  }
+
+  return withRetry(async () => {
+    await updateDoc(doc(db, 'clients', targetUid), {
+      ...safeUpdates,
+      updatedAt: new Date().toISOString(),
+    });
+    return { success: true };
+  });
+};
+
 // Aggiorna email dell'utente (richiede riautenticazione)
 const updateUserEmail = async (currentPassword, newEmail) => {
   try {
@@ -366,6 +399,7 @@ const deleteAccount = async () => {
 
 export {
   getCurrentUserData, getUserByName, getUserProfileData, updateUserProfile,
+  updateClient,
   updateUserEmail,
   updateUserPassword,
   sendPasswordResetEmailToUser,

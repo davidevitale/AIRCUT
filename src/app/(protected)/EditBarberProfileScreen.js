@@ -21,25 +21,30 @@ import { Image } from "expo-image";
 
 import { auth } from "../../../config/firebase";
 import { LEGAL_URLS } from "../../../config/legal";
-import { getCurrentUserData } from "../../services/userService";
+import { getCurrentUserData, deleteAccount } from "../../services/userService";
 import { updateBarberPortfolio } from "../../services/barberService";
-import { checkBarberNicknameUniqueness } from "../../services/authService";
+import { checkBarberNicknameUniqueness, logoutUser } from "../../services/authService";
 import { pickImages } from "../../services/mediaService";
+import { useToast } from "../../context/ToastContext";
 
 // M4 §4.3 — Edit Profile barbiere brandizzato (no form nativi), Formik + Yup,
 // campi reali nickName / salonName / website / telephone, avatar privato
 // (solo proprietario, riusa il flusso immagini esistente), link legali via WebBrowser.
 export default function EditBarberProfileScreen() {
   const { t } = useTranslation();
+  const { showSuccess, showError } = useToast();
   const currentUser = auth.currentUser;
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [initialValues, setInitialValues] = useState({
     nickName: "",
     salonName: "",
-    website: "",
+    address: "",
     telephone: "",
+    emailContact: "",
+    website: "",
   });
   const [profileImage, setProfileImage] = useState(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
@@ -52,8 +57,10 @@ export default function EditBarberProfileScreen() {
         setInitialValues({
           nickName: ud.nickName || "",
           salonName: ud.salonName || "",
-          website: ud.website || "",
+          address: ud.address || "",
           telephone: ud.telephone || "",
+          emailContact: ud.emailContact || "",
+          website: ud.website || "",
         });
         setProfileImage(ud.profileImageThumbnail || ud.profileImage || null);
       } catch (error) {
@@ -74,8 +81,19 @@ export default function EditBarberProfileScreen() {
       .trim()
       .min(2, t("editProfile.salonNameValidation"))
       .required(t("editProfile.required")),
+    address: Yup.string()
+      .trim()
+      .min(3, t("editProfile.addressValidation"))
+      .required(t("editProfile.required")),
+    telephone: Yup.string()
+      .trim()
+      .min(9, t("editProfile.phoneValidation"))
+      .required(t("editProfile.required")),
+    emailContact: Yup.string()
+      .trim()
+      .email(t("editProfile.emailValidation"))
+      .required(t("editProfile.required")),
     website: Yup.string().trim().url(t("editProfile.websiteValidation")).nullable(),
-    telephone: Yup.string().trim().nullable(),
   });
 
   // Riusa lo stesso flusso avatar di BarberAccountScreen (resize/compress invariati, D4).
@@ -148,20 +166,66 @@ export default function EditBarberProfileScreen() {
       await updateBarberPortfolio(currentUser.uid, {
         nickName: nextNick,
         salonName: values.salonName.trim(),
+        address: values.address.trim(),
+        telephone: values.telephone.trim(),
+        emailContact: values.emailContact.trim(),
         website: values.website ? values.website.trim() : "",
-        telephone: values.telephone ? values.telephone.trim() : "",
         updatedAt: new Date().toISOString(),
       });
 
-      Alert.alert(t("editProfile.successTitle"), t("editProfile.saved"), [
-        { text: "OK", onPress: () => router.back() },
-      ]);
+      showSuccess(t("editProfile.saved"));
+      router.back();
     } catch (error) {
       console.error("EditBarberProfileScreen save error:", error);
-      Alert.alert(t("editProfile.errorTitle"), t("editProfile.saveError"));
+      showError(t("editProfile.saveError"));
     } finally {
       setSaving(false);
     }
+  };
+
+  // Eliminazione account: conferma forte (Alert distruttivo) → service →
+  // logout/redirect. Gestione esplicita di auth/requires-recent-login.
+  const handleDeleteAccount = () => {
+    if (deleting || saving) return;
+    Alert.alert(
+      t("DeleteAccount.confirmTitle"),
+      t("DeleteAccount.confirmMessage"),
+      [
+        { text: t("DeleteAccount.cancel"), style: "cancel" },
+        {
+          text: t("DeleteAccount.confirmAction"),
+          style: "destructive",
+          onPress: async () => {
+            setDeleting(true);
+            try {
+              await deleteAccount();
+              showSuccess(t("DeleteAccount.success"));
+              router.replace("/auth");
+            } catch (error) {
+              if (error?.code === "auth/requires-recent-login") {
+                Alert.alert(
+                  t("DeleteAccount.reauthTitle"),
+                  t("DeleteAccount.reauthMessage"),
+                  [
+                    {
+                      text: t("DeleteAccount.reauthOk"),
+                      onPress: async () => {
+                        try { await logoutUser(); } catch {}
+                        router.replace("/auth");
+                      },
+                    },
+                  ],
+                );
+              } else {
+                showError(t("DeleteAccount.errorMessage"));
+              }
+            } finally {
+              setDeleting(false);
+            }
+          },
+        },
+      ],
+    );
   };
 
   const openLegal = (url) => WebBrowser.openBrowserAsync(url);
@@ -248,15 +312,13 @@ export default function EditBarberProfileScreen() {
                 />
               </FieldBlock>
 
-              <FieldBlock error={touched.website && errors.website}>
+              <FieldBlock error={touched.address && errors.address}>
                 <TextInput
                   {...paperProps}
-                  label={t("editProfile.website")}
-                  value={values.website}
-                  onChangeText={handleChange("website")}
-                  onBlur={handleBlur("website")}
-                  keyboardType="url"
-                  autoCapitalize="none"
+                  label={t("editProfile.address")}
+                  value={values.address}
+                  onChangeText={handleChange("address")}
+                  onBlur={handleBlur("address")}
                 />
               </FieldBlock>
 
@@ -271,10 +333,34 @@ export default function EditBarberProfileScreen() {
                 />
               </FieldBlock>
 
+              <FieldBlock error={touched.emailContact && errors.emailContact}>
+                <TextInput
+                  {...paperProps}
+                  label={t("editProfile.contactEmail")}
+                  value={values.emailContact}
+                  onChangeText={handleChange("emailContact")}
+                  onBlur={handleBlur("emailContact")}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                />
+              </FieldBlock>
+
+              <FieldBlock error={touched.website && errors.website}>
+                <TextInput
+                  {...paperProps}
+                  label={t("editProfile.website")}
+                  value={values.website}
+                  onChangeText={handleChange("website")}
+                  onBlur={handleBlur("website")}
+                  keyboardType="url"
+                  autoCapitalize="none"
+                />
+              </FieldBlock>
+
               <TouchableOpacity
-                style={[styles.saveButton, saving && styles.saveButtonDisabled]}
+                style={[styles.saveButton, (saving || deleting) && styles.saveButtonDisabled]}
                 onPress={handleSubmit}
-                disabled={saving}
+                disabled={saving || deleting}
               >
                 {saving ? (
                   <ActivityIndicator color="#00BCD4" />
@@ -300,6 +386,22 @@ export default function EditBarberProfileScreen() {
             onPress={() => openLegal(LEGAL_URLS.termsOfService)}
           >
             <Text style={styles.legalLinkText}>{t("editProfile.terms")}</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Zona pericolosa: eliminazione account (azione irreversibile). */}
+        <View style={styles.dangerZone}>
+          <View style={styles.dangerDivider} />
+          <TouchableOpacity
+            style={[styles.deleteAccountButton, (deleting || saving) && styles.saveButtonDisabled]}
+            onPress={handleDeleteAccount}
+            disabled={deleting || saving}
+          >
+            {deleting ? (
+              <ActivityIndicator color="#DC2626" />
+            ) : (
+              <Text style={styles.deleteAccountButtonText}>{t("DeleteAccount.button")}</Text>
+            )}
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -403,4 +505,20 @@ const styles = StyleSheet.create({
   legalLink: { paddingVertical: 16, paddingHorizontal: 18 },
   legalLinkText: { fontSize: 15, color: "#00BCD4", fontWeight: "600" },
   legalDivider: { height: 1, backgroundColor: "#eef2f6" },
+  dangerZone: { marginTop: 28 },
+  dangerDivider: {
+    height: 1,
+    backgroundColor: "rgba(220, 38, 38, 0.2)",
+    marginBottom: 16,
+  },
+  deleteAccountButton: {
+    backgroundColor: "rgba(220, 38, 38, 0.12)",
+    borderRadius: 16,
+    height: 52,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1.5,
+    borderColor: "rgba(220, 38, 38, 0.6)",
+  },
+  deleteAccountButtonText: { color: "#DC2626", fontSize: 16, fontWeight: "700" },
 });

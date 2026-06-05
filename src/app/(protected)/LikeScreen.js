@@ -182,9 +182,10 @@ const LikeScreen = () => {
       marginBottom: 8,
     }]} onPress={() => openLikedListing(item)}>
       <Image
-        source={{ uri: item.thumbnailUrl }}
+        source={{ uri: item.zoomReadyUrl || item.thumbnailUrl || item.imageUrl }}
         style={styles.postImage}
         resizeMode="cover"
+        cachePolicy="memory-disk"
       />
       <TouchableOpacity style={styles.unlikeButton} onPress={() => handleRemoveLike(item.postId)}>
         {/* <Text style={styles.unlikeText}></Text> */}
