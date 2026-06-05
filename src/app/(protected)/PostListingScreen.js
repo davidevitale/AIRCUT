@@ -119,7 +119,7 @@ const PostListingScreen = () => {
         keyExtractor={(item, index) => item?.id || String(index)}
         renderItem={({ item }) => (
           <BlurView intensity={26} tint="light" style={styles.glassCard}>
-            <BarberPost barber={item} />
+            <BarberPost barber={item} zoomable />
           </BlurView>
         )}
         contentContainerStyle={styles.listContent}

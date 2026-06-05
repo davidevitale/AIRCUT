@@ -13,11 +13,32 @@ import { BlurView } from 'expo-blur';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import BarberPost from '../../components/BarberPost';
+import FilterModal from '../../components/FilterModal';
 import { getAllPostsWithLikeStatus } from '../../services/postService';
 import { getCurrentUserData } from '../../services/userService';
 import { setBarberProfileContext } from '../../services/barberProfileStore';
-import { getActiveFilterCount, subscribeActiveFilters } from '../../services/filterStore';
+import { setActiveFilterTags, clearActiveFilterTags } from '../../services/filterStore';
+import { COLOR_TAG_ID } from '../../services/tagOptions';
 import { Image } from 'expo-image';
+
+// Normalizza una stringa tag per il confronto (rimuove #, spazi, lowercase).
+const normalizeTagText = (value) => (
+  String(value || '')
+    .replace(/^#/, '')
+    .replace(/\s+/g, '')
+    .toLowerCase()
+);
+
+// Estrae le chiavi tag confrontabili da un post.
+const getPostTagKeys = (post) => {
+  const tags = Array.isArray(post?.selectedTags) ? post.selectedTags : [];
+  return tags.flatMap((tag) => {
+    if (typeof tag === 'string') return [normalizeTagText(tag)];
+    return [tag?.id, tag?.en, tag?.it, tag?.label?.en, tag?.label?.it]
+      .filter(Boolean)
+      .map(normalizeTagText);
+  });
+};
 
 const isFirebaseConnectionError = (error) => (
   error.message?.includes('client is offline') ||
@@ -81,7 +102,11 @@ const HomeScreen = ({ onViewProfile, onHashtagPress }) => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [hasConnectionError, setHasConnectionError] = useState(false);
-  const [activeFilterCount, setActiveFilterCount] = useState(getActiveFilterCount());
+  // Filtri in-screen (Task 4): selezione locale + visibilità del Modal.
+  const [selectedFilters, setSelectedFilters] = useState([]);
+  const [filterVisible, setFilterVisible] = useState(false);
+  // Il badge riflette i filtri "applicabili" (esclude il tag contenitore "colore").
+  const activeFilterCount = selectedFilters.filter((id) => id !== COLOR_TAG_ID).length;
 
   // console.log(JSON.stringify(posts, null, 2))
   const loadData = useCallback(async () => {
@@ -114,13 +139,31 @@ const HomeScreen = ({ onViewProfile, onHashtagPress }) => {
     loadData();
   }, [loadData]);
 
-  // Sincronizza il badge filtri con lo store condiviso (Task 4).
-  useEffect(() => {
-    setActiveFilterCount(getActiveFilterCount());
-    const unsubscribe = subscribeActiveFilters((tags) => {
-      setActiveFilterCount(Array.isArray(tags) ? tags.length : 0);
+  // Applica i filtri selezionati al feed Home (Task 4): mostra solo i post che
+  // contengono almeno uno dei tag selezionati. Il tag contenitore "colore" non
+  // filtra di per sé (filtrano i colori scelti sotto di esso).
+  const visiblePosts = React.useMemo(() => {
+    const activeKeys = selectedFilters
+      .filter((id) => id !== COLOR_TAG_ID)
+      .map(normalizeTagText);
+    if (activeKeys.length === 0) return posts;
+
+    return posts.filter((post) => {
+      const postKeys = getPostTagKeys(post);
+      return activeKeys.some((key) => postKeys.includes(key));
     });
-    return unsubscribe;
+  }, [posts, selectedFilters]);
+
+  // Applica i filtri dal Modal e li condivide con lo store (per la SearchScreen).
+  const handleApplyFilters = useCallback((tags) => {
+    const next = Array.isArray(tags) ? tags : [];
+    setSelectedFilters(next);
+    const applicable = next.filter((id) => id !== COLOR_TAG_ID);
+    if (applicable.length > 0) {
+      setActiveFilterTags(applicable);
+    } else {
+      clearActiveFilterTags();
+    }
   }, []);
 
   const onRefresh = useCallback(async () => {
@@ -160,12 +203,7 @@ const HomeScreen = ({ onViewProfile, onHashtagPress }) => {
       onSearchPress={() =>
         router.push('/(protected)/SearchScreen')
       }
-      onFilterPress={() =>
-        router.push({
-          pathname: '/(protected)/SearchScreen',
-          params: { openFilter: '1' },
-        })
-      }
+      onFilterPress={() => setFilterVisible(true)}
     />
   );
 
@@ -217,18 +255,26 @@ const HomeScreen = ({ onViewProfile, onHashtagPress }) => {
       <FlatList
         automaticallyAdjustKeyboardInsets
         style={styles.mainContent}
-        data={posts}
+        data={visiblePosts}
         renderItem={renderListItem}
         keyExtractor={(item) => item.id}
         ListHeaderComponent={listHeader}
         ListEmptyComponent={renderEmptyContent}
         contentContainerStyle={[
           styles.listContent,
-          posts.length === 0 && styles.listEmptyContent,
+          visiblePosts.length === 0 && styles.listEmptyContent,
         ]}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
+      />
+
+      {/* Filtri in-screen (Task 4): Modal sopra la Home, nessuna navigazione. */}
+      <FilterModal
+        visible={filterVisible}
+        initialSelected={selectedFilters}
+        onApply={handleApplyFilters}
+        onClose={() => setFilterVisible(false)}
       />
     </ScreenShell>
   );

@@ -17,6 +17,7 @@ import { getCurrentUserData } from '../../services/userService';
 import { collection, query, where, getDocs, doc, updateDoc, arrayRemove } from 'firebase/firestore';
 import { db } from '../../../config/firebase';
 import { setPostListingContext } from '../../services/postListingStore';
+import { getBarberProfilesMap, resolveBarberAvatar } from '../../services/barberService';
 import Entypo from '@expo/vector-icons/Entypo';
 import { Image } from 'expo-image';
 
@@ -62,24 +63,49 @@ const LikeScreen = () => {
         );
 
         const querySnapshot = await getDocs(postsQuery);
+
+        // Mappa profili barbiere per arricchire ogni post con l'avatar (Task 1):
+        // così aprendo la foto da "Mi piace" l'avatar in alto corrisponde a quello
+        // mostrato nel feed Home. Sorgente unica = thumbnail.webp via resolveBarberAvatar.
+        const barberProfilesMap = await getBarberProfilesMap();
         const likedPostsData = [];
 
         querySnapshot.forEach((postDoc) => {
           const postData = postDoc.data();
+          const barberProfile = barberProfilesMap[postData.barberId] || {};
+          // Avatar: preferisci quello salvato sul post, poi quello del documento barbiere.
+          const avatarUrl =
+            resolveBarberAvatar(postData) || resolveBarberAvatar(barberProfile);
+
           likedPostsData.push({
             id: postDoc.id,
             postId: postDoc.id,
             imageUrl: postData.imageUrl,
             thumbnailUrl: postData.thumbnailUrl,
+            zoomReadyUrl: postData.zoomReadyUrl || null,
             postImage: postData.imageUrl,
-            barberName: postData.barberName || t('LikeScreen.defaultBarberName'),
-            salonName: postData.barberName || t('LikeScreen.defaultBarberName'),
+            barberName: postData.barberName || barberProfile.salonName || t('LikeScreen.defaultBarberName'),
+            salonName: postData.barberName || barberProfile.salonName || t('LikeScreen.defaultBarberName'),
+            nickName: barberProfile.nickName || postData.nickName || '',
             barberId: postData.barberId,
+            // Campi letti da BarberPost per l'avatar (allineati al feed).
+            avatar: avatarUrl,
+            barberProfileImage: avatarUrl,
             likesCount: Array.isArray(postData.likes) ? postData.likes.length : 0,
             likes: Array.isArray(postData.likes) ? postData.likes.length : 0,
             likedAt: new Date().toISOString(),
             ...postData,
+            // Riapplica i campi derivati DOPO lo spread, così non vengono sovrascritti
+            // da eventuali valori grezzi/nulli presenti in postData.
+            avatarResolved: avatarUrl,
           });
+        });
+
+        // Garantisce che avatar/barberProfileImage non siano sovrascritti dallo spread.
+        likedPostsData.forEach((p) => {
+          p.avatar = p.avatarResolved;
+          p.barberProfileImage = p.avatarResolved;
+          delete p.avatarResolved;
         });
 
         setLikedPosts(likedPostsData);

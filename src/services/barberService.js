@@ -1,6 +1,21 @@
 import { collection, doc, getDoc, getDocs, updateDoc, setDoc } from "firebase/firestore";
 import { db } from "../../config/firebase";
 
+// Sorgente UNICA della foto profilo barbiere (Task 1 — sincronizzazione feed/like).
+// Preferisce sempre la versione leggera thumbnail.webp; fallback graduale verso
+// gli altri campi disponibili. Ritorna null se nessuna immagine è presente
+// (i componenti mostreranno il placeholder con l'iniziale).
+export const resolveBarberAvatar = (source = {}) => {
+  if (!source || typeof source !== "object") return null;
+  const candidate =
+    source.profileImageThumbnail ||
+    source.barberProfileImage ||
+    source.avatar ||
+    source.profileImage ||
+    null;
+  return typeof candidate === "string" && candidate.length > 0 ? candidate : null;
+};
+
 // Ottieni dati completi parrucchiere per profilo
 const getBarberProfileData = async (barberName) => {
   try {
@@ -158,6 +173,23 @@ const getAllBarbersRawData = async () => {
     throw error;
   }
 };
-export { getBarberProfileData, getBarberProfileByUid, getBarberPrices, updateBarberPrices, updateBarberPortfolio, getAllBarbersRawData, };
+export { getBarberProfileData, getBarberProfileByUid, getBarberPrices, updateBarberPrices, updateBarberPortfolio, getAllBarbersRawData, getBarberProfilesMap };
+
+// Ritorna una mappa { barberId: { ...barberData } } per arricchire i post
+// (es. con l'avatar) senza N query separate. Usato dalla LikeScreen (Task 1).
+// (flush)
+async function getBarberProfilesMap() {
+  try {
+    const snapshot = await getDocs(collection(db, "barbers"));
+    const map = {};
+    snapshot.docs.forEach((d) => {
+      map[d.id] = d.data();
+    });
+    return map;
+  } catch (error) {
+    console.error("getBarberProfilesMap: errore:", error);
+    return {};
+  }
+}
 
 

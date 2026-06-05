@@ -19,6 +19,7 @@ import { getStorage, ref, uploadBytesResumable, getDownloadURL } from 'firebase/
 import { serverTimestamp } from "firebase/firestore";
 import { useToast } from "@kritikhedau/react-native-toastify";
 import { Image } from "expo-image";
+import { COLOR_TAG, COLOR_TAG_ID, getColorTagOptions, isColorTagId } from "../../services/tagOptions";
 
 // Sistema a 2 livelli (M1 §Task 7):
 //   L1 thumbnail.webp  400x400  q45  -> feed/griglia, caricamento immediato
@@ -114,7 +115,7 @@ export default function PostScreen() {
 
   const isUnisexUser = userData?.workGender === "unisex";
   const selectedTagsSet = useMemo(() => new Set(selectedTags), [selectedTags]);
-  const visibleTags = useMemo(() => {
+  const baseVisibleTags = useMemo(() => {
     if (!isUnisexUser) {
       return allowedTags;
     }
@@ -125,6 +126,16 @@ export default function PostScreen() {
 
     return getVisibleTagsByWorkGender(allowedTags, workCategory);
   }, [allowedTags, isUnisexUser, workCategory]);
+
+  // Aggiunge il tag speciale "colore" alla lista (Task 2). Quando selezionato,
+  // sotto compaiono i colori come tag (gestiti separatamente in render).
+  const visibleTags = useMemo(() => {
+    if (baseVisibleTags.length === 0) return baseVisibleTags;
+    return [...baseVisibleTags, COLOR_TAG];
+  }, [baseVisibleTags]);
+
+  const colorSelected = selectedTagsSet.has(COLOR_TAG_ID);
+  const colorTagOptions = useMemo(() => getColorTagOptions(), []);
 
   const getLocalizedText = (value, fallback = "") => {
     if (!value) return fallback;
@@ -262,9 +273,16 @@ export default function PostScreen() {
   };
 
   const toggleTag = (tagId) => {
-    setSelectedTags((prev) =>
-      prev.includes(tagId) ? prev.filter((id) => id !== tagId) : [...prev, tagId]
-    );
+    setSelectedTags((prev) => {
+      if (prev.includes(tagId)) {
+        // Deselezionando "colore" si rimuovono anche i colori scelti (Task 2).
+        if (tagId === COLOR_TAG_ID) {
+          return prev.filter((id) => id !== COLOR_TAG_ID && !isColorTagId(id));
+        }
+        return prev.filter((id) => id !== tagId);
+      }
+      return [...prev, tagId];
+    });
   };
 
   const handleWorkCategoryChange = (category) => {
@@ -304,9 +322,12 @@ export default function PostScreen() {
 
       const postRef = doc(collection(db, "posts"));
       const postId = postRef.id;
+      // Includi i colori (Task 2) nel pool di lookup, escludendo il tag
+      // contenitore "colore" che non è un tag salvabile di per sé.
+      const tagLookupPool = [...visibleTags, ...colorTagOptions];
       const localizedSelectedTags = buildLocalizedSelectedTags(
-        selectedTags,
-        visibleTags
+        selectedTags.filter((id) => id !== COLOR_TAG_ID),
+        tagLookupPool
       );
       const { thumbnail, zoomReady } = await createPostImageVariants(selectedImage);
 
@@ -504,6 +525,33 @@ export default function PostScreen() {
           })}
         </View>
 
+        {/* Colori come tag: visibili solo se "colore" è selezionato (Task 2). */}
+        {colorSelected && (
+          <View style={styles.colorSection}>
+            <Text style={styles.sectionTitle}>
+              {t("PostScreen.selectColorsTitle", "Colori")}
+            </Text>
+            <View style={styles.colorChipsContainer}>
+              {colorTagOptions.map((color) => {
+                const isSelected = selectedTagsSet.has(color.id);
+                return (
+                  <TouchableOpacity
+                    key={color.id}
+                    style={[styles.colorChip, isSelected && styles.tagCardActive]}
+                    onPress={() => toggleTag(color.id)}
+                    disabled={publishing}
+                  >
+                    <View style={[styles.colorDot, { backgroundColor: color.hex }]} />
+                    <Text style={[styles.tagTitle, isSelected && styles.tagTitleActive]}>
+                      {getLocalizedText(color.label, color.id)}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+        )}
+
         <TouchableOpacity
           style={[styles.publishButton, publishing && styles.publishButtonDisabled]}
           onPress={handlePublishPost}
@@ -622,6 +670,34 @@ const styles = StyleSheet.create({
   tagCardActive: {
     borderColor: "#00BCD4",
     backgroundColor: "rgba(0, 188, 212, 0.12)",
+  },
+  colorSection: {
+    marginTop: 8,
+  },
+  colorChipsContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    marginTop: 8,
+  },
+  colorChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 20,
+    marginRight: 10,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    backgroundColor: "#fff",
+  },
+  colorDot: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    marginRight: 8,
+    borderWidth: 1,
+    borderColor: "rgba(0,0,0,0.1)",
   },
   tagTitle: {
     fontSize: 14,

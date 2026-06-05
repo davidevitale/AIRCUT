@@ -8,6 +8,7 @@ import {
   Animated,
   Share,
   Alert,
+  ScrollView,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import Svg, {
@@ -21,6 +22,7 @@ import { getCurrentUserData } from "../services/userService";
 import { Image } from "expo-image";
 import useLikesStore, { resolvePostId } from "../services/likesStore";
 import { canBookNow, openBookNow } from "../services/bookingActions";
+import { resolveBarberAvatar } from "../services/barberService";
 
 // Componente Cuore SVG Instagram-style
 const HeartIcon = ({ size = 24, filled = false, color = "#262626" }) => (
@@ -66,7 +68,7 @@ const ClickableTags = ({ selectedTags, language, onHashtagPress }) => {
 };
 
 // Componente Post del Parrucchiere
-const BarberPost = ({ barber, onViewProfile, onHashtagPress }) => {
+const BarberPost = ({ barber, onViewProfile, onHashtagPress, zoomable = false }) => {
   // console.log(JSON.stringify(barber, null, 2))
   const { t, i18n } = useTranslation();
 
@@ -395,12 +397,9 @@ const BarberPost = ({ barber, onViewProfile, onHashtagPress }) => {
     await openBookNow(barber);
   };
 
-  // Avatar helpers
-  const avatarValue = barber?.avatar || barber?.barberProfileImage;
-  const avatarUri =
-    typeof avatarValue === "string" && avatarValue.length > 0
-      ? avatarValue
-      : null;
+  // Avatar helpers — sorgente UNICA condivisa con feed/like (Task 1).
+  // resolveBarberAvatar preferisce thumbnail.webp e applica il fallback graduale.
+  const avatarUri = resolveBarberAvatar(barber);
   // Base = thumbnail.webp (L1). Dopo il prefetch (>=1.2s) si usa zoom-ready.webp
   // (L2) per una resa migliore in zoom. Fallback a L1 se L2 non disponibile.
   const postImageUri =
@@ -454,27 +453,49 @@ const BarberPost = ({ barber, onViewProfile, onHashtagPress }) => {
         </TouchableOpacity>
       </View>
 
-      {/* Immagine del lavoro con doppio tap // Double tap work image */}
+      {/* Immagine del lavoro.
+          - Feed (zoomable=false): doppio tap per mettere like (comportamento Instagram).
+          - Vista dettaglio (zoomable=true): pinch-to-zoom per ispezionare il taglio
+            (Task 3), tramite ScrollView nativo (maximumZoomScale), iOS + Android,
+            senza nuove dipendenze. */}
       <View style={styles.imageContainer}>
-        <View
-          style={styles.imagePress}
-          onStartShouldSetResponder={() => true}
-          onResponderGrant={handleImagePress}
-        >
-          {imageError || !postImageUri ? (
-            <View
-              style={[styles.fallbackImage, { backgroundColor: fallbackColor }]}
-            >
-              <Text style={styles.fallbackEmoji}>✨</Text>
-            </View>
-          ) : (
+        {imageError || !postImageUri ? (
+          <View
+            style={[styles.fallbackImage, { backgroundColor: fallbackColor }]}
+          >
+            <Text style={styles.fallbackEmoji}>✨</Text>
+          </View>
+        ) : zoomable ? (
+          <ScrollView
+            style={styles.zoomScroll}
+            contentContainerStyle={styles.zoomContent}
+            maximumZoomScale={3.5}
+            minimumZoomScale={1}
+            bouncesZoom
+            pinchGestureEnabled
+            centerContent
+            showsHorizontalScrollIndicator={false}
+            showsVerticalScrollIndicator={false}
+          >
             <Image
               source={{ uri: postImageUri }}
               style={styles.workImage}
               onError={() => setImageError(true)}
             />
-          )}
-        </View>
+          </ScrollView>
+        ) : (
+          <View
+            style={styles.imagePress}
+            onStartShouldSetResponder={() => true}
+            onResponderGrant={handleImagePress}
+          >
+            <Image
+              source={{ uri: postImageUri }}
+              style={styles.workImage}
+              onError={() => setImageError(true)}
+            />
+          </View>
+        )}
 
         {/* Cuore animato per doppio tap - Instagram Style */}
         <Animated.View
@@ -684,6 +705,15 @@ const styles = StyleSheet.create({
   imagePress: {
     width: "100%",
     height: "100%",
+  },
+  zoomScroll: {
+    width: "100%",
+    height: "100%",
+  },
+  zoomContent: {
+    flexGrow: 1,
+    justifyContent: "center",
+    alignItems: "center",
   },
 
   // Overlay del cuore per doppio tap - Instagram Style
