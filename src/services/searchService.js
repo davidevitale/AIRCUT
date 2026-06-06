@@ -120,6 +120,8 @@ const searchBarbersByName = async (searchText) => {
           salonName,
           barberName,
           nickName: data.nickName || '',
+          firstName: data.firstName || '',
+          lastName: data.lastName || '',
           nomiDipendenti: data.nomiDipendenti,
           via: location,
           telefono: data.telephone || data.telefono,

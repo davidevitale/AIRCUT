@@ -8,9 +8,13 @@ import {
   updatePassword,
   EmailAuthProvider,
   reauthenticateWithCredential,
-  deleteUser
+  deleteUser,
+  GoogleAuthProvider,
+  FacebookAuthProvider,
+  OAuthProvider,
+  signInWithCredential
 } from 'firebase/auth';
-import { doc, setDoc, getDoc, getDocs, collection, query, where, updateDoc, arrayUnion, arrayRemove, orderBy, limit } from 'firebase/firestore';
+import { doc, setDoc, getDoc, getDocs, collection, query, where, updateDoc, arrayUnion, arrayRemove, orderBy, limit, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '../../config/firebase';
 
 // Funzione helper per gestire errori di connessione Firebase || Helper function to handle Firebase connection errors
@@ -507,27 +511,247 @@ export const onAuthStateChange = (callback) => {
 
 // ============================================================================
 // SISTEMA XP E SLOT MACHINE
+
+
 // ============================================================================
-
-
-
-
-
-
-
-
-
 
 
 // =================== GESTIONE PROFILO UTENTE ===================
 
 
 
+// ============================================================================
+// RECUPERO PASSWORD (AUTHSERVICE_REDESIGN_v3 §3)
+// ============================================================================
 
+/**
+ * Invia email di reset password all'indirizzo fornito.
+ * Firebase non rivela se l'email esiste o meno (privacy by design):
+ * il chiamante mostra sempre lo stesso messaggio di conferma.
+ *
+ * @param {string} email
+ */
+export const sendPasswordReset = async (email) => {
+  const normalizedEmail = (email || '').trim();
+  if (!normalizedEmail) {
+    throw new Error('invalidEmail');
+  }
 
+  try {
+    await sendPasswordResetEmail(auth, normalizedEmail);
+  } catch (error) {
+    // Per privacy NON propaghiamo "auth/user-not-found": la UI mostra sempre il
+    // messaggio statico di conferma. Propaghiamo solo gli errori che è giusto
+    // mostrare (email malformata, troppi tentativi).
+    if (error.code === 'auth/user-not-found') {
+      return;
+    }
 
+    let errorKey = error.message || 'genericError';
+    if (error.code === 'auth/invalid-email') {
+      errorKey = 'invalidEmail';
+    } else if (error.code === 'auth/too-many-requests') {
+      errorKey = 'tooManyRequests';
+    } else if (error.code === 'auth/missing-email') {
+      errorKey = 'invalidEmail';
+    }
 
+    throw new Error(errorKey);
+  }
+};
 
+// ============================================================================
+// SOCIAL LOGIN (AUTHSERVICE_REDESIGN_v3 §4)
+//
+// NOTE IMPORTANTI:
+// - I pacchetti nativi (@react-native-google-signin/google-signin,
+//   react-native-fbsdk-next, expo-apple-authentication) NON sono importati in
+//   cima al modulo: vengono caricati con require() lazy DENTRO ogni funzione.
+//   Così authService continua a importarsi e funzionare (login email/password,
+//   ecc.) anche se i pacchetti non sono ancora installati. Le funzioni social
+//   lanciano un errore chiaro solo se invocate senza il pacchetto presente.
+// - I documenti Firestore vengono creati con i NOMI CAMPO ESISTENTI dell'app
+//   (nickName, salonName, address, workGender, telephone, emailContact,
+//   roleCode, accountType) così tutte le altre schermate continuano a leggere
+//   correttamente. In più aggiungiamo `authProviders` come da redesign.
+// ============================================================================
 
+const requireOptional = (moduleName) => {
+  try {
+    // eslint-disable-next-line global-require, import/no-dynamic-require
+    return require(moduleName);
+  } catch (error) {
+    const wrapped = new Error('socialProviderNotInstalled');
+    wrapped.cause = error;
+    wrapped.moduleName = moduleName;
+    throw wrapped;
+  }
+};
 
+const mapProviderIds = (user) => {
+  const ids = (user?.providerData || []).map((p) => p.providerId).filter(Boolean);
+  return ids.length ? Array.from(new Set(ids)) : [];
+};
 
+/**
+ * Verifica se l'utente Firebase Auth ha già un documento Firestore.
+ * Restituisce il ruolo se trovato, null se nuovo utente.
+ *
+ * @param {import('firebase/auth').User} user
+ * @returns {Promise<'barber' | 'client' | null>}
+ */
+export const getExistingUserRole = async (user) => {
+  if (!user?.uid) {
+    return null;
+  }
+
+  const [barberSnap, clientSnap] = await Promise.all([
+    getDoc(doc(db, 'barbers', user.uid)),
+    getDoc(doc(db, 'clients', user.uid)),
+  ]);
+
+  if (barberSnap.exists()) return 'barber';
+  if (clientSnap.exists()) return 'client';
+  return null;
+};
+
+/** Google Sign In — restituisce lo user Firebase. */
+export const signInWithGoogle = async () => {
+  const { GoogleSignin } = requireOptional('@react-native-google-signin/google-signin');
+
+  await GoogleSignin.hasPlayServices();
+  const result = await GoogleSignin.signIn();
+  const idToken = result?.idToken || result?.data?.idToken;
+  if (!idToken) {
+    throw new Error('googleNoIdToken');
+  }
+
+  const credential = GoogleAuthProvider.credential(idToken);
+  const { user } = await signInWithCredential(auth, credential);
+  return user; // il chiamante poi chiama getExistingUserRole
+};
+
+/** Facebook Sign In — restituisce lo user Firebase. */
+export const signInWithFacebook = async () => {
+  const { LoginManager, AccessToken } = requireOptional('react-native-fbsdk-next');
+
+  const loginResult = await LoginManager.logInWithPermissions(['public_profile', 'email']);
+  if (loginResult.isCancelled) {
+    throw new Error('cancelled');
+  }
+
+  const data = await AccessToken.getCurrentAccessToken();
+  if (!data?.accessToken) {
+    throw new Error('facebookNoAccessToken');
+  }
+
+  const credential = FacebookAuthProvider.credential(data.accessToken);
+  const { user } = await signInWithCredential(auth, credential);
+  return user;
+};
+
+/** Apple Sign In — restituisce lo user Firebase. */
+export const signInWithApple = async () => {
+  const AppleAuthentication = requireOptional('expo-apple-authentication');
+
+  const { identityToken } = await AppleAuthentication.signInAsync({
+    requestedScopes: [
+      AppleAuthentication.AppleAuthenticationScope.EMAIL,
+      AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+    ],
+  });
+
+  if (!identityToken) {
+    throw new Error('appleNoIdentityToken');
+  }
+
+  const provider = new OAuthProvider('apple.com');
+  const credential = provider.credential({ idToken: identityToken });
+  const { user } = await signInWithCredential(auth, credential);
+  return user;
+};
+
+/**
+ * Crea il documento client dopo social signup.
+ * Usa i nomi campo esistenti dell'app + authProviders.
+ * avatarUrl precompilato dal provider se disponibile.
+ *
+ * @param {import('firebase/auth').User} user
+ * @param {{ nickname: string }} data
+ */
+export const createClientDocFromSocial = async (user, { nickname }) => {
+  const normalizedNickname = (nickname || '').trim();
+  if (normalizedNickname.length < 3) {
+    throw new Error('userNameValidation');
+  }
+
+  const isUnique = await checkUsernameUniqueness(normalizedNickname);
+  if (!isUnique) {
+    throw new Error('nicknameAlreadyExists');
+  }
+
+  await setDoc(doc(db, 'clients', user.uid), {
+    userName:       normalizedNickname,
+    nomeUtente:     normalizedNickname,
+    email:          user.email ?? null,
+    authProviders:  mapProviderIds(user),
+    avatarUrl:      user.photoURL ?? null,
+    sex:            null,
+    preferenceCut:  [],
+    role:           'client',
+    accountType:    'client',
+    roleCode:       0,
+    createdAt:      new Date().toISOString(),
+  });
+};
+
+/**
+ * Crea il documento barber dopo social signup.
+ * Riceve i campi del barber (esclusi email/password che vengono dal provider).
+ * Usa i nomi campo esistenti dell'app + authProviders.
+ *
+ * @param {import('firebase/auth').User} user
+ * @param {Object} barberData
+ */
+export const createBarberDocFromSocial = async (user, barberData) => {
+  const {
+    nickName,
+    salonName,
+    firstName,
+    lastName,
+    salonAddress,
+    workGender,
+    typesCut,
+    website,
+    phoneNumber,
+    contactEmail,
+  } = barberData;
+
+  const isNicknameUnique = await checkBarberNicknameUniqueness(nickName);
+  if (!isNicknameUnique) {
+    throw new Error('nicknameExists');
+  }
+
+  await setDoc(doc(db, 'barbers', user.uid), {
+    email:           user.email ?? null,
+    firstName:       (firstName || '').trim(),
+    lastName:        (lastName || '').trim(),
+    nickName:        (nickName || '').trim(),
+    salonName:       (salonName || '').trim(),
+    address:         (salonAddress || '').trim(),
+    workGender:      workGender,
+    typesCut:        Array.isArray(typesCut) ? typesCut : [],
+    telephone:       (phoneNumber || '').trim() || null,
+    website:         (website || '').trim() || null,
+    emailContact:    (contactEmail || '').trim() || user.email || null,
+    authProviders:   mapProviderIds(user),
+    avatarUrl:       user.photoURL ?? null,
+    portfolioImages: [],
+    portfolioVideos: [],
+    tags:            [],
+    role:            'barber',
+    accountType:     'barber',
+    roleCode:        1,
+    createdAt:       new Date().toISOString(),
+  });
+};

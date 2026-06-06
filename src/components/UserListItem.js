@@ -10,10 +10,13 @@ import { Image } from "expo-image";
 
 const UserListItem = ({ user, onUserPress }) => {
   const profileInitial = user?.salonName?.charAt(0)?.toUpperCase() || 'S';
-  const primaryName = user?.salonName || user?.barberName || user?.nickName || 'Salon';
-  const secondaryName = [user?.barberName, user?.nickName]
-    .filter((value) => value && value !== primaryName)
-    .join(' - ');
+  // Display name barbiere: "{nickName} - {salonName}" (coerente con home e account).
+  const primaryName = [user?.nickName, user?.salonName]
+    .filter(Boolean)
+    .join(' - ') || user?.salonName || user?.barberName || user?.nickName || 'Salon';
+  const secondaryName = [user?.firstName, user?.lastName]
+    .filter(Boolean)
+    .join(' ');
 
   const handleUserPress = () => {
     if (onUserPress) {

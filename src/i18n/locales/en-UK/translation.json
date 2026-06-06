@@ -36,7 +36,13 @@
     "tooManyRequests": "Too many failed attempts. Please try again later.",
     "barberAccountNotFound": "This email is not registered as a Hair Artist account.",
     "clientAccountNotFound": "This email is not registered as a Client account.",
-    "successTitle": "Login success"
+    "successTitle": "Login success",
+    "continueWithGoogle": "Continue with Google",
+    "continueWithFacebook": "Continue with Facebook",
+    "continueWithApple": "Continue with Apple",
+    "orDivider": "or",
+    "socialNotAvailable": "Social login is not available yet in this version of the app.",
+    "socialError": "Something went wrong while signing in. Please try again."
   },
   "ClientRegistrationScreen": {
     "Credentials": "Credentials",
@@ -290,7 +296,10 @@
     "serviceNamePlaceholder": "e.g. Men haircut",
     "priceLabel": "Price (?)",
     "pricePlaceholder": "e.g. 15.00",
-    "update": "Update"
+    "update": "Update",
+    "displayNameLabel": "Nickname - Salon:",
+    "firstNameLabel": "First name:",
+    "lastNameLabel": "Last name:"
   },
   "PostScreen": {
     "errorTitle": "Error",
@@ -400,5 +409,26 @@
     "preferenceCutValidation": "Select at least one preference",
     "saved": "Profile updated successfully",
     "saveError": "Unable to save the profile"
+  },
+  "ForgotPasswordScreen": {
+    "title": "Reset password",
+    "instructions": "Enter your email. If it is registered you will receive a link to reset your password.",
+    "emailLabel": "Email",
+    "submitButton": "Send link",
+    "confirmation": "If the address is registered you will receive an email shortly.",
+    "backToLogin": "Back to login"
+  },
+  "CompleteClientScreen": {
+    "title": "Choose your nickname",
+    "subtitle": "Your public handle on AirCut",
+    "submitButton": "Continue",
+    "cancel": "Cancel",
+    "nicknameTaken": "This nickname is already taken. Please choose another."
+  },
+  "CompleteBarberProfileScreen": {
+    "title": "Complete your profile",
+    "subtitle": "We still need a few details",
+    "submitButton": "Complete profile",
+    "cancel": "Cancel"
   }
 }

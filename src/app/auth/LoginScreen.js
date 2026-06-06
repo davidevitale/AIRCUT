@@ -7,8 +7,15 @@ import {
   Alert,
   ScrollView,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
-import { loginUser } from '../../services/authService';
+import {
+  loginUser,
+  signInWithGoogle,
+  signInWithFacebook,
+  signInWithApple,
+  getExistingUserRole,
+} from '../../services/authService';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -18,9 +25,123 @@ import * as Yup from 'yup';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '@kritikhedau/react-native-toastify';
 
-export default function LoginScreen({ }) {
+/**
+ * Bottoni di social login (Google / Facebook / Apple).
+ *
+ * Flusso (AUTHSERVICE_REDESIGN_v3 sezione 4.2):
+ *   provider sign-in -> getExistingUserRole(user)
+ *     - ruolo trovato -> AuthContext (onAuthStateChanged) naviga a (protected)
+ *     - nuovo utente   -> CompleteClientScreen | CompleteBarberProfileScreen
+ *
+ * Il userRole corrente (scelto in RoleSelection) determina quale complete
+ * screen mostrare per i nuovi utenti.
+ *
+ * NOTA: i pacchetti nativi social non sono ancora installati. In quel caso la
+ * funzione authService lancia 'socialProviderNotInstalled' e mostriamo un
+ * messaggio informativo invece di crashare.
+ */
+function SocialAuthButtons({ userRole }) {
+  const { t } = useTranslation();
+  const [busyProvider, setBusyProvider] = useState(null);
+
+  const handleSocial = async (provider) => {
+    if (busyProvider) return;
+    setBusyProvider(provider);
+    try {
+      let user;
+      if (provider === 'google') {
+        user = await signInWithGoogle();
+      } else if (provider === 'facebook') {
+        user = await signInWithFacebook();
+      } else if (provider === 'apple') {
+        user = await signInWithApple();
+      }
+
+      const existingRole = await getExistingUserRole(user);
+
+      if (existingRole) {
+        // Utente esistente: AuthContext gestisce la navigazione a (protected).
+        return;
+      }
+
+      // Nuovo utente: completa il profilo in base al ruolo selezionato.
+      if (userRole === 'barber') {
+        router.push('/auth/CompleteBarberProfileScreen');
+      } else {
+        router.push('/auth/CompleteClientScreen');
+      }
+    } catch (error) {
+      if (error?.message === 'cancelled') {
+        return;
+      }
+      if (error?.message === 'socialProviderNotInstalled') {
+        Alert.alert(t('LoginScreen.errorTitle'), t('LoginScreen.socialNotAvailable'));
+        return;
+      }
+      Alert.alert(t('LoginScreen.errorTitle'), t('LoginScreen.socialError'));
+    } finally {
+      setBusyProvider(null);
+    }
+  };
+
+  return (
+    <View style={styles.socialSection}>
+      <View style={styles.dividerRow}>
+        <View style={styles.dividerLine} />
+        <Text style={styles.dividerText}>{t('LoginScreen.orDivider')}</Text>
+        <View style={styles.dividerLine} />
+      </View>
+
+      <TouchableOpacity
+        style={styles.socialButton}
+        onPress={() => handleSocial('google')}
+        disabled={!!busyProvider}
+      >
+        {busyProvider === 'google' ? (
+          <ActivityIndicator size="small" color="#00BCD4" />
+        ) : (
+          <Text style={styles.socialButtonText}>
+            {t('LoginScreen.continueWithGoogle')}
+          </Text>
+        )}
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.socialButton}
+        onPress={() => handleSocial('facebook')}
+        disabled={!!busyProvider}
+      >
+        {busyProvider === 'facebook' ? (
+          <ActivityIndicator size="small" color="#00BCD4" />
+        ) : (
+          <Text style={styles.socialButtonText}>
+            {t('LoginScreen.continueWithFacebook')}
+          </Text>
+        )}
+      </TouchableOpacity>
+
+      {Platform.OS === 'ios' && (
+        <TouchableOpacity
+          style={styles.socialButton}
+          onPress={() => handleSocial('apple')}
+          disabled={!!busyProvider}
+        >
+          {busyProvider === 'apple' ? (
+            <ActivityIndicator size="small" color="#00BCD4" />
+          ) : (
+            <Text style={styles.socialButtonText}>
+              {t('LoginScreen.continueWithApple')}
+            </Text>
+          )}
+        </TouchableOpacity>
+      )}
+    </View>
+  );
+}
+
+export default function LoginScreen() {
   const params = useLocalSearchParams();
-  const { show } = useToast()
+  const { show } = useToast();
   const selectedRole = Array.isArray(params.role) ? params.role[0] : params.role;
   const userRole = selectedRole === 'barber' ? 'barber' : 'client';
 
@@ -49,7 +170,7 @@ export default function LoginScreen({ }) {
     try {
       const { user, userData, role } = await loginUser(values.email, values.password, userRole);
       console.log('Login successo:', { user: user.email, role });
-      // Firebase observer gestir� automaticamente lo stato
+      // Firebase observer gestisce automaticamente lo stato
     } catch (error) {
       const knownErrorKeys = [
         'userNotFound',
@@ -97,7 +218,7 @@ export default function LoginScreen({ }) {
     <View style={{ backgroundColor: 'red' }}>
       <Text>Bye</Text>
     </View>
-  )
+  );
 
   return (
     <SafeAreaView style={styles.container}>
@@ -105,7 +226,7 @@ export default function LoginScreen({ }) {
         <View style={styles.content}>
           <Text
             onPress={() => {
-              show(customToast)
+              show(customToast);
             }} style={styles.title}>
             {t('LoginScreen.title')} {userRole === 'client' ? t('LoginScreen.client') : t('LoginScreen.hairArtist')}
           </Text>
@@ -190,10 +311,21 @@ export default function LoginScreen({ }) {
                       <Text style={styles.loginButtonText}>{t('LoginScreen.loginButton')}</Text>
                     )}
                   </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.forgotPasswordLink}
+                    onPress={() => router.push('/auth/ForgotPasswordScreen')}
+                  >
+                    <Text style={styles.forgotPasswordText}>
+                      {t('LoginScreen.forgotPassword')}
+                    </Text>
+                  </TouchableOpacity>
                 </View>
               </>
             )}
           </Formik>
+
+          <SocialAuthButtons userRole={userRole} />
 
           <View style={styles.registerSection}>
             <Text style={styles.registerText}>{t('LoginScreen.noAccount')}</Text>
@@ -284,6 +416,54 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
   },
+  forgotPasswordLink: {
+    marginTop: 14,
+    alignItems: 'center',
+  },
+  forgotPasswordText: {
+    color: '#00BCD4',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  socialSection: {
+    marginTop: 10,
+  },
+  dividerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 18,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: 'rgba(0, 188, 212, 0.25)',
+  },
+  dividerText: {
+    marginHorizontal: 12,
+    color: '#64748b',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  socialButton: {
+    height: 50,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
+    backgroundColor: '#ffffff',
+    borderWidth: 1.5,
+    borderColor: 'rgba(0, 188, 212, 0.4)',
+    shadowColor: '#00BCD4',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  socialButtonText: {
+    color: '#0f172a',
+    fontSize: 16,
+    fontWeight: '600',
+  },
   registerSection: {
     flexDirection: 'row',
     justifyContent: 'center',
@@ -301,6 +481,3 @@ const styles = StyleSheet.create({
     marginLeft: 5,
   },
 });
-
-
-

@@ -56,7 +56,13 @@
     "tooManyRequests": "Troppi tentativi falliti. Riprova piu tardi.",
     "barberAccountNotFound": "Questo account non esiste come parrucchiere.",
     "clientAccountNotFound": "Questo account non esiste come cliente.",
-    "successTitle": "Accesso riuscito"
+    "successTitle": "Accesso riuscito",
+    "continueWithGoogle": "Continua con Google",
+    "continueWithFacebook": "Continua con Facebook",
+    "continueWithApple": "Continua con Apple",
+    "orDivider": "oppure",
+    "socialNotAvailable": "Il login social non è ancora disponibile in questa versione dell'app.",
+    "socialError": "Si è verificato un errore durante l'accesso. Riprova."
   },
   "ClientRegistrationScreen": {
     "Credentials": "Credenziali",
@@ -310,7 +316,10 @@
     "serviceNamePlaceholder": "es. Taglio uomo",
     "priceLabel": "Prezzo (?)",
     "pricePlaceholder": "es. 15.00",
-    "update": "Aggiorna"
+    "update": "Aggiorna",
+    "displayNameLabel": "Nickname - Salone:",
+    "firstNameLabel": "Nome:",
+    "lastNameLabel": "Cognome:"
   },
   "BarberProfileScreen": {
     "loadingProfile": "Caricamento profilo...",
@@ -400,5 +409,26 @@
     "preferenceCutValidation": "Seleziona almeno una preferenza",
     "saved": "Profilo aggiornato con successo",
     "saveError": "Impossibile salvare il profilo"
+  },
+  "ForgotPasswordScreen": {
+    "title": "Recupera password",
+    "instructions": "Inserisci la tua email. Se è registrata riceverai un link per reimpostare la password.",
+    "emailLabel": "Email",
+    "submitButton": "Invia link",
+    "confirmation": "Se l'indirizzo è registrato riceverai un'email a breve.",
+    "backToLogin": "Torna al login"
+  },
+  "CompleteClientScreen": {
+    "title": "Scegli il tuo nickname",
+    "subtitle": "Il tuo handle pubblico su AirCut",
+    "submitButton": "Continua",
+    "cancel": "Annulla",
+    "nicknameTaken": "Questo nickname è già in uso. Scegline un altro."
+  },
+  "CompleteBarberProfileScreen": {
+    "title": "Completa il tuo profilo",
+    "subtitle": "Ci servono ancora alcune informazioni",
+    "submitButton": "Completa profilo",
+    "cancel": "Annulla"
   }
 }

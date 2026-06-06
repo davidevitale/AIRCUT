@@ -586,7 +586,11 @@ export default function BarberAccountScreen({
 
               {/* Name and role to the right */}
               <View style={styles.salonInfo}>
-                <Text style={styles.salonName}>{userData?.salonName}</Text>
+                <Text style={styles.salonName}>
+                  {[userData?.nickName, userData?.salonName]
+                    .filter(Boolean)
+                    .join(" - ") || userData?.salonName || ""}
+                </Text>
                 <Text style={styles.roleText}>{t("BarberAccountScreen.hairArtist")}</Text>
               </View>
             </View>
@@ -635,9 +639,32 @@ export default function BarberAccountScreen({
             <Text style={styles.sectionTitle}>{t("BarberAccountScreen.yourSalon")}</Text>
 
             <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>{t("BarberAccountScreen.displayNameLabel")}</Text>
+              <Text style={styles.infoValue}>
+                {[userData?.nickName, userData?.salonName]
+                  .filter(Boolean)
+                  .join(" - ") || userData?.salonName || ""}
+              </Text>
+            </View>
+
+            <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>{t("BarberAccountScreen.nameLabel")}</Text>
               <Text style={styles.infoValue}>{userData?.salonName}</Text>
             </View>
+
+            {userData?.firstName && (
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>{t("BarberAccountScreen.firstNameLabel")}</Text>
+                <Text style={styles.infoValue}>{userData?.firstName}</Text>
+              </View>
+            )}
+
+            {userData?.lastName && (
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>{t("BarberAccountScreen.lastNameLabel")}</Text>
+                <Text style={styles.infoValue}>{userData?.lastName}</Text>
+              </View>
+            )}
 
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>{t("BarberAccountScreen.addressLabel")}</Text>
