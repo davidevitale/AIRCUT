@@ -1,4 +1,4 @@
-import { collection, deleteDoc, doc, getDoc, getDocs, query, updateDoc, where } from "firebase/firestore";
+import { arrayRemove, collection, deleteDoc, doc, getDoc, getDocs, query, updateDoc, where, writeBatch } from "firebase/firestore";
 import { auth, db } from "../../config/firebase";
 import { deleteUser, EmailAuthProvider, reauthenticateWithCredential, sendPasswordResetEmail, updateEmail, updatePassword } from "firebase/auth";
 import { deleteObject, getStorage, listAll, ref } from "firebase/storage";
@@ -323,6 +323,28 @@ const deleteSubcollection = async (parentPath, subName) => {
   }
 };
 
+// Best-effort: rimuove `uid` da un campo array (es. `likedBy`/`likes`) su tutti
+// i documenti di una collection che lo contengono. Additivo e protetto:
+// in caso di errore logga e NON propaga, cosi' non interrompe deleteAccount.
+// Chunking a 450 op/batch per restare entro il limite Firestore di 500.
+const removeUidFromArrayField = async (uid, collectionName, arrayField) => {
+  try {
+    const snap = await getDocs(
+      query(collection(db, collectionName), where(arrayField, 'array-contains', uid))
+    );
+    const docs = snap.docs;
+    for (let i = 0; i < docs.length; i += 450) {
+      const batch = writeBatch(db);
+      docs.slice(i, i + 450).forEach((d) => {
+        batch.update(d.ref, { [arrayField]: arrayRemove(uid) });
+      });
+      await batch.commit();
+    }
+  } catch (error) {
+    console.warn(`removeUidFromArrayField: ${collectionName}.${arrayField} cleanup non completato:`, error?.message || error);
+  }
+};
+
 // Cancellazione account end-to-end (M5 §5.2.a, requisito Apple 5.1.1(v)).
 // Ordine: Storage media → post del barbiere → subcollezioni utente → doc utente
 // → utente Firebase Auth. Throwa 'requires-recent-login' se serve riautenticarsi.
@@ -372,6 +394,17 @@ const deleteAccount = async () => {
     await deleteSubcollection(`barbers/${uid}`, 'blocked');
   }
 
+  // 3-bis) NUOVO (Step 5): rimozione dei like messi dall'utente su contenuti altrui.
+  // Additivo e best-effort (gli errori vengono loggati ma non bloccano la cancellazione).
+  // I like vivono come array sui documenti (caso A, eliminabile lato client):
+  //   - posts/{postId}.likes         (toggle in postService.togglePostLike)
+  //   - posts/{postId}.likedBy       (alcune letture in postService usano questo campo)
+  //   - portfolioImages/{id}.likedBy (engagementService)
+  // Eseguito PRIMA della cancellazione del doc utente e di deleteUser().
+  await removeUidFromArrayField(uid, 'posts', 'likes');
+  await removeUidFromArrayField(uid, 'posts', 'likedBy');
+  await removeUidFromArrayField(uid, 'portfolioImages', 'likedBy');
+
   // 4) Documento utente.
   if (isClient) {
     await withRetry(() => deleteDoc(clientRef));
@@ -392,6 +425,27 @@ const deleteAccount = async () => {
     }
     throw error;
   }
+
+  // ---------------------------------------------------------------------------
+  // DATI ORFANI RESIDUI (Step 5) - non eliminabili in modo affidabile lato client:
+  //   - `reports` con reporterUid == uid: conservati di proposito (moderazione/
+  //     audit) e comunque non leggibili/cancellabili dal client (firestore.rules:
+  //     reports -> read/update/delete: false).
+  //   - Atomicita': questo cleanup non e' transazionale tra Storage/Auth/Firestore;
+  //     se i permessi decadono a meta' (token scaduto) parte puo' non completarsi.
+  //   - Eventuali commenti/follow/notifiche/cache feed, se introdotti in futuro.
+  //
+  // SOLUZIONE ROBUSTA (proposta, fuori scope se l'infra serverless non e' attiva):
+  // Cloud Function `onUserDelete` con privilegi admin, idempotente, fuori dal
+  // percorso critico del client:
+  //   exports.onUserDelete = functions.auth.user().onDelete(async (user) => {
+  //     const uid = user.uid; const db = admin.firestore();
+  //     // 1) like residui (collection group, copre array e subcollection)
+  //     // 2) reports con reporterUid == uid
+  //     // 3) commenti / follow / notifiche
+  //     // 4) media Storage residui: admin.storage().bucket().deleteFiles({ prefix })
+  //   });
+  // ---------------------------------------------------------------------------
 
   console.log('deleteAccount: completed for', uid);
   return { success: true };

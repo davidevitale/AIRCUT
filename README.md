@@ -40,6 +40,18 @@
      ```
    - Scan the QR code with the Expo Go app on your phone, or run on an emulator/simulator.
 
+6. **Deploy Security Rules** (Firestore + Storage):
+   - Le regole sono dichiarate in `firebase.json` (`firestore.rules` e `storage.rules`).
+   - Validazione a secco (non pubblica nulla):
+     ```
+     firebase deploy --only storage --dry-run
+     ```
+   - Pubblicazione:
+     ```
+     firebase deploy --only firestore:rules
+     firebase deploy --only storage
+     ```
+
 ## Navigation Guide
 
 AirCut uses a state-based navigation system managed in `App.js`. Here's a step-by-step guide for first-time users:
