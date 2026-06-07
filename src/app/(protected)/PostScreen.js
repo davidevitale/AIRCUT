@@ -17,7 +17,7 @@ import { getCurrentUserData } from "../../services/userService";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { getStorage, ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { serverTimestamp } from "firebase/firestore";
-import { useToast } from "@kritikhedau/react-native-toastify";
+import { useToast } from "../../context/ToastContext";
 import { Image } from "expo-image";
 import { COLOR_TAG, COLOR_TAG_ID, getColorTagOptions, isColorTagId } from "../../services/tagOptions";
 import { invalidateFeedCache } from "../../services/postService";

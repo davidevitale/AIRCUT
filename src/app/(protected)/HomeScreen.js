@@ -348,12 +348,13 @@ const HomeScreen = ({ onViewProfile, onHashtagPress }) => {
 
   if (loading) {
     return (
-      <ScreenShell>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#00BCD4" />
-          <Text style={styles.loadingText}>{t('HomeScreen.loadingFeed')}</Text>
-        </View>
-      </ScreenShell>
+      // Loader minimale: rotellina piccola grigia + testo discreto. Niente blur
+      // o glow di sfondo (NO ScreenShell che aggiungeva il BlurView sotto): il
+      // loader sta su sfondo bianco pulito, coerente col resto della Home.
+      <View style={styles.plainLoadingContainer}>
+        <ActivityIndicator size="small" color="#9CA3AF" />
+        <Text style={styles.loadingText}>{t('HomeScreen.loadingFeed')}</Text>
+      </View>
     );
   }
 
@@ -395,8 +396,10 @@ const HomeScreen = ({ onViewProfile, onHashtagPress }) => {
 
 const styles = StyleSheet.create({
   screen: {
+    // Task 3: sfondo bianco puro (look "Apple-style"), via le card glass restano
+    // ben staccate grazie a bordo + ombra morbida.
     flex: 1,
-    backgroundColor: '#b8b7b74a',
+    backgroundColor: '#FFFFFF',
     paddingTop: 80,
   },
   backgroundBlur: {
@@ -412,10 +415,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: 'transparent',
   },
+  // Loader pulito del feed: sfondo bianco, niente blur. paddingBottom 80 per
+  // centrare visivamente sopra alla FloatingTabBar.
+  plainLoadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
+    paddingBottom: 80,
+  },
   loadingText: {
-    marginTop: 12,
-    fontSize: 16,
-    color: '#666',
+    marginTop: 10,
+    fontSize: 15,
+    color: '#6B7280',
+    fontWeight: '500',
   },
   emptyContainer: {
     flex: 1,
@@ -516,18 +529,20 @@ const styles = StyleSheet.create({
     lineHeight: 12,
   },
   glassCard: {
+    // Task 3: card "glass" coerenti con la nuova navbar — bordo bianco
+    // semitrasparente, fondo leggermente velato, ombra morbida e diffusa.
     marginHorizontal: 12,
     marginBottom: 16,
     borderRadius: 20,
     overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.45)',
-    backgroundColor: 'rgba(255, 255, 255, 0.5)',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255,255,255,0.65)',
+    backgroundColor: 'rgba(255, 255, 255, 0.55)',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.12,
-    shadowRadius: 16,
-    elevation: 6,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.08,
+    shadowRadius: 22,
+    elevation: 5,
   },
 });
 

@@ -8,7 +8,7 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { TextInput } from 'react-native-paper';
@@ -24,6 +24,7 @@ import {
 } from '../../services/userService';
 import { logoutUser } from '../../services/authService';
 import { useToast } from '../../context/ToastContext';
+import { useAuth } from '../../context/AuthContext';
 
 // Modifica account CLIENTE (expo-router attivo). Mostra SOLO i campi realmente
 // salvati su clients/{uid} ed editabili dal profilo: userName, sex,
@@ -33,6 +34,11 @@ import { useToast } from '../../context/ToastContext';
 export default function EditClientProfileScreen() {
   const { t, i18n } = useTranslation();
   const { showSuccess, showError } = useToast();
+  // Stato globale: ottimistico (updateUserData) + ricarica reale (refreshUserProfile).
+  const { refreshUserProfile, updateUserData } = useAuth();
+  // Per dimensionare correttamente il paddingBottom della ScrollView in modo
+  // che la sezione "Elimina account" stia SEMPRE sopra la FloatingTabBar.
+  const insets = useSafeAreaInsets();
   const currentUser = auth.currentUser;
 
   const [loading, setLoading] = useState(true);
@@ -99,11 +105,31 @@ export default function EditClientProfileScreen() {
     if (!currentUser) return;
     setSaving(true);
     try {
+      const cleanUserName = values.userName.trim();
+      // Salva su Firestore tramite userService (whitelist EDITABLE_CLIENT_FIELDS).
       await updateClient(currentUser.uid, {
-        userName: values.userName.trim(),
+        userName: cleanUserName,
         sex: values.sex,
         preferenceCut: values.preferenceCut,
       });
+
+      // 1) Update OTTIMISTICO dello stato globale: la schermata Account mostra
+      //    subito il nuovo nome anche prima del re-fetch da Firestore.
+      if (typeof updateUserData === 'function') {
+        updateUserData({
+          userName: cleanUserName,
+          sex: values.sex,
+          preferenceCut: values.preferenceCut,
+        });
+      }
+
+      // 2) RICARICA REALE da Firestore in background per allineare il context
+      //    con la sorgente di verità (in caso di trasformazioni server-side).
+      //    Non blocchiamo l'UI in attesa: il toast e la navigazione partono subito.
+      if (typeof refreshUserProfile === 'function') {
+        refreshUserProfile().catch(() => {});
+      }
+
       showSuccess(t('editProfileClient.saved'));
       router.back();
     } catch (error) {
@@ -180,7 +206,17 @@ export default function EditClientProfileScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={[
+          styles.content,
+          // Spazio extra in fondo: 96px circa per la FloatingTabBar + safe-area.
+          // Garantisce che il bottone "Elimina account" sia sempre raggiungibile
+          // e visibile, non coperto dalla bottom navbar.
+          { paddingBottom: insets.bottom + 160 },
+        ]}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
         <View style={styles.headerRow}>
           <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
             <Text style={styles.backButtonText}>{'<'}</Text>

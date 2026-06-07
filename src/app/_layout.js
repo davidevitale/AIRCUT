@@ -1,7 +1,7 @@
 import { Stack } from "expo-router";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { AuthProvider } from "../context/AuthContext";
-import { ToastProvider } from "@kritikhedau/react-native-toastify";
+import { ToastProvider } from "../context/ToastContext";
 
 
 const _layout = () => {

@@ -26,6 +26,7 @@ import { updateBarberPortfolio } from "../../services/barberService";
 import { checkBarberNicknameUniqueness, logoutUser } from "../../services/authService";
 import { pickImages } from "../../services/mediaService";
 import { useToast } from "../../context/ToastContext";
+import { useAuth } from "../../context/AuthContext";
 
 // M4 §4.3 — Edit Profile barbiere brandizzato (no form nativi), Formik + Yup,
 // campi reali nickName / salonName / website / telephone, avatar privato
@@ -33,6 +34,9 @@ import { useToast } from "../../context/ToastContext";
 export default function EditBarberProfileScreen() {
   const { t } = useTranslation();
   const { showSuccess, showError } = useToast();
+  // Stato globale: updateUserData = patch ottimistico immediato,
+  // refreshUserProfile = ricarica reale da Firestore in background.
+  const { refreshUserProfile, updateUserData } = useAuth();
   const currentUser = auth.currentUser;
 
   const [loading, setLoading] = useState(true);
@@ -139,6 +143,11 @@ export default function EditBarberProfileScreen() {
         profileImageThumbnail: url,
       });
       setProfileImage(url);
+      // Propaga subito il nuovo avatar al context globale (l'header dell'Account
+      // mostra `userData.profileImage` → si aggiorna senza riavvio).
+      if (typeof updateUserData === "function") {
+        updateUserData({ profileImage: url, profileImageThumbnail: url });
+      }
       Alert.alert(t("editProfile.successTitle"), t("editProfile.avatarUpdated"));
     } catch (error) {
       console.error("handlePickAvatar error:", error);
@@ -163,7 +172,9 @@ export default function EditBarberProfileScreen() {
         }
       }
 
-      await updateBarberPortfolio(currentUser.uid, {
+      // Patch da salvare. Riusato sia per Firestore sia per l'update ottimistico
+      // del context → così tutti i campi nuovi sono visibili subito nell'Account.
+      const patch = {
         nickName: nextNick,
         salonName: values.salonName.trim(),
         address: values.address.trim(),
@@ -171,8 +182,24 @@ export default function EditBarberProfileScreen() {
         emailContact: values.emailContact.trim(),
         website: values.website ? values.website.trim() : "",
         updatedAt: new Date().toISOString(),
-      });
+      };
 
+      // 1) Scrittura Firestore (collezione `barbers/{uid}`).
+      await updateBarberPortfolio(currentUser.uid, patch);
+
+      // 2) Update OTTIMISTICO del context: BarberAccountScreen, che legge
+      //    `userData` dal context, vede subito nickName/salonName/ecc. nuovi.
+      if (typeof updateUserData === "function") {
+        updateUserData(patch);
+      }
+
+      // 3) RICARICA reale da Firestore in background (non blocchiamo l'UI).
+      //    Serve a riallineare il context con eventuali trasformazioni server.
+      if (typeof refreshUserProfile === "function") {
+        refreshUserProfile().catch(() => {});
+      }
+
+      // 4) Solo a questo punto mostriamo il toast di successo e usciamo.
       showSuccess(t("editProfile.saved"));
       router.back();
     } catch (error) {

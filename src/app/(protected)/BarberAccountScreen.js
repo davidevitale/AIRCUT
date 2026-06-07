@@ -33,6 +33,7 @@ import { useFocusEffect } from "@react-navigation/native";
 import { Image } from "expo-image";
 import Reanimated, { useAnimatedScrollHandler } from "react-native-reanimated";
 import { useTabBarScroll } from "../../context/TabBarScrollContext";
+import { useAuth } from "../../context/AuthContext";
 
 const AnimatedScrollView = Reanimated.createAnimatedComponent(ScrollView);
 
@@ -44,6 +45,12 @@ export default function BarberAccountScreen({
 }) {
 
   const { t, i18n } = useTranslation();
+  // userData dal context globale (AuthContext): rispecchia in tempo reale gli
+  // update fatti da EditBarberProfileScreen tramite updateUserData/refreshUserProfile.
+  // Manteniamo `userData` come stato locale per i merge con campi figli
+  // (portfolioImages, listinoPrezzo, ecc.) che vengono modificati da questa
+  // schermata stessa.
+  const { userData: ctxUserData, refreshUserProfile } = useAuth();
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -76,6 +83,29 @@ export default function BarberAccountScreen({
       loadUserData();
     }
   }, [propUserData]);
+
+  // Sincronizza lo stato locale ogni volta che il context userData cambia
+  // (es. dopo il salvataggio in EditBarberProfileScreen → updateUserData/
+  //  refreshUserProfile). Così l'header e le sezioni "Tuo salone" mostrano
+  // immediatamente nickName/salonName/address/ecc. aggiornati, senza riavvio.
+  // Il merge preserva i campi locali (portfolioImages, listinoPrezzo, ecc.).
+  useEffect(() => {
+    if (ctxUserData) {
+      setUserData((prev) => ({ ...(prev || {}), ...ctxUserData }));
+    }
+  }, [ctxUserData]);
+
+  // Ulteriore safety net: quando l'utente torna in focus su questa schermata
+  // (router.back() da EditBarberProfileScreen), ricarichiamo il profilo da
+  // Firestore per assicurare la fonte di verità più recente.
+  useFocusEffect(
+    useCallback(() => {
+      if (typeof refreshUserProfile === "function") {
+        refreshUserProfile().catch(() => {});
+      }
+      return () => {};
+    }, [refreshUserProfile])
+  );
 
   const loadUserData = async () => {
     try {

@@ -58,6 +58,20 @@ export const ToastProvider = ({ children }) => {
         showSuccess,
         showWarning,
         showInfo,
+        // Alias `show(...)` per compatibilità con i call site che usavano
+        // l'API di `@kritikhedau/react-native-toastify` (LoginScreen,
+        // RegisterBarberScreen, PostScreen). Accetta sia stringhe semplici
+        // sia oggetti `{ message, type, duration }` (forma usata da
+        // LoginScreen come "customToast"). Quando viene passato un oggetto
+        // senza `message`, fallback su `String(payload)`.
+        show: (payload, type = 'info', duration) => {
+          if (payload && typeof payload === 'object') {
+            const msg = payload.message ?? payload.text ?? String(payload);
+            showToast(msg, payload.type ?? type, payload.duration ?? duration ?? 4000);
+          } else {
+            showToast(String(payload ?? ''), type, duration ?? 4000);
+          }
+        },
       }}
     >
       {children}

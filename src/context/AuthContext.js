@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { onAuthStateChange } from '../services/authService';
 import { getCurrentUserData } from '../services/userService';
 
@@ -87,11 +87,38 @@ export const AuthProvider = ({ children }) => {
     };
   }, []);
 
+  // Ricarica il documento profilo da Firestore e aggiorna lo stato globale.
+  // Usata dalle schermate di edit (es. EditClientProfileScreen) DOPO un save
+  // così tutte le schermate che leggono userData dal context vedono subito
+  // i nuovi valori senza dover chiudere e riaprire l'app.
+  const refreshUserProfile = useCallback(async () => {
+    try {
+      const fresh = await getCurrentUserData();
+      if (fresh?.user) setUser(fresh.user);
+      if (fresh?.role) setRole(fresh.role);
+      if (fresh?.userData) setUserData(fresh.userData);
+      return fresh;
+    } catch (error) {
+      console.warn('[Auth] refreshUserProfile failed:', error?.message);
+      return null;
+    }
+  }, []);
+
+  // Update ottimistico locale: applica subito un patch a userData senza
+  // attendere il roundtrip Firestore. Comodo per riflettere immediatamente
+  // un cambio nome nello header dell'Account.
+  const updateUserData = useCallback((patch) => {
+    if (!patch || typeof patch !== 'object') return;
+    setUserData((prev) => ({ ...(prev || {}), ...patch }));
+  }, []);
+
   const value = {
     authStatus,
     user,
     role,
     userData,
+    refreshUserProfile,
+    updateUserData,
   };
 
   return (

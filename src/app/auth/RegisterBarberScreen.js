@@ -17,7 +17,7 @@ import * as Yup from "yup";
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "../../../config/firebase";
 import { useAuth } from "../../context/AuthContext";
-import { useToast } from "@kritikhedau/react-native-toastify";
+import { useToast } from "../../context/ToastContext";
 import * as WebBrowser from "expo-web-browser";
 
 // M5 §5.1.d — URL della pagina EULA / Policy contenuti abusivi.

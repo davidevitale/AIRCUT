@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { Platform, Pressable, StyleSheet, View } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { Image } from 'expo-image';
@@ -111,6 +111,9 @@ const TabBarButton = ({
 export default function FloatingTabBar({ state, descriptors, navigation }) {
   const insets = useSafeAreaInsets();
   const { scrollY } = useTabBarScroll();
+  // Task 2: ref dichiarata in cima — i hook devono sempre essere chiamati nello
+  // stesso ordine, prima di qualunque early-return condizionale (Rules of Hooks).
+  const lastVisibleIndexRef = useRef(state.index);
 
   // ===== Bidirectional scale (req 3) =====
   // `scale` è una SharedValue separata, animata via withSpring sia in shrink
@@ -220,6 +223,24 @@ export default function FloatingTabBar({ state, descriptors, navigation }) {
     return null;
   }
 
+  // ===== Effective focused index (Task 2) =====
+  // Quando si entra in una route "figlia" della tab (es. dettaglio foto da
+  // LikeScreen, EditClientProfileScreen dall'account, PostListingScreen, ecc.)
+  // la route attiva di expo-router NON è una delle visibleRoutes (`href: null`,
+  // niente tabBarIcon). Di default `state.index` punta a quella route nascosta
+  // e nessun bottone risulta `isFocused`, quindi la pill della tab scompare.
+  //
+  // Fix: memorizziamo (in `lastVisibleIndexRef`, dichiarata in cima) l'ultimo
+  // `state.index` che corrispondeva a una route con icona, e lo usiamo come
+  // fallback quando la route corrente non ne ha. Così la pill resta visibile
+  // sulla tab da cui l'utente è sceso nel sotto-flusso.
+  if (currentHasIcon) {
+    lastVisibleIndexRef.current = state.index;
+  }
+  const effectiveFocusedIndex = currentHasIcon
+    ? state.index
+    : lastVisibleIndexRef.current;
+
   return (
     // ROOT CONTAINER: Reanimated.View. Qui applichiamo il transform: scale
     // così l'intero blocco (BlurView + shadow + pill + icone) si rimpicciolisce
@@ -248,7 +269,7 @@ export default function FloatingTabBar({ state, descriptors, navigation }) {
           {visibleRoutes.map((route) => {
             const descriptor = descriptors[route.key];
             const realIndex = state.routes.findIndex((r) => r.key === route.key);
-            const isFocused = state.index === realIndex;
+            const isFocused = effectiveFocusedIndex === realIndex;
 
             const onPress = () => {
               const event = navigation.emit({

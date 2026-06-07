@@ -23,7 +23,7 @@ import { TextInput } from 'react-native-paper';
 import { Formik } from 'formik';
 import * as Yup from 'yup';
 import { useAuth } from '../../context/AuthContext';
-import { useToast } from '@kritikhedau/react-native-toastify';
+import { useToast } from '../../context/ToastContext';
 
 /**
  * Bottoni di social login (Google / Facebook / Apple).

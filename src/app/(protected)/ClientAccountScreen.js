@@ -19,11 +19,17 @@ import LanguageToggle from '../../components/LanguageToggle';
 import { SafeAreaView } from 'react-native-safe-area-context'
 import Reanimated, { useAnimatedScrollHandler } from 'react-native-reanimated';
 import { useTabBarScroll } from '../../context/TabBarScrollContext';
+import { useAuth } from '../../context/AuthContext';
 
 const AnimatedScrollView = Reanimated.createAnimatedComponent(ScrollView);
 const { width, height } = Dimensions.get('window');
 export default function ClientAccountScreen({ userData: propUserData, onLogout, navigate }) {
   const { t, i18n } = useTranslation();
+  // userData dal context globale (AuthContext): rispecchia in tempo reale gli
+  // update fatti da altre schermate (es. EditClientProfileScreen → updateUserData).
+  // Continuiamo a tenere uno stato locale `userData` come fallback per il primo
+  // mount quando il context non è ancora popolato.
+  const { userData: ctxUserData } = useAuth();
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -46,6 +52,15 @@ export default function ClientAccountScreen({ userData: propUserData, onLogout, 
       loadUserData();
     }
   }, [propUserData]);
+
+  // Sincronizza lo stato locale ogni volta che il context viene aggiornato
+  // (es. dopo il salvataggio in EditClientProfileScreen). Così l'header
+  // mostra immediatamente il nuovo userName senza dover refetch o riavviare.
+  useEffect(() => {
+    if (ctxUserData) {
+      setUserData((prev) => ({ ...(prev || {}), ...ctxUserData }));
+    }
+  }, [ctxUserData]);
 
   useEffect(() => {
     loadTags();

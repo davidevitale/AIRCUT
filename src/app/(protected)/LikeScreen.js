@@ -242,8 +242,9 @@ const LikeScreen = () => {
 
 const styles = StyleSheet.create({
   container: {
+    // Task 3: sfondo bianco puro (look "Apple-style").
     flex: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    backgroundColor: '#FFFFFF',
   },
   loadingContainer: {
     flex: 1,
@@ -262,21 +263,23 @@ const styles = StyleSheet.create({
     paddingHorizontal: 32,
   },
   header: {
+    // Task 3: header glass coerente con navbar + card.
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: 'rgba(255, 255, 255, 0.6)',
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.55)',
+    borderRadius: 20,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255,255,255,0.65)',
     marginHorizontal: 12,
     marginTop: 8,
     marginBottom: 8,
-    shadowColor: '#00BCD4',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.06,
+    shadowRadius: 18,
     elevation: 3,
   },
   headerTitle: {
@@ -294,17 +297,25 @@ const styles = StyleSheet.create({
     paddingBottom: 24,
   },
   postContainer: {
+    // Task 3: box foto in stile glass (sfondo bianco traslucido, bordo morbido,
+    // ombra diffusa). overflow:hidden mantiene il borderRadius sull'immagine.
     width: itemSize,
     height: itemSize,
-
-    backgroundColor: '#f2f2f2',
+    backgroundColor: 'rgba(255, 255, 255, 0.55)',
     overflow: 'hidden',
-    borderRadius: 20
+    borderRadius: 20,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255,255,255,0.65)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.08,
+    shadowRadius: 14,
+    elevation: 4,
   },
   postImage: {
     width: '100%',
     height: '100%',
-    backgroundColor: '#f0f0f0',
+    backgroundColor: 'transparent',
   },
   unlikeButton: {
     position: 'absolute',

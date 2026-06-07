@@ -8,9 +8,16 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
+  Dimensions,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import Entypo from '@expo/vector-icons/Entypo';
+import Reanimated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  runOnJS,
+} from 'react-native-reanimated';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import { getAllBarberPosts } from '../services/postService';
@@ -25,12 +32,49 @@ import {
 // navigazione, così non si perde scroll/contesto della schermata chiamante.
 // Include il tag speciale "colore" (Task 2): selezionandolo si rivelano i colori
 // come tag selezionabili.
+// Task 4: animazione spring nativa (UI thread) + niente overlay scuro.
+// `SHEET_TRAVEL` è la distanza che la sheet percorre dall'alto al basso.
+// Calcolata dall'altezza dello schermo (80% max) per coprire anche dispositivi
+// piccoli senza mai mostrare un "salto" finale.
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
+const SHEET_TRAVEL = Math.round(SCREEN_HEIGHT * 0.85);
+// Curva spring "morbida" – damping alto = nessun overshoot fastidioso, stiffness
+// medio-bassa per discesa/salita fluida tipo iOS sheet.
+const SHEET_SPRING = { damping: 22, stiffness: 180, mass: 0.9, overshootClamping: false };
+
 const FilterModal = ({ visible, initialSelected = [], onApply, onClose }) => {
   const { t, i18n } = useTranslation();
   const [availableTags, setAvailableTags] = useState([]);
   const [tagsLoading, setTagsLoading] = useState(false);
   const [trendOrder, setTrendOrder] = useState({}); // tagKey -> punteggio trend
   const [draftSelected, setDraftSelected] = useState(initialSelected);
+  // Stato locale di mount: il Modal nativo deve restare montato per tutta la
+  // durata dell'animazione di uscita (altrimenti la sheet scompare di colpo).
+  // Quando `visible` diventa false, `mounted` rimane true finché lo spring di
+  // chiusura non ha completato (callback runOnJS → setMounted(false)).
+  const [mounted, setMounted] = useState(visible);
+
+  // Posizione verticale della sheet (0 = visibile, SHEET_TRAVEL = nascosta in basso).
+  const translateY = useSharedValue(SHEET_TRAVEL);
+
+  useEffect(() => {
+    if (visible) {
+      setMounted(true);
+      // Apertura: dal basso verso 0 con spring naturale.
+      translateY.value = withSpring(0, SHEET_SPRING);
+    } else if (mounted) {
+      // Chiusura: torna giù con la stessa curva e poi smonta.
+      translateY.value = withSpring(SHEET_TRAVEL, SHEET_SPRING, (finished) => {
+        if (finished) runOnJS(setMounted)(false);
+      });
+    }
+    // translateY è SharedValue stabile, non serve in deps.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible]);
+
+  const sheetAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: translateY.value }],
+  }));
 
   const getLocalizedText = useCallback(
     (value, fallback = '') => {
@@ -139,9 +183,27 @@ const FilterModal = ({ visible, initialSelected = [], onApply, onClose }) => {
   const colorOptions = getColorTagOptions();
 
   return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <Pressable style={styles.backdrop} onPress={onClose}>
-        <Pressable style={styles.sheet}>
+    // Task 4:
+    //   - `animationType="none"` → l'animazione la guidiamo noi via Reanimated
+    //     spring (UI thread, 60fps, niente "scatti" della slide nativa).
+    //   - root contenitore con `pointerEvents="box-none"` + nessun colore di
+    //     sfondo → lo schermo dietro alla sheet resta visibile e cliccabile,
+    //     come richiesto (niente overlay scuro).
+    //   - L'utente chiude tappando fuori (area trasparente sopra la sheet) o
+    //     usando il bottone × dentro l'header. Pressable invisibile in alto
+    //     gestisce il tap-fuori senza colorare il background.
+    <Modal
+      visible={mounted}
+      animationType="none"
+      transparent
+      onRequestClose={onClose}
+      statusBarTranslucent
+    >
+      <View style={styles.root} pointerEvents="box-none">
+        {/* Area "tap fuori per chiudere": copre tutto lo schermo SOPRA la
+            sheet ma è trasparente. Niente backdrop scuro. */}
+        <Pressable style={styles.tapOutside} onPress={onClose} />
+        <Reanimated.View style={[styles.sheet, sheetAnimatedStyle]}>
           <View style={styles.handle} />
           <View style={styles.header}>
             <Text style={styles.title}>{t('HomeScreen.filtersTitle', 'Filtri')}</Text>
@@ -209,19 +271,29 @@ const FilterModal = ({ visible, initialSelected = [], onApply, onClose }) => {
               <Text style={styles.primaryText}>{t('HomeScreen.apply', 'Applica')}</Text>
             </TouchableOpacity>
           </View>
-        </Pressable>
-      </Pressable>
+        </Reanimated.View>
+      </View>
     </Modal>
   );
 };
 
 const styles = StyleSheet.create({
-  backdrop: {
+  // Task 4: niente colore di sfondo qui — lo schermo dietro la sheet resta
+  // visibile e interattivo. La sheet è posizionata in basso in modo assoluto
+  // così il translateY animato non scolla dal bordo inferiore.
+  root: {
     flex: 1,
-    justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0, 0, 0, 0.35)',
+    backgroundColor: 'transparent',
+  },
+  tapOutside: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'transparent',
   },
   sheet: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
     maxHeight: '80%',
     backgroundColor: '#fff',
     borderTopLeftRadius: 24,
@@ -229,6 +301,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     paddingTop: 10,
     paddingBottom: 24,
+    // Ombra morbida per "staccare" la sheet dallo schermo senza overlay scuro.
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -6 },
+    shadowOpacity: 0.12,
+    shadowRadius: 18,
+    elevation: 12,
   },
   handle: {
     alignSelf: 'center',

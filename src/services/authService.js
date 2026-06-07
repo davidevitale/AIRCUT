@@ -576,16 +576,20 @@ export const sendPasswordReset = async (email) => {
 //   correttamente. In più aggiungiamo `authProviders` come da redesign.
 // ============================================================================
 
+// I provider social nativi (@react-native-google-signin/google-signin,
+// react-native-fbsdk-next, expo-apple-authentication) NON sono installati in
+// questa build. I require() statici verrebbero comunque risolti da Metro al
+// momento del bundling, anche se sono dentro un try/catch o una mappa di
+// loader, perché Metro analizza staticamente i require letterali. Per questo
+// teniamo i require commentati e segnaliamo i provider come "non disponibili":
+// così Metro non prova a risolverli e l'app compila comunque.
+//
+// Quando un pacchetto verrà installato, riabilitare la riga `require(...)`
+// corrispondente E aggiornare la funzione `signInWith*` per usarlo.
 const requireOptional = (moduleName) => {
-  try {
-    // eslint-disable-next-line global-require, import/no-dynamic-require
-    return require(moduleName);
-  } catch (error) {
-    const wrapped = new Error('socialProviderNotInstalled');
-    wrapped.cause = error;
-    wrapped.moduleName = moduleName;
-    throw wrapped;
-  }
+  const err = new Error('socialProviderNotInstalled');
+  err.moduleName = moduleName;
+  throw err;
 };
 
 const mapProviderIds = (user) => {
@@ -615,60 +619,32 @@ export const getExistingUserRole = async (user) => {
   return null;
 };
 
-/** Google Sign In — restituisce lo user Firebase. */
+/** Google Sign In — restituisce lo user Firebase.
+ *  Disabilitato: il pacchetto @react-native-google-signin/google-signin non è
+ *  installato in questa build. Lascia l'export attivo per non rompere i chiamanti. */
 export const signInWithGoogle = async () => {
-  const { GoogleSignin } = requireOptional('@react-native-google-signin/google-signin');
-
-  await GoogleSignin.hasPlayServices();
-  const result = await GoogleSignin.signIn();
-  const idToken = result?.idToken || result?.data?.idToken;
-  if (!idToken) {
-    throw new Error('googleNoIdToken');
-  }
-
-  const credential = GoogleAuthProvider.credential(idToken);
-  const { user } = await signInWithCredential(auth, credential);
-  return user; // il chiamante poi chiama getExistingUserRole
+  const err = new Error('socialProviderNotInstalled');
+  err.moduleName = '@react-native-google-signin/google-signin';
+  err.userMessage = 'Google Sign-In non è ancora configurato in questa build';
+  throw err;
 };
 
-/** Facebook Sign In — restituisce lo user Firebase. */
+/** Facebook Sign In — restituisce lo user Firebase.
+ *  Disabilitato: il pacchetto react-native-fbsdk-next non è installato in questa build. */
 export const signInWithFacebook = async () => {
-  const { LoginManager, AccessToken } = requireOptional('react-native-fbsdk-next');
-
-  const loginResult = await LoginManager.logInWithPermissions(['public_profile', 'email']);
-  if (loginResult.isCancelled) {
-    throw new Error('cancelled');
-  }
-
-  const data = await AccessToken.getCurrentAccessToken();
-  if (!data?.accessToken) {
-    throw new Error('facebookNoAccessToken');
-  }
-
-  const credential = FacebookAuthProvider.credential(data.accessToken);
-  const { user } = await signInWithCredential(auth, credential);
-  return user;
+  const err = new Error('socialProviderNotInstalled');
+  err.moduleName = 'react-native-fbsdk-next';
+  err.userMessage = 'Facebook Sign-In non è ancora configurato in questa build';
+  throw err;
 };
 
-/** Apple Sign In — restituisce lo user Firebase. */
+/** Apple Sign In — restituisce lo user Firebase.
+ *  Disabilitato: il pacchetto expo-apple-authentication non è installato in questa build. */
 export const signInWithApple = async () => {
-  const AppleAuthentication = requireOptional('expo-apple-authentication');
-
-  const { identityToken } = await AppleAuthentication.signInAsync({
-    requestedScopes: [
-      AppleAuthentication.AppleAuthenticationScope.EMAIL,
-      AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
-    ],
-  });
-
-  if (!identityToken) {
-    throw new Error('appleNoIdentityToken');
-  }
-
-  const provider = new OAuthProvider('apple.com');
-  const credential = provider.credential({ idToken: identityToken });
-  const { user } = await signInWithCredential(auth, credential);
-  return user;
+  const err = new Error('socialProviderNotInstalled');
+  err.moduleName = 'expo-apple-authentication';
+  err.userMessage = 'Apple Sign-In non è ancora configurato in questa build';
+  throw err;
 };
 
 /**
